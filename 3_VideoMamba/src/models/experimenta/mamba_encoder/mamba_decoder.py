@@ -7,7 +7,7 @@ from functools import partial
 from torch import Tensor
 from typing import Optional
 import torch.utils.checkpoint as checkpoint
-
+ 
 # remember that this is einstein operation, which is the special fancy way of reshaping.
 from einops import rearrange
 from timm.models.vision_transformer import _cfg
