@@ -1,3 +1,6 @@
+"""
+Upon rereading the Video Mamba paper, I realize that the patchifying is already done inside the VisionMamba block
+"""
 import numpy as np
 
 def patchify_image(image, patch_size):

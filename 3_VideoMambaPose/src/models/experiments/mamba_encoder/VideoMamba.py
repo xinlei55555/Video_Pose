@@ -43,7 +43,7 @@ class Block(nn.Module):
         Simple block wrapping a mixer class with LayerNorm/RMSNorm and residual connection"
 
         This Block has a slightly different structure compared to a regular
-        prenorm Transformer block.
+        prenorm Transformer torchblock.
         The standard block is: LN -> MHA/MLP -> Add.
         [Ref: https://arxiv.org/abs/2002.04745]
         Here we have: Add -> LN -> Mixer, returning both
@@ -385,6 +385,13 @@ class VisionMamba(nn.Module):
         x = self.forward_features(x, inference_params)
         # !then head is just a linear layer
         x = self.head(self.head_drop(x))
+
+
+        # ** CHANGE: This is where I added a layer for the output
+        # * I need to add a layer which returns the same number of nodes as the number of frames, but each frame must have correct number of joints
+        # * see deciwatch, but basically (Video length, joints, X, Y, Z)
+        
+
         return x
 
 
