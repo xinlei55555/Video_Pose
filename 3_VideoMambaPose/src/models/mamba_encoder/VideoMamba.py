@@ -257,6 +257,8 @@ class VisionMamba(nn.Module):
         num_patches = self.patch_embed.num_patches
 
         # ! This is only if we need to use heatmaps.
+                # *defining the classification token.
+
         self.cls_token = nn.Parameter(torch.zeros(1, 1, self.embed_dim))
         self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, self.embed_dim))
         self.temporal_pos_embedding = nn.Parameter(torch.zeros(1, num_frames // kernel_size, embed_dim))
