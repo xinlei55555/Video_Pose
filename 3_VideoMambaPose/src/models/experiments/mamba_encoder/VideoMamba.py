@@ -202,6 +202,7 @@ class PatchEmbed(nn.Module):
         )
 
     def forward(self, x):
+        # perform a 3d convolution.
         x = self.proj(x)
         return x
     
@@ -247,6 +248,7 @@ class VisionMamba(nn.Module):
         self.num_classes = num_classes
         self.d_model = self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
 
+        # *Notice that the first thing created is a patch embedding, to transform the image with convolutions
         self.patch_embed = PatchEmbed(
             img_size=img_size, patch_size=patch_size, 
             kernel_size=kernel_size,
