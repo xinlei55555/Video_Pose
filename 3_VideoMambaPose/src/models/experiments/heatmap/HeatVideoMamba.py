@@ -37,7 +37,7 @@ class Deconv(nn.Module):
     https://github.com/ViTAE-Transformer/ViTPose/blob/d5216452796c90c6bc29f5c5ec0bdba94366768a/mmpose/models/heads/deconv_head.py#L12
     """
 
-    def __init__(self):
+    def __init__(self, d=8, h=14, w=14):
         super().__init__()
         # !using ViTPose
         # self.deconv = hdh.DeconvHead(in_channels = 192, out_channels = 3)
@@ -51,6 +51,7 @@ class Deconv(nn.Module):
 
         self.conv_layers = self.define_conv_layers()
         self.deconv_layers = self.define_deconv_layers()
+        self.d, self.h, self.w = d, h, w
 
     def prep_input(self, x):
         """Conv2d's input is of shape (N, C_in, H, W) 
@@ -60,13 +61,13 @@ class Deconv(nn.Module):
         H is the height and 
         W the width of the image
         """
-        x = rearrange(x, 'b (d h w) c -> b c d h w', d=8, h=14, w=14)
+        x = rearrange(x, 'b (d h w) c -> b c d h w', d=self.d, h=self.h, w=self.w)
         # x has the following sizes: (16, 8, 14, 14, 192 channels) --> The 192 channels were initiated from the patching
         return x
 
     def define_conv_layers(self,
                            num_conv_layers=1,
-                           conv_channels=3, 
+                           conv_channels=21, 
                            out_channels=17,
                            num_deconv_kernels=(4, 4, 4)):
         layers = []
@@ -79,8 +80,9 @@ class Deconv(nn.Module):
                     kernel_size=num_conv_kernels[i],
                     stride=1,
                     padding=(num_conv_kernels[i] - 1) // 2))
-            layers.append(
-                build_norm_layer(dict(type='BN'), conv_channels)[1])
+            layers.append(nn.BatchNorm3d(conv_channels))
+            # layers.append(
+                # build_norm_layer(dict(type='BN'), conv_channels)[1])
             layers.append(nn.ReLU(inplace=True))
         # add a final output convolution
         layers.append(cfg=dict(type='Conv3d'),
@@ -117,9 +119,11 @@ class Deconv(nn.Module):
 
     def define_deconv_layers(self,
                            num_layers=1,
+                           # I start with 192 channels, which comes from the patching operations at the beginning of mamba (which linearized the data)
+                            # Note that for ViTPose, there were 3 channels, that's because ViTPose still works with a VisionTransformers, but deconvolves the data first.
                            deconv_channels=192, 
                            # this is defining the shape of the filter
-                           num_filters=(81, 9, 3),
+                           num_filters=(81, 49, 21),
 
                            # the larger kernel size capture more information from neighbour
                            num_kernels=(4, 3, 2)):
@@ -145,13 +149,14 @@ class Deconv(nn.Module):
                     dict(type='deconv3d'),
                     in_channels=deconv_channels,
                     out_channels=planes,
-                    kernel_size=kernel,
+                    ### * I am defining the kernel_size to be three times the size, so that it performs deconvolution within the video too.
+                    kernel_size=(self.d, kernel, kernel),
                     # stride=(2, 2, 2),
-                    stride=2,
+                    stride=(self.d, kernel, kernel),
                     padding=padding,
                     output_padding=output_padding,
                     bias=False))
-            layers.append(nn.BatchNorm2d(planes))
+            layers.append(nn.BatchNorm3d(planes))
             layers.append(nn.ReLU(inplace=True))
 
             # updating the input channel to be the output of the previous channel
