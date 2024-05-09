@@ -100,6 +100,7 @@ class VideoMambaPose(nn.Module):
         # adding my own layer, see how deciwatch did it.
         print(x.shape)
         return x
+# remember that initially, video mamba was trained to be for action recognition, henc,e there is a 10000 dimensional vector that is used.
 
 
 # In[13]:
