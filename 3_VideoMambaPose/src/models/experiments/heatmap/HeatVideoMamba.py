@@ -26,6 +26,7 @@ from mamba_ssm.modules.mamba_simple import Mamba
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 import HeatmapVideoMamba as hvm
+import HeatMapDeconvHead as hdh
 # import VideoMamba as vm
 
 class Deconv(nn.Module):
@@ -35,23 +36,31 @@ class Deconv(nn.Module):
     """
     def __init__(self):
         super().__init__()
-        pass
+        self.deconv = dh.DeconvHead
         # 1. need to make sure of the shape of the hidden state. Should not be single dimensional. I should be able to have frame per frame.
         # self.
-    def generate_deconv(self, input):
-        pass
+    def prepare_input(self, x):
+        x = self.deconv._transform_inputs(x)
+        return x
+
+    def forward(self, input):
+        x = prepare_input(x)
+
+        return x
+        
 
 
 class HeatMapVideoMambaPose(nn.Module):
     def __init__(self):
         super().__init__()
         self.mamba = hvm.videomamba_tiny()
+        self.deconv = Deconv()
         # self.decoder = 
 
     def forward(self, x):
         x = self.mamba(x)
         print(x.shape)
-        # x = self.decoder(x)
+        x = self.deconv(x)
 
         return x
 
@@ -82,6 +91,8 @@ if __name__ == "__main__":
     test_video = test_video.to(device)
 
     y = test_model(test_video)
+    
+    # * note: when I print (B, C, T, H, W), returns 16, 192, 8, 14, 14
 
-    print(y.shape) # torch.Size([16, 1568, 192]), i.e. (Batch, 224*7, )
+    print(y.shape) # torch.Size([16, 1568, 192]), i.e. (Batch, 1568 is 8*14*14, 192 is the channel number )
     print(y)

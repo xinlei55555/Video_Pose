@@ -202,7 +202,7 @@ class PatchEmbed(nn.Module):
         )
 
     def forward(self, x):
-        # perform a 3d convolution.
+        # perform a 3d convolution, increases the number of channels to 192, and makes the .
         x = self.proj(x)
         return x
     
@@ -327,10 +327,16 @@ class VisionMamba(nn.Module):
     def forward_features(self, x, inference_params=None):
         # ! this is where they patchify, and reshape the input.
         x = self.patch_embed(x)
+
+        # 16, 192, 8, 14, 14 
         B, C, T, H, W = x.shape
 
         # so this relinearizes the structure (C is 192, 284, etc.)
-        x = x.permute(0, 2, 3, 4, 1).reshape(B * T, H * W, C)
+        x = x.permute(0, 2, 3, 4, 1)
+        # 16, 8, 14, 14, 192
+
+        x = x.reshape(B * T, H * W, C)
+        # 128, 196, 192 
 
         # for heatmap, can remove cls token
         # cls_token = self.cls_token.expand(x.shape[0], -1, -1)  # stole cls_tokens impl from Phil Wang, thanks
