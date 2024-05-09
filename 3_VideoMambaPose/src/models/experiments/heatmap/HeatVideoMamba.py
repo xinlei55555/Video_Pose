@@ -83,7 +83,7 @@ class Deconv(nn.Module):
                 build_norm_layer(dict(type='BN'), conv_channels)[1])
             layers.append(nn.ReLU(inplace=True))
         # add a final output convolution
-        layers.append(cfg=dict(type='Conv2d'),
+        layers.append(cfg=dict(type='Conv3d'),
                       in_channels=conv_channels,
                       out_channels=out_channels,
                       kernel_size=kernel_size,
@@ -99,6 +99,8 @@ class Deconv(nn.Module):
         """
         This is inspired from the ViTPose Paper Heatmap
         Get configurations for deconv layers."""
+
+        # defines the padding based on the size of the deconvolution kernel
         if deconv_kernel == 4:
             padding = 1
             output_padding = 0
@@ -118,7 +120,10 @@ class Deconv(nn.Module):
                            deconv_channels=192, 
                            # this is defining the shape of the filter
                            num_filters=(81, 9, 3),
-                           num_kernels=(4, 4, 4)):
+
+                           # the larger kernel size capture more information from neighbour
+                           num_kernels=(4, 3, 2)):
+        """The middle deconvolution layers"""
         if num_layers != len(num_filters):
             error_msg = f'num_layers({num_layers}) ' \
                         f'!= length of num_filters({len(num_filters)})'
@@ -137,10 +142,11 @@ class Deconv(nn.Module):
             planes = num_filters[i]
             layers.append(
                 build_upsample_layer(
-                    dict(type='deconv'),
+                    dict(type='deconv3d'),
                     in_channels=deconv_channels,
                     out_channels=planes,
                     kernel_size=kernel,
+                    # stride=(2, 2, 2),
                     stride=2,
                     padding=padding,
                     output_padding=output_padding,
