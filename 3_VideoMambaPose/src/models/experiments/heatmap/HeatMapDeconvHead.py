@@ -5,8 +5,10 @@ https://github.com/ViTAE-Transformer/ViTPose
 """
 import torch
 import torch.nn as nn
-from mmcv.cnn import (build_conv_layer, build_norm_layer, build_upsample_layer,
-                      constant_init, normal_init)
+# from mmcv.cnn import (build_conv_layer, build_norm_layer, build_upsample_layer,
+                    #   constant_init, normal_init)
+from mmcv.cnn import build_conv_layer, build_norm_layer, build_upsample_layer
+from mmengine.model import constant_init, normal_init
 
 from mmpose.models.builder import HEADS, build_loss
 from mmpose.models.utils.ops import resize
@@ -53,10 +55,9 @@ class DeconvHead(nn.Module):
                  align_corners=False,
                  loss_keypoint=None):
         super().__init__()
-
         self.in_channels = in_channels
-        self.loss = build_loss(loss_keypoint)
-
+        # TODO uncomment, but since I haven't defined my loss function yet... can't really train
+        # self.loss = build_loss(loss_keypoint)
         self._init_inputs(in_channels, in_index, input_transform)
         self.in_index = in_index
         self.align_corners = align_corners
@@ -90,7 +91,7 @@ class DeconvHead(nn.Module):
         else:
             kernel_size = 1
             padding = 0
-
+        # makes the final matrix the identity matrix
         if identity_final_layer:
             self.final_layer = nn.Identity()
         else:
@@ -180,7 +181,7 @@ class DeconvHead(nn.Module):
             Tensor: The transformed inputs
         """
         if not isinstance(inputs, list):
-            return inputs
+             return inputs
 
         if self.input_transform == 'resize_concat':
             inputs = [inputs[i] for i in self.in_index]

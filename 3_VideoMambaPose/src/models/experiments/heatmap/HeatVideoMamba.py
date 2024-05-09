@@ -2,6 +2,8 @@
 https://github.com/ViTAE-Transformer/ViTPose
 """
 
+import HeatMapDeconvHead as hdh
+import HeatmapVideoMamba as hvm
 import os
 import torch
 import torch.nn as nn
@@ -9,7 +11,7 @@ from functools import partial
 from torch import Tensor
 from typing import Optional
 import torch.utils.checkpoint as checkpoint
- 
+
 # remember that this is einstein operation, which is the special fancy way of reshaping.
 from einops import rearrange
 from timm.models.vision_transformer import _cfg
@@ -25,42 +27,59 @@ from mamba_ssm.modules.mamba_simple import Mamba
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-import HeatmapVideoMamba as hvm
-import HeatMapDeconvHead as hdh
 # import VideoMamba as vm
+
 
 class Deconv(nn.Module):
     """
     This was inspired by the ViTPose deconvolution process
     https://github.com/ViTAE-Transformer/ViTPose/blob/d5216452796c90c6bc29f5c5ec0bdba94366768a/mmpose/models/heads/deconv_head.py#L12
     """
+
     def __init__(self):
         super().__init__()
-        self.deconv = dh.DeconvHead
-        # 1. need to make sure of the shape of the hidden state. Should not be single dimensional. I should be able to have frame per frame.
-        # self.
-    def prepare_input(self, x):
-        x = self.deconv._transform_inputs(x)
+        # !using ViTPose
+        # self.deconv = hdh.DeconvHead(in_channels = 192, out_channels = 3)
+
+
+        self.deconv = torch.nn.ConvTranspose3d(in_channels=192,
+                                               out_channels=3,
+                                               kernel_size=2)
+
+    def prep_input(self, x):
+        """Conv2d's input is of shape (N, C_in, H, W) 
+        where N is the batch size as before, 
+        C_in the number of input channels, 
+        Depth input
+        H is the height and 
+        W the width of the image
+        """
+        # I am not sure of the order of the first section
+        x = rearrange(x, 'b (d h w) c -> b c d h w', d = 8, h = 14, w = 14)
+        x = self.deconv(x)
         return x
 
-    def forward(self, input):
-        x = prepare_input(x)
-
+    def forward(self, x):
+        # print(x)
+        x = self.prep_input(x)
+        # x = self.deconv._transform_inputs(x) # sounds to me like this is useless since not passing list
+        # x = self.deconv.deconv_layers(x)
         return x
-        
 
 
 class HeatMapVideoMambaPose(nn.Module):
     def __init__(self):
         super().__init__()
         self.mamba = hvm.videomamba_tiny()
+
         self.deconv = Deconv()
-        # self.decoder = 
+
 
     def forward(self, x):
         x = self.mamba(x)
-        print(x.shape)
+        print('before', x.shape)
         x = self.deconv(x)
+        # print(x)
 
         return x
 
@@ -78,11 +97,11 @@ if __name__ == "__main__":
     channels = 3
 
     # Generate a random tensor
-    test_video = torch.rand(batch_size, channels, num_frames, height, width) # I get an error .... 384, 3, 1, 16, 16
+    # I get an error .... 384, 3, 1, 16, 16
+    test_video = torch.rand(batch_size, channels, num_frames, height, width)
 
     # Check the shape of the random tensor
     print("Shape of the random tensor:", test_video.shape)
-
 
     test_model = HeatMapVideoMambaPose()
 
@@ -91,8 +110,9 @@ if __name__ == "__main__":
     test_video = test_video.to(device)
 
     y = test_model(test_video)
-    
+
     # * note: when I print (B, C, T, H, W), returns 16, 192, 8, 14, 14
 
-    print(y.shape) # torch.Size([16, 1568, 192]), i.e. (Batch, 1568 is 8*14*14, 192 is the channel number )
+    # torch.Size([16, 1568, 192]), i.e. (Batch, 1568 is 8*14*14, 192 is the channel number )
+    print(y.shape)
     print(y)
