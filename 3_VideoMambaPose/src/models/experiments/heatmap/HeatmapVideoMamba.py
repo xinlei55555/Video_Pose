@@ -259,7 +259,9 @@ class VisionMamba(nn.Module):
         # ! This is only if we need to use heatmaps.
         # *removing the cls token, no need since heatmap
         # self.cls_token = nn.Parameter(torch.zeros(1, 1, self.embed_dim))
-        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, self.embed_dim))
+
+        # *also removed a +1 from the num_patches, to match the removal of the cls_token
+        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches, self.embed_dim))
         self.temporal_pos_embedding = nn.Parameter(torch.zeros(1, num_frames // kernel_size, embed_dim))
         self.pos_drop = nn.Dropout(p=drop_rate)
 

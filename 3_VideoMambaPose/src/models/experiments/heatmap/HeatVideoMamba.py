@@ -26,6 +26,7 @@ from mamba_ssm.modules.mamba_simple import Mamba
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 import HeatmapVideoMamba as hvm
+# import VideoMamba as vm
 
 class Deconv(nn.Module):
     """
@@ -34,23 +35,23 @@ class Deconv(nn.Module):
     """
     def __init__(self):
         super().__init__()
-
+        pass
         # 1. need to make sure of the shape of the hidden state. Should not be single dimensional. I should be able to have frame per frame.
-        self.
+        # self.
     def generate_deconv(self, input):
-
+        pass
 
 
 class HeatMapVideoMambaPose(nn.Module):
-    def __init(self):
+    def __init__(self):
         super().__init__()
-        self.mamba = vm.videomamba_tiny()
-        self.decoder = 
+        self.mamba = hvm.videomamba_tiny()
+        # self.decoder = 
 
     def forward(self, x):
         x = self.mamba(x)
         print(x.shape)
-        x = self.decoder(x)
+        # x = self.decoder(x)
 
         return x
 
@@ -74,3 +75,13 @@ if __name__ == "__main__":
     print("Shape of the random tensor:", test_video.shape)
 
 
+    test_model = HeatMapVideoMambaPose()
+
+    # move the data to the GPU
+    test_model = test_model.to(device)
+    test_video = test_video.to(device)
+
+    y = test_model(test_video)
+
+    print(y.shape) # torch.Size([16, 1568, 192]), i.e. (Batch, 224*7, )
+    print(y)
