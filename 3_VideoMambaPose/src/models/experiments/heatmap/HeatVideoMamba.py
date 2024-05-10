@@ -42,11 +42,11 @@ class HeatMapVideoMambaPose(nn.Module):
         self.joints = hjr.JointOutput()
 
     def forward(self, x):
-        x = self.mamba(x)
+        # x = self.mamba(x)
         # print(x)
         x = self.deconv(x)
         # print('before', x.shape)
-        x = self.joints(x)
+        # x = self.joints(x)
         return x
 
 
