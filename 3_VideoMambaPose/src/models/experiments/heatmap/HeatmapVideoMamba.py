@@ -202,7 +202,7 @@ class PatchEmbed(nn.Module):
         )
 
     def forward(self, x):
-        # perform a 3d convolution.
+        # perform a 3d convolution, increases the number of channels to 192, and makes the .
         x = self.proj(x)
         return x
     
@@ -257,10 +257,11 @@ class VisionMamba(nn.Module):
         num_patches = self.patch_embed.num_patches
 
         # ! This is only if we need to use heatmaps.
-                # *defining the classification token.
+        # *removing the cls token, no need since heatmap
+        # self.cls_token = nn.Parameter(torch.zeros(1, 1, self.embed_dim))
 
-        self.cls_token = nn.Parameter(torch.zeros(1, 1, self.embed_dim))
-        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, self.embed_dim))
+        # *also removed a +1 from the num_patches, to match the removal of the cls_token
+        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches, self.embed_dim))
         self.temporal_pos_embedding = nn.Parameter(torch.zeros(1, num_frames // kernel_size, embed_dim))
         self.pos_drop = nn.Dropout(p=drop_rate)
 
@@ -326,23 +327,31 @@ class VisionMamba(nn.Module):
     def forward_features(self, x, inference_params=None):
         # ! this is where they patchify, and reshape the input.
         x = self.patch_embed(x)
+
+        # 16, 192, 8, 14, 14 
         B, C, T, H, W = x.shape
 
         # so this relinearizes the structure (C is 192, 284, etc.)
-        x = x.permute(0, 2, 3, 4, 1).reshape(B * T, H * W, C)
+        x = x.permute(0, 2, 3, 4, 1)
+        # 16, 8, 14, 14, 192
 
-        cls_token = self.cls_token.expand(x.shape[0], -1, -1)  # stole cls_tokens impl from Phil Wang, thanks
-        # concatenate
-        x = torch.cat((cls_token, x), dim=1)
+        x = x.reshape(B * T, H * W, C)
+        # 128, 196, 192 
+
+        # for heatmap, can remove cls token
+        # cls_token = self.cls_token.expand(x.shape[0], -1, -1)  # stole cls_tokens impl from Phil Wang, thanks
+        # concatenate the positional embedding
+        # x = torch.cat((cls_token, x), dim=1)
+        # * Still need positional embedding
         x = x + self.pos_embed
 
         # temporal pos
-        cls_tokens = x[:B, :1, :]
-        x = x[:, 1:]
+        # cls_tokens = x[:B, :1, :]
+        # x = x[:, 1:]
         x = rearrange(x, '(b t) n m -> (b n) t m', b=B, t=T)
         x = x + self.temporal_pos_embedding
         x = rearrange(x, '(b n) t m -> b (t n) m', b=B, t=T)
-        x = torch.cat((cls_tokens, x), dim=1)
+        # x = torch.cat((cls_tokens, x), dim=1)
         # ! This is only if we need to use heatmaps.!
         x = self.pos_drop(x)
 
@@ -382,13 +391,17 @@ class VisionMamba(nn.Module):
             )
 
         # return only cls token
-        return hidden_states[:, 0, :]
+        # return hidden_states[:, 0, :]
+
+        # instead of just retuning the x value
+        return hidden_states
 
     # !then you can run forward here, to change the features of the forward inference parameter 
     def forward(self, x, inference_params=None):
         x = self.forward_features(x, inference_params)
         # !then head is just a linear layer
-        x = self.head(self.head_drop(x))
+        # * I remove the linear layer that was used for action classication.
+        # x = self.head(self.head_drop(x)) 
 
 
         # ** CHANGE: This is where I added a layer for the output

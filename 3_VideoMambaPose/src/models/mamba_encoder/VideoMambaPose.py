@@ -1,27 +1,27 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[14]:
+# In[4]:
 
 
 import os
 os.getcwd()
 
 
-# In[15]:
+# In[5]:
 
 
 os.chdir("/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/mamba_encoder")
 os.getcwd()
 
 
-# In[16]:
+# In[ ]:
 
 
-# get_ipython().system('pip list')
+get_ipython().system('pip list')
 
 
-# In[17]:
+# In[1]:
 
 
 import os
@@ -46,7 +46,17 @@ import math
 from mamba_ssm.modules.mamba_simple import Mamba
 
 
-# In[19]:
+
+# In[10]:
+
+
+# making sure the data and models are on the GPU
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+# model.to(device)
+# data = data.to(device)
+
+
+# In[3]:
 
 
 # generating a random input
@@ -70,13 +80,13 @@ print("Shape of the random tensor:", test_video.shape)
 
 # #### running the mamba model
 
-# In[21]:
+# In[4]:
 
 
 import VideoMamba as vm
 
 
-# In[22]:
+# In[7]:
 
 
 class VideoMambaPose(nn.Module):
@@ -89,12 +99,40 @@ class VideoMambaPose(nn.Module):
 
         # adding my own layer, see how deciwatch did it.
         print(x.shape)
+        return x
+# remember that initially, video mamba was trained to be for action recognition, henc,e there is a 10000 dimensional vector that is used.
 
 
-# In[24]:
+# In[13]:
 
 
 test_model = VideoMambaPose()
 
+# move the data to the GPU
+test_model = test_model.to(device)
+test_video = test_video.to(device)
+
 y = test_model(test_video)
+
+
+# In[19]:
+
+
+print(test_video.shape)
+print(y.shape)
+
+
+# In[20]:
+
+
+print(test_video.shape)
+
+print(y)
+
+
+
+# In[1]:
+
+
+get_ipython().system('jupyter nbconvert --to script *.ipynb')
 
