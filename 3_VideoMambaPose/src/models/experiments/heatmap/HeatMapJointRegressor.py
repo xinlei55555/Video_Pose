@@ -32,6 +32,8 @@ class JointOutput(nn.Module):
         super().__init__()
         # * I need to verify the output layer size
         self.b, self.c, self.d, self.h, self.w = x.shape()
+        self.joint_number = joint_number
+        self.input_channels = input_channels
         
 
     def input_flatten(self, x):
@@ -40,21 +42,24 @@ class JointOutput(nn.Module):
         return rearrange(x, 'b c d h w', 'c b (d h w)') # rearrange
 
     def regressors(self, x):
-        return nn.Sequential[
+        input_size = x.size(1)  # Assuming the input tensor x has shape (batch_size, input_size)
+        return nn.Sequential(
             # need to verify the input size!
-            nn.Linear(),
-            
-        ]
+            nn.Linear(input_size, input_size//2),
+            nn.ReLU(),
+            nn.Linear(input_size//2, 2)
+        )
 
     def forward(self, x):
         x = self.input_flatten(x)
 
-        # for each channel, generate a joint.
-        output = torch.zeros(17, 2)        B, dwh = x.shape()
+        # ! unsure Apply regressors to all channels simultaneously
+        output = self.regressors(x)  # This will apply regressors to all channels at once
+        # Reshape output to have shape (batch_size, input_channels, 2)
+        output = output.view(x.size(0), self.input_channels, -1)
 
-        for i in x:
-            
+        return output            
 
 
-if __name__ == '__main__':
+    
 
