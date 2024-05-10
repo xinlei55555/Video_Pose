@@ -42,7 +42,7 @@ class Deconv(nn.Module):
         self.d, self.h, self.w = d, h, w
 
     def prep_input(self, x):
-        """Conv2d's input is of shape (N, C_in, H, W) 
+        """Conv3d's input is of shape (N, C_in, D, H, W) 
         where N is the batch size as before, 
         C_in the number of input channels, 
         Depth input
@@ -50,7 +50,7 @@ class Deconv(nn.Module):
         W the width of the image
         """
         x = rearrange(x, 'b (d h w) c -> b c d h w', d=self.d, h=self.h, w=self.w)
-        # x has the following sizes: (16, 8, 14, 14, 192 channels) --> The 192 channels were initiated from the patching
+        # x has the following sizes: (16,192 channels, 8, 14, 14) --> The 192 channels were initiated from the patching
         return x
 
     def define_conv_layers(self,

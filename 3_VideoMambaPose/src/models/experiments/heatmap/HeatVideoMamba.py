@@ -42,11 +42,11 @@ class HeatMapVideoMambaPose(nn.Module):
         self.joints = hjr.JointOutput()
 
     def forward(self, x):
-        x = self.mamba(x)
-        print('before', x.shape)
+        # x = self.mamba(x)
         # print(x)
         x = self.deconv(x)
-        x = self.joints(x)
+        print('before', x.shape)
+        # x = self.joints(x)
         return x
 
 
@@ -65,6 +65,7 @@ if __name__ == "__main__":
     # Generate a random tensor
     # I get an error .... 384, 3, 1, 16, 16
     test_video = torch.rand(batch_size, channels, num_frames, height, width)
+    
 
     # Check the shape of the random tensor
     print("Shape of the random tensor:", test_video.shape)
