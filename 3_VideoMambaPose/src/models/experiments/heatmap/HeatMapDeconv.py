@@ -57,7 +57,7 @@ class Deconv(nn.Module):
                            num_conv_layers=1,
                            conv_channels=21, 
                            out_channels=17,
-                           num_deconv_kernels=(4, 4, 4)):
+                           num_conv_kernels=(4, 4, 4)):
         layers = []
         for i in range(num_conv_layers):
             layers.append(
