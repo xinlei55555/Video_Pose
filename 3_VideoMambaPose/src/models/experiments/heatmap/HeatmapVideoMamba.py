@@ -419,7 +419,7 @@ def inflate_weight(weight_2d, time_dim, center=True):
         weight_3d = weight_3d.unsqueeze(2).repeat(1, 1, time_dim, 1, 1)
         middle_idx = time_dim // 2
         weight_3d[:, :, middle_idx, :, :] = weight_2d
-    else:
+    else:￼
         weight_3d = weight_2d.unsqueeze(2).repeat(1, 1, time_dim, 1, 1)
         weight_3d = weight_3d / time_dim
     return weight_3d

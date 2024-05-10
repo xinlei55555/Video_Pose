@@ -30,15 +30,31 @@ class JointOutput(nn.Module):
                  input_channels=17,
                  joint_number=17):
         super().__init__()
-        self.layers = []
-        # *okay I need to check the output layer size
+        # * I need to verify the output layer size
+        self.b, self.c, self.d, self.h, self.w = x.shape()
         
-        # for each 
-        self.pool = 
 
-    def input_process(self, x):
+    def input_flatten(self, x):
         # x has the following sizes: (16,17 channels, 8, 14, 14) --> The 192 channels were initiated from the patching
-        
+        # * I want each channel to be processed separately, as a whole. So flatten each layer.
+        return rearrange(x, 'b c d h w', 'c b (d h w)') # rearrange
 
-    
+    def regressors(self, x):
+        return nn.Sequential[
+            # need to verify the input size!
+            nn.Linear(),
+            
+        ]
+
+    def forward(self, x):
+        x = self.input_flatten(x)
+
+        # for each channel, generate a joint.
+        output = torch.zeros(17, 2)        B, dwh = x.shape()
+
+        for i in x:
+            
+
+
+if __name__ == '__main__':
 
