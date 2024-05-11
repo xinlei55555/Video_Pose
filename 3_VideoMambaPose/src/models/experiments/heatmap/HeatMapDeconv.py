@@ -87,7 +87,7 @@ class Deconv(nn.Module):
         else:
             return layers[0]
 
-    def _get_deconv_cfg(deconv_kernel):
+    def _get_deconv_cfg(self, deconv_kernel):
         """
         This is inspired from the ViTPose Paper Heatmap
         Get configurations for deconv layers."""
@@ -108,7 +108,7 @@ class Deconv(nn.Module):
         return deconv_kernel, padding, output_padding
 
     def define_deconv_layers(self,
-                           num_layers=1,
+                           num_layers=3,
                            # I start with 192 channels, which comes from the patching operations at the beginning of mamba (which linearized the data)
                             # Note that for ViTPose, there were 3 channels, that's because ViTPose still works with a VisionTransformers, but deconvolves the data first.
                            deconv_channels=192, 
@@ -130,8 +130,7 @@ class Deconv(nn.Module):
 
         layers = []
         for i in range(num_layers):
-            kernel, padding, output_padding = \
-                self._get_deconv_cfg(num_kernels[i])
+            kernel, padding, output_padding = self._get_deconv_cfg(num_kernels[i])
 
             planes = num_filters[i]
             layers.append(
