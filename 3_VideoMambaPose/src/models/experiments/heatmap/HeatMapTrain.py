@@ -5,7 +5,7 @@ from HeatVideoMamba import  HeatMapVideoMambaPose
 
 class PoseEstimationLoss(nn.Module):
     def __init__(self):
-        super(PoseEstimationLoss, self).__init__()
+        super().__init__()
         self.mse_loss = nn.MSELoss()
 
     def forward(self, predicted, target):
@@ -62,3 +62,5 @@ target_tensor = None #TODO define this later
 # Compute loss
 loss = loss_fn(predicted_output, target_tensor)
 print(f"Loss: {loss.item()}")
+
+# Training loop
