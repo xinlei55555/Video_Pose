@@ -10,3 +10,4 @@ mamba_env/
 2_7_VitPose
 VideoMamba
 __pycache__/
+.vscode/

@@ -36,11 +36,11 @@ class Deconv(nn.Module):
         #                                        kernel_size=2)
 
         # * Initialize my layers with mmcv.cnn
+        self.d, self.h, self.w = d, h, w
 
         self.conv_layers = self.define_conv_layers()
         self.deconv_layers = self.define_deconv_layers()
-        self.d, self.h, self.w = d, h, w
-
+        
     def prep_input(self, x):
         """Conv3d's input is of shape (N, C_in, D, H, W) 
         where N is the batch size as before, 
@@ -57,7 +57,7 @@ class Deconv(nn.Module):
                            num_conv_layers=1,
                            conv_channels=21, 
                            out_channels=17,
-                           num_deconv_kernels=(4, 4, 4)):
+                           num_conv_kernels=(4, 4, 4)):
         layers = []
         for i in range(num_conv_layers):
             layers.append(
@@ -73,19 +73,21 @@ class Deconv(nn.Module):
                 # build_norm_layer(dict(type='BN'), conv_channels)[1])
             layers.append(nn.ReLU(inplace=True))
         # add a final output convolution
-        layers.append(cfg=dict(type='Conv3d'),
-                      in_channels=conv_channels,
-                      out_channels=out_channels,
-                      kernel_size=kernel_size,
-                      stride=1,
-                      padding=0)
+        layers.append(
+            build_conv_layer(
+                cfg=dict(type='Conv3d'),
+                in_channels=conv_channels,
+                out_channels=out_channels,
+                kernel_size=num_conv_kernels[0],
+                stride=1,
+                padding=0))
 
         if len(layers) > 1:
             return nn.Sequential(*layers)
         else:
             return layers[0]
 
-    def _get_deconv_cfg(deconv_kernel):
+    def _get_deconv_cfg(self, deconv_kernel):
         """
         This is inspired from the ViTPose Paper Heatmap
         Get configurations for deconv layers."""
@@ -106,7 +108,7 @@ class Deconv(nn.Module):
         return deconv_kernel, padding, output_padding
 
     def define_deconv_layers(self,
-                           num_layers=1,
+                           num_layers=3,
                            # I start with 192 channels, which comes from the patching operations at the beginning of mamba (which linearized the data)
                             # Note that for ViTPose, there were 3 channels, that's because ViTPose still works with a VisionTransformers, but deconvolves the data first.
                            deconv_channels=192, 
@@ -128,8 +130,7 @@ class Deconv(nn.Module):
 
         layers = []
         for i in range(num_layers):
-            kernel, padding, output_padding = \
-                self._get_deconv_cfg(num_kernels[i])
+            kernel, padding, output_padding = self._get_deconv_cfg(num_kernels[i])
 
             planes = num_filters[i]
             layers.append(
@@ -165,4 +166,3 @@ class Deconv(nn.Module):
         # heatmap output, through convolutions
         x = self.conv_layers(x)
         return x
-
