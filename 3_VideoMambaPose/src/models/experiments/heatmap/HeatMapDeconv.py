@@ -76,7 +76,7 @@ class Deconv(nn.Module):
         layers.append(cfg=dict(type='Conv3d'),
                       in_channels=conv_channels,
                       out_channels=out_channels,
-                      kernel_size=num_conv_kerneks[0],
+                      kernel_size=num_conv_kernels[0],
                       stride=1,
                       padding=0)
 

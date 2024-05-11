@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 
+from HeatVideoMamba import  HeatMapVideoMambaPose
+
 class PoseEstimationLoss(nn.Module):
     def __init__(self):
         super(PoseEstimationLoss, self).__init__()
@@ -21,19 +23,41 @@ class PoseEstimationLoss(nn.Module):
 # Example usage:
 # Assuming `model` is an instance of `HeatMapVideoMambaPose`
 # and `target` is the ground truth tensor.
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # Initialize the model and loss function
 model = HeatMapVideoMambaPose().to(device)
 loss_fn = PoseEstimationLoss()
 
-# Example input tensor
-input_tensor = torch.rand(batch_size, channels, num_frames, height, width).to(device)
+batch_size = 16
+num_frames = 8
+height = 224
+width = 224
+channels = 3
 
-# Forward pass
-predicted_output = model(input_tensor)
+# Generate a random input tensor
+test_video = torch.rand(batch_size, channels, num_frames, height, width)
+
+# Check the shape of the random tensor
+print("Shape of the random tensor:", test_video.shape)
+
+# defining model
+test_model = HeatMapVideoMambaPose()
+
+# move the data to the GPU
+test_model = test_model.to(device)
+test_video = test_video.to(device)
+
+# Forward Pass
+y = test_model(test_video)
+
+# * note: (B, C, T, H, W) returns 16, 192, 8, 14, 14
+# torch.Size([16, 1568, 192]), i.e. (Batch, 1568 is 8*14*14, 192 is the channel number )
+print(y.shape)
+print(y)
 
 # Example target tensor (should be of the same shape as predicted_output)
-target_tensor = torch.rand_like(predicted_output).to(device)
+target_tensor = None #TODO define this later
 
 # Compute loss
 loss = loss_fn(predicted_output, target_tensor)
