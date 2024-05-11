@@ -36,11 +36,11 @@ class Deconv(nn.Module):
         #                                        kernel_size=2)
 
         # * Initialize my layers with mmcv.cnn
+        self.d, self.h, self.w = d, h, w
 
         self.conv_layers = self.define_conv_layers()
         self.deconv_layers = self.define_deconv_layers()
-        self.d, self.h, self.w = d, h, w
-
+        
     def prep_input(self, x):
         """Conv3d's input is of shape (N, C_in, D, H, W) 
         where N is the batch size as before, 
@@ -166,4 +166,3 @@ class Deconv(nn.Module):
         # heatmap output, through convolutions
         x = self.conv_layers(x)
         return x
-

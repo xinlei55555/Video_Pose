@@ -31,10 +31,11 @@ class JointOutput(nn.Module):
                  joint_number=17):
         super().__init__()
         # * I need to verify the output layer size
-        self.b, self.c, self.d, self.h, self.w = x.shape()
         self.joint_number = joint_number
         self.input_channels = input_channels
         
+    def get_shape(self, x):
+        self.b, self.c, self.d, self.h, self.w = x.shape()
 
     def input_flatten(self, x):
         # x has the following sizes: (16,17 channels, 8, 14, 14) --> The 192 channels were initiated from the patching
@@ -51,6 +52,7 @@ class JointOutput(nn.Module):
         )
 
     def forward(self, x):
+        self.get_shape(x)
         x = self.input_flatten(x)
 
         # ! unsure Apply regressors to all channels simultaneously
