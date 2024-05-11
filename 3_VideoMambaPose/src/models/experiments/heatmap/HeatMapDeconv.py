@@ -108,7 +108,7 @@ class Deconv(nn.Module):
         return deconv_kernel, padding, output_padding
 
     def define_deconv_layers(self,
-                           num_layers=1,
+                           num_layers=3,
                            # I start with 192 channels, which comes from the patching operations at the beginning of mamba (which linearized the data)
                             # Note that for ViTPose, there were 3 channels, that's because ViTPose still works with a VisionTransformers, but deconvolves the data first.
                            deconv_channels=192, 
