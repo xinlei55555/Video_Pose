@@ -48,7 +48,7 @@ class JointOutput(nn.Module):
             # need to verify the input size!
             nn.Linear(input_size, input_size//2),
             nn.ReLU(),
-            nn.Linear(input_size//2, 2)
+            nn.Linear(input_size//2, 3) # I will return 3, which are the values for x, y, z
         )
 
     def forward(self, x):
