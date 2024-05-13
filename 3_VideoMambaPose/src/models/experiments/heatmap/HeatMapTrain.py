@@ -3,6 +3,18 @@ import torch.nn as nn
 
 from HeatVideoMamba import HeatMapVideoMambaPose
 
+# wandb stuff
+import wandb
+wandb.init(
+    project="1heatmap_video_mamba",
+
+    config={
+        "learning_rate":0.001,
+        "architecture":"12 Video BiMamba blocks + 3 layers 2D Deconvolutions + 1 layers Convolution + Joint Regressor (Linear + Relu + Linear)",
+        "dataset":"JHMDB, no cropping.",
+        "epochs":100,
+    }
+)
 
 class PoseEstimationLoss(nn.Module):
     def __init__(self):
@@ -50,6 +62,8 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_inputs, val_inputs,
         # then, the optimizer will update the values of the weights based on all the derivatives of the losses computed by loss_train.backward()
         optimizer.step()
 
+        wandb.log({"loss": loss})
+
         if epoch == 1 or epoch % 100 == 0:
             print(f"Epoch {epoch}, Training loss {loss_train.item():.4f},"
                   f" Validation loss {loss_val.item():.4f}")
@@ -66,6 +80,7 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_inputs, val_inputs,
             checkpoint_path = os.path.join(checkpoint_dir, f'heatmap_{best_val_loss:.4f}.pt')
             torch.save(model.state_dict(), checkpoint_path)
             print(f'Best model saved at {checkpoint_path}')
+    wandb.finish()
 
 
 # Example usage:
@@ -120,5 +135,5 @@ torch.optim.Adam(model.parameters())
 
 # Training loop
 loss_fn = PoseEstimationLoss()
-training_loop(1, optimizer, model, loss_fn, train_inputs,
+training_loop(100, optimizer, model, loss_fn, train_inputs,
               val_inputs, train_labels, val_labels)
