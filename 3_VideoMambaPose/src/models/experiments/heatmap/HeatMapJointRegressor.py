@@ -56,9 +56,9 @@ class JointOutput(nn.Module):
         # x has the following sizes: (16,17 channels, 8, 14, 14) --> The 192 channels were initiated from the patching
         # * I want each channel to be processed separately, as a whole. So flatten each layer.
         if len(list(x.size())) == 5:
-            return rearrange(x, 'b c d h w -> c b (d h w)')  # rearrange
+            return rearrange(x, 'b c d h w -> (b c) (d h w)')  # rearrange
         else:
-            return rearrange(x, 'c d h w -> c (d h w)')
+            return rearrange(x, 'b c h w -> (b c) (h w)')
 
     def regressors(self):
         # Assuming the input tensor x has shape (batch_size, input_size)

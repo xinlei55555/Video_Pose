@@ -46,7 +46,7 @@ class HeatMapVideoMambaPose(nn.Module):
 
     def forward(self, x):
         print('Memory before (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary
-        # x = self.mamba(x) # uses around 7gb of memory for tiny
+        x = self.mamba(x) # uses around 7gb of memory for tiny
 
         x = self.deconv(x)
         
@@ -54,7 +54,7 @@ class HeatMapVideoMambaPose(nn.Module):
         print(self.deconv)
         # the shape of this is a bit too big after the convolutions.
         print('After deconvolution', x.shape)
-        # x = self.joints(x)
+        x = self.joints(x)
         return x
 
 
@@ -73,7 +73,7 @@ if __name__ == "__main__":
     # Generate a random tensor
     # I get an error .... 384, 3, 1, 16, 16
     # test video for mamba 
-    # test_video = torch.rand(batch_size, channels, num_frames, height, width)
+    test_video = torch.rand(batch_size, channels, num_frames, height, width)
     
     # this is the test video for the deconv
     # okay, let me not batch this lol
@@ -81,7 +81,7 @@ if __name__ == "__main__":
     # test_video=torch.rand(1, 64, 192)
 
     # with num_frames 64
-    test_video = torch.rand(1, 12544, 192)
+    # test_video = torch.rand(1, 12544, 192)
 
     # this is the joint map regressor:
     # test_video = torhc.rand()
@@ -102,4 +102,4 @@ if __name__ == "__main__":
 
     # torch.Size([16, 1568, 192]), i.e. (Batch, 1568 is 8*14*14, 192 is the channel number )
     print('Shape of final tensor', y.shape)
-    # print(y)
+    print(y)
