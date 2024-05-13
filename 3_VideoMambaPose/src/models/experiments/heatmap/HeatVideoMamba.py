@@ -37,19 +37,21 @@ class HeatMapVideoMambaPose(nn.Module):
         self.mamba = hvm.videomamba_tiny()
 
         # decoder into heatmap
-        # self.deconv = hmd.Deconv(4, 4, 4)
-        self.deconv = hmd3D.Deconv()
-        # self.deconv = hmd2D.Deconv()
+        # self.deconv = hmd.Deconv(4, 4, 4) 
+        # self.deconv = hmd3D.Deconv(64, 14, 14)
+        self.deconv = hmd2D.Deconv(64, 14, 14) # Shape of final tensor torch.Size([64, 17, 112, 112])
 
         # output into joints
         self.joints = hjr.JointOutput()
 
     def forward(self, x):
         print('Memory before (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary
-        # x = self.mamba(x) # uses around 7gb of memory
+        # x = self.mamba(x) # uses around 7gb of memory for tiny
 
         x = self.deconv(x)
+        
         print('Memory after (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary
+        print(self.deconv)
         # the shape of this is a bit too big after the convolutions.
         print('After deconvolution', x.shape)
         # x = self.joints(x)
@@ -62,9 +64,9 @@ if __name__ == "__main__":
     # (Batch, Channel number, NumFrames, W, H) = (16, 3, 8, 224, 224)
 
     # Define the dimensions
-    batch_size = 16
-    num_frames = 8
-    height = 224
+    batch_size = 1 # ! can train on cedar with batch size of 32 (no more)
+    num_frames = 64 #memory usage is linearly growing with the input size.
+    height = 224 # *Note: VitPose doesn't use square, to reduce number of pixels. (bounding box with YolO)
     width = 224
     channels = 3
 
@@ -75,8 +77,11 @@ if __name__ == "__main__":
     
     # this is the test video for the deconv
     # okay, let me not batch this lol
-    test_video = torch.rand(1, 1568, 192) #!this 1568 makes the whole video HUEGEE. which means my deconvolution isn't really working lmao.
+    # test_video = torch.rand(1, 1568, 192) #!this 1568 makes the whole video HUEGEE. which means my deconvolution isn't really working lmao.
     # test_video=torch.rand(1, 64, 192)
+
+    # with num_frames 64
+    test_video = torch.rand(1, 12544, 192)
 
     # this is the joint map regressor:
     # test_video = torhc.rand()

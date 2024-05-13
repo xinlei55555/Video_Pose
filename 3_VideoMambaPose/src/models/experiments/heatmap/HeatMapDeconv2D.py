@@ -49,12 +49,13 @@ class Deconv(nn.Module):
         H is the height and 
         W the width of the image
         """
-        x = rearrange(x, 'b (d h w) c -> b c d h w', d=self.d, h=self.h, w=self.w)
+        # I want to combine batch and depth, for the 2d
+        x = rearrange(x, 'b (d h w) c -> (b d) c h w', d=self.d, h=self.h, w=self.w)
         # x has the following sizes: (16,192 channels, 8, 14, 14) --> The 192 channels were initiated from the patching
         return x
 
     def define_conv_layers(self,
-                           num_conv_layers=1,
+                           num_conv_layers=0,
                            # number of input channels
                            conv_channels=256, 
                            out_channels=17,
@@ -63,20 +64,20 @@ class Deconv(nn.Module):
         for i in range(num_conv_layers):
             layers.append(
                 build_conv_layer(
-                    dict(type='Conv3d'),
+                    dict(type='Conv2d'),
                     in_channels=conv_channels,
                     out_channels=conv_channels,
                     kernel_size=num_conv_kernels[i],
                     stride=1,
                     padding=(num_conv_kernels[i] - 1) // 2))
-            layers.append(nn.BatchNorm3d(conv_channels))
+            layers.append(nn.BatchNorm2d(conv_channels))
             # layers.append(
                 # build_norm_layer(dict(type='BN'), conv_channels)[1])
             layers.append(nn.ReLU(inplace=True))
         # add a final output convolution
         layers.append(
             build_conv_layer(
-                cfg=dict(type='Conv3d'),
+                cfg=dict(type='Conv2d'),
                 in_channels=conv_channels,
                 out_channels=out_channels,
                 kernel_size=num_conv_kernels[0],
@@ -109,20 +110,21 @@ class Deconv(nn.Module):
 
         return deconv_kernel, padding, output_padding
 
+    # in my case my deconv layers are doubling the size of the images. 
     def define_deconv_layers(self,
-                           num_layers=3,
+                           num_layers=2,
                            # I start with 192 channels, which comes from the patching operations at the beginning of mamba (which linearized the data)
                             # Note that for ViTPose, there were 3 channels, that's because ViTPose still works with a VisionTransformers, but deconvolves the data first.
                            deconv_channels=192, 
                            # this is defining the shape of the filter
                         #    num_filters=(81, 49, 21),
                         # * I want to deconv to the correct number of channels
-                            num_filters=(256, 256, 256),
+                            num_filters=(256, 256),
 
                            # the larger kernel size capture more information from neighbour
                         #    num_kernels=(4, 3, 2)):
                         #! larger kernel sizes
-                            num_kernels=(4, 4, 4), 
+                            num_kernels=(4, 4), 
                             stride=()):
         """The middle deconvolution layers"""
         if num_layers != len(num_filters):
@@ -142,18 +144,18 @@ class Deconv(nn.Module):
             planes = num_filters[i]
             layers.append(
                 build_upsample_layer(
-                    dict(type='deconv3d'),
+                    dict(type='deconv'),
                     in_channels=deconv_channels,
                     out_channels=planes,
                     ### * I am defining the kernel_size to be three times the size, so that it performs deconvolution within the video too.
                     # here, i was using 8 as the kernel size for the 3d thingy. Very bad idea, since d is a huge number.
-                    kernel_size=(kernel, kernel, kernel),
-                    stride=(2, 2, 2),
+                    kernel_size=(kernel, kernel),
+                    stride=(2, 2),
                     # stride=(kernel, kernel, kernel),
                     padding=padding,
                     output_padding=output_padding,
                     bias=False))
-            layers.append(nn.BatchNorm3d(planes))
+            layers.append(nn.BatchNorm2d(planes))
             layers.append(nn.ReLU(inplace=True))
 
             # updating the input channel to be the output of the previous channel

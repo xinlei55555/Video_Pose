@@ -125,8 +125,7 @@ class Deconv(nn.Module):
                            # the larger kernel size capture more information from neighbour
                         #    num_kernels=(4, 3, 2)):
                         #! larger kernel sizes
-                            num_kernels=(4, 4, 4), 
-                            stride=()):
+                            num_kernels=(4, 4, 4)):
         """The middle deconvolution layers"""
         if num_layers != len(num_filters):
             error_msg = f'num_layers({num_layers}) ' \
@@ -151,7 +150,7 @@ class Deconv(nn.Module):
                     ### * I am defining the kernel_size to be three times the size, so that it performs deconvolution within the video too.
                     # here, i was using 8 as the kernel size for the 3d thingy. Very bad idea, since d is a huge number.
                     kernel_size=(kernel, kernel, kernel),
-                    stride=(3, 2, 2),
+                    stride=(2, 2, 2),
                     # stride=(kernel, kernel, kernel),
                     padding=padding,
                     output_padding=output_padding,

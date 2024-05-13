@@ -1,5 +1,12 @@
 '''
-Inefficient.
+Inefficient to linearize the channels, and then to regress.
+    Instead, want to predit loss on the heatmap.
+Also for x, y (not z) (because 3D pose detection is more complex : https://wham.is.tue.mpg.de/)
+
+
+2 solutions:
+1. Either use the heatmap, and directly compute loss. But that would involve transforming the dataset into heatmaps (then taking the mse between each pixel)
+2. Use a joint regressor from mmpose, or whatever, but problem is that if its hardcoded, then cannot apply loss.  --> see code sent by soroush.
 '''
 
 import os
@@ -39,7 +46,11 @@ class JointOutput(nn.Module):
         self.input_channels = input_channels
 
     def get_shape(self, x):
-        self.b, self.c, self.d, self.h, self.w = x.shape
+        if len(list(x.shape)) == 5:
+            self.b, self.c, self.d, self.h, self.w = x.shape
+        else:
+            self.b, self.c, self.h, self.w = x.shape
+            self.d = 1
 
     def input_flatten(self, x):
         # x has the following sizes: (16,17 channels, 8, 14, 14) --> The 192 channels were initiated from the patching
@@ -73,6 +84,8 @@ class JointOutput(nn.Module):
 
         # ! unsure Apply regressors to all channels simultaneously
         # This will apply regressors to all channels at once
+
+        # need to apply regressor to each channel
         output = self.regressor(x)
 
         # # Reshape output to have shape (batch_size, input_channels, 2)
