@@ -23,7 +23,8 @@ import math
 
 from mamba_ssm.modules.mamba_simple import Mamba
 import HeatmapVideoMamba as hvm
-import HeatMapDeconv as hmd
+import HeatMapDeconv2D as hmd2D
+import HeatMapDeconv3D as hmd3D
 import HeatMapJointRegressor as hjr
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -36,16 +37,21 @@ class HeatMapVideoMambaPose(nn.Module):
         self.mamba = hvm.videomamba_tiny()
 
         # decoder into heatmap
-        self.deconv = hmd.Deconv()
+        # self.deconv = hmd.Deconv(4, 4, 4)
+        self.deconv = hmd3D.Deconv()
+        # self.deconv = hmd2D.Deconv()
 
         # output into joints
         self.joints = hjr.JointOutput()
 
     def forward(self, x):
-        # x = self.mamba(x)
-        # print(x)
+        print('Memory before (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary
+        # x = self.mamba(x) # uses around 7gb of memory
+
         x = self.deconv(x)
-        # print('before', x.shape)
+        print('Memory after (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary
+        # the shape of this is a bit too big after the convolutions.
+        print('After deconvolution', x.shape)
         # x = self.joints(x)
         return x
 
@@ -64,8 +70,16 @@ if __name__ == "__main__":
 
     # Generate a random tensor
     # I get an error .... 384, 3, 1, 16, 16
+    # test video for mamba 
     # test_video = torch.rand(batch_size, channels, num_frames, height, width)
-    test_video = torch.rand(16, 1568, 192)
+    
+    # this is the test video for the deconv
+    # okay, let me not batch this lol
+    test_video = torch.rand(1, 1568, 192) #!this 1568 makes the whole video HUEGEE. which means my deconvolution isn't really working lmao.
+    # test_video=torch.rand(1, 64, 192)
+
+    # this is the joint map regressor:
+    # test_video = torhc.rand()
     
 
     # Check the shape of the random tensor
@@ -82,5 +96,5 @@ if __name__ == "__main__":
     # * note: when I print (B, C, T, H, W), returns 16, 192, 8, 14, 14
 
     # torch.Size([16, 1568, 192]), i.e. (Batch, 1568 is 8*14*14, 192 is the channel number )
-    print(y.shape)
-    print(y)
+    print('Shape of final tensor', y.shape)
+    # print(y)

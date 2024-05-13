@@ -328,6 +328,10 @@ class VisionMamba(nn.Module):
         # ! this is where they patchify, and reshape the input.
         x = self.patch_embed(x)
 
+        # dealing with batches
+        if len(list(x.size())) == 4:
+            x = rerrange(x, '(b c) t h w -> b c t h w', b=1)
+
         # 16, 192, 8, 14, 14 
         B, C, T, H, W = x.shape
 

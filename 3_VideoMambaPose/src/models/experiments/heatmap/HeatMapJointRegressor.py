@@ -1,3 +1,7 @@
+'''
+Inefficient.
+'''
+
 import os
 import torch
 import torch.nn as nn
@@ -33,35 +37,45 @@ class JointOutput(nn.Module):
         # * I need to verify the output layer size
         self.joint_number = joint_number
         self.input_channels = input_channels
-        
+
     def get_shape(self, x):
-        self.b, self.c, self.d, self.h, self.w = x.shape()
+        self.b, self.c, self.d, self.h, self.w = x.shape
 
     def input_flatten(self, x):
         # x has the following sizes: (16,17 channels, 8, 14, 14) --> The 192 channels were initiated from the patching
         # * I want each channel to be processed separately, as a whole. So flatten each layer.
-        return rearrange(x, 'b c d h w', 'c b (d h w)') # rearrange
+        if len(list(x.size())) == 5:
+            return rearrange(x, 'b c d h w -> c b (d h w)')  # rearrange
+        else:
+            return rearrange(x, 'c d h w -> c (d h w)')
 
-    def regressors(self, x):
-        input_size = x.size(1)  # Assuming the input tensor x has shape (batch_size, input_size)
-        return nn.Sequential(
-            # need to verify the input size!
-            nn.Linear(input_size, input_size//2),
-            nn.ReLU(),
-            nn.Linear(input_size//2, 3) # I will return 3, which are the values for x, y, z
-        )
+    def regressors(self):
+        # Assuming the input tensor x has shape (batch_size, input_size)
+        input_size = self.d * self.h * self.w
+        # need to verify the input size! although this is still hugeeeeeee
+        layers = [nn.Linear(input_size, self.w), # reduce one dimension
+                  nn.ReLU(),
+                  nn.Linear(self.w, 3)]  # I will return 3, which are the values for x, y, z
+        return nn.Sequential(*layers)
+
+    def define_regressor(self):
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+        self.regressor = self.regressors()
+
+        self.regressor = self.regressor.to(device)
 
     def forward(self, x):
         self.get_shape(x)
+        self.define_regressor()
+
         x = self.input_flatten(x)
 
         # ! unsure Apply regressors to all channels simultaneously
-        output = self.regressors(x)  # This will apply regressors to all channels at once
-        # Reshape output to have shape (batch_size, input_channels, 2)
-        output = output.view(x.size(0), self.input_channels, -1)
+        # This will apply regressors to all channels at once
+        output = self.regressor(x)
 
-        return output            
+        # # Reshape output to have shape (batch_size, input_channels, 2)
+        # output = output.view(x.size(0), self.input_channels, -1)
 
-
-    
-
+        return x
