@@ -19,6 +19,7 @@ class PoseEstimationLoss(nn.Module):
         Returns:
             torch.Tensor: Computed loss.
         """
+        # !TODO I need to change that, because it's not just MSE, I am taking the mse of a 3D value, idk if mse works.
         loss = self.mse_loss(self.train, self.test)
         return loss
 
