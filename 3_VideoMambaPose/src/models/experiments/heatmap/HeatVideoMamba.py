@@ -50,11 +50,11 @@ class HeatMapVideoMambaPose(nn.Module):
 
         x = self.deconv(x)
         
-        print('Memory after (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary
         print(self.deconv)
         # the shape of this is a bit too big after the convolutions.
-        print('After deconvolution', x.shape)
+        # print('After deconvolution', x.shape)
         x = self.joints(x)
+        print('Memory after (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary
         return x
 
 
