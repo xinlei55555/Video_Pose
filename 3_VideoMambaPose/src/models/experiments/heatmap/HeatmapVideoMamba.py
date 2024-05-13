@@ -227,7 +227,7 @@ class VisionMamba(nn.Module):
             bimamba=True,
             # video
             kernel_size=1, 
-            num_frames=8, 
+            num_frames=64, # !need to change this for the video based on number of frames.
             fc_drop_rate=0., 
             device=None,
             dtype=None,
@@ -327,6 +327,10 @@ class VisionMamba(nn.Module):
     def forward_features(self, x, inference_params=None):
         # ! this is where they patchify, and reshape the input.
         x = self.patch_embed(x)
+
+        # dealing with batches
+        if len(list(x.size())) == 4:
+            x = rerrange(x, '(b c) t h w -> b c t h w', b=1)
 
         # 16, 192, 8, 14, 14 
         B, C, T, H, W = x.shape
@@ -447,7 +451,8 @@ def videomamba_tiny(pretrained=False, **kwargs):
     model = VisionMamba(
         patch_size=16, 
         embed_dim=192, 
-        depth=24, 
+        # depth=24, 
+        depth=12, # this is what causes the increase in mempry usage.
         rms_norm=True, 
         residual_in_fp32=True, 
         fused_add_norm=True, 
@@ -465,8 +470,8 @@ def videomamba_tiny(pretrained=False, **kwargs):
 def videomamba_small(pretrained=False, **kwargs):
     model = VisionMamba(
         patch_size=16, 
-        embed_dim=384, 
-        depth=24, 
+        embed_dim=384, # number of channels
+        depth=24, # number of mamba blocks in a row
         rms_norm=True, 
         residual_in_fp32=True, 
         fused_add_norm=True, 

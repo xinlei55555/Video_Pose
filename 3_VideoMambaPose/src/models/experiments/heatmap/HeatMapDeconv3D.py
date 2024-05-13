@@ -1,3 +1,6 @@
+'''
+Since Mamba already mixes the 3D videos together, there is not necessarily a need for 3D deconvolutions.
+'''
 import os
 import torch
 import torch.nn as nn
@@ -55,9 +58,10 @@ class Deconv(nn.Module):
 
     def define_conv_layers(self,
                            num_conv_layers=1,
-                           conv_channels=21, 
+                           # number of input channels
+                           conv_channels=256, 
                            out_channels=17,
-                           num_conv_kernels=(4, 4, 4)):
+                           num_conv_kernels=(1, 1, 1)):
         layers = []
         for i in range(num_conv_layers):
             layers.append(
@@ -79,6 +83,7 @@ class Deconv(nn.Module):
                 in_channels=conv_channels,
                 out_channels=out_channels,
                 kernel_size=num_conv_kernels[0],
+                # stride of 1, to go through all
                 stride=1,
                 padding=0))
 
@@ -113,10 +118,14 @@ class Deconv(nn.Module):
                             # Note that for ViTPose, there were 3 channels, that's because ViTPose still works with a VisionTransformers, but deconvolves the data first.
                            deconv_channels=192, 
                            # this is defining the shape of the filter
-                           num_filters=(81, 49, 21),
+                        #    num_filters=(81, 49, 21),
+                        # * I want to deconv to the correct number of channels
+                            num_filters=(256, 256, 256),
 
                            # the larger kernel size capture more information from neighbour
-                           num_kernels=(4, 3, 2)):
+                        #    num_kernels=(4, 3, 2)):
+                        #! larger kernel sizes
+                            num_kernels=(4, 4, 4)):
         """The middle deconvolution layers"""
         if num_layers != len(num_filters):
             error_msg = f'num_layers({num_layers}) ' \
@@ -139,9 +148,10 @@ class Deconv(nn.Module):
                     in_channels=deconv_channels,
                     out_channels=planes,
                     ### * I am defining the kernel_size to be three times the size, so that it performs deconvolution within the video too.
-                    kernel_size=(self.d, kernel, kernel),
-                    # stride=(2, 2, 2),
-                    stride=(self.d, kernel, kernel),
+                    # here, i was using 8 as the kernel size for the 3d thingy. Very bad idea, since d is a huge number.
+                    kernel_size=(kernel, kernel, kernel),
+                    stride=(2, 2, 2),
+                    # stride=(kernel, kernel, kernel),
                     padding=padding,
                     output_padding=output_padding,
                     bias=False))
@@ -162,6 +172,7 @@ class Deconv(nn.Module):
         
         # deconvolutions
         x = self.deconv_layers(x)
+        print("before convolution", x.shape)
 
         # heatmap output, through convolutions
         x = self.conv_layers(x)
