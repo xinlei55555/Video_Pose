@@ -66,7 +66,7 @@ class JointOutput(nn.Module):
         # need to verify the input size! although this is still hugeeeeeee
         layers = [nn.Linear(input_size, self.w), # reduce one dimension
                   nn.ReLU(),
-                  nn.Linear(self.w, 3)]  # I will return 3, which are the values for x, y, z
+                  nn.Linear(self.w, 2)]  # I will return 3, which are the values for x, y, z
         return nn.Sequential(*layers)
 
     def define_regressor(self):
@@ -88,7 +88,6 @@ class JointOutput(nn.Module):
         # need to apply regressor to each channel
         output = self.regressor(x)
 
-        # # Reshape output to have shape (batch_size, input_channels, 2)
-        # output = output.view(x.size(0), self.input_channels, -1)
-
-        return x
+        # need to reshape the output
+        output = rearrange(output, '(b c) o -> b c o', b=self.b, c=self.c)
+        return output
