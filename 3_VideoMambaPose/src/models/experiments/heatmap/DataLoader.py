@@ -9,12 +9,12 @@ import pickle
 class load_JHMDB(nn.Module):
     def __init__(self, unpickle=False, path="/home/linxin67/scratch/JHMDB/annotations"):
         os.chdir(path)
-
         if unpickle:
             self.train_annotations, self.test_annotations = self.unpickle_JHMDB()
+        self.
         
         if joints:
-            self.joints = 
+            self.joints = self.read_joints()
 
     def unpickle_JHMDB(self, path="/home/linxin67/scratch/JHMDB_old/annotations"):
         os.chdir(path)
@@ -36,7 +36,12 @@ class load_JHMDB(nn.Module):
             except UnicodeDecodeError as e:
                 print("UnicodeDecodeError:", e)
         return train, test
-            
+    
+    def read_joints(self, action, video, path="/home/linxin67/scratch/JHMDB/"):
+        os.chdir(path)
+        mat = scipy.io.loadmat(f'{path}{action}/{video}/joint_positions.mat')
+        return mat
+    
     def run_batch(self):
         pass
     
