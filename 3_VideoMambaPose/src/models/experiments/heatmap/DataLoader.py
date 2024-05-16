@@ -7,6 +7,8 @@ import pandas as pd
 
 from torch.utils.data import Dataset, DataLoader
 
+import scipy
+
 
 class load_JHMDB(Dataset):
     '''
@@ -28,7 +30,7 @@ class load_JHMDB(Dataset):
 
         # in the end, implement this
         if joints:
-            self.actions, self.train, self.test = self.get_names_train_test_split
+            self.actions, self.train, self.test = self.get_names_train_test_split()
             # self.joints = 
         #     self.joint_values = torch.zeros()
         #     # collect all joint values. In the same way, collect all the titles
@@ -70,14 +72,17 @@ class load_JHMDB(Dataset):
         return train, test
 
     # first a function that given an action and a video returns the joints for each frame
-    def read_joints(self, action, video, path="/home/linxin67/scratch/JHMDB/"):
+    def read_joints_full_video(self, action, video, path="/home/linxin67/scratch/JHMDB/"):
+        '''Returns a dictionary
+        dict_keys(['__header__', '__version__', '__globals__', 'pos_img', 'pos_world', 'scale', 'viewpoint'])
+        '''
         os.chdir(path)
-        mat = scipy.io.loadmat(f'{path}{action}/{video}/joint_positions.mat')
+        mat = scipy.io.loadmat(f'{path}joint_positions/{action}/{video}/joint_positions.mat')
         return mat
     
-    def read_joints(self, action, video, line_num, path='/home/linxin67/scratch/JHMDB/'):
-        joint_file = self.read_joints(action, video)
-        return mat[]
+    # def read_joints(self, action, video, line_num, path='/home/linxin67/scratch/JHMDB/'):
+    #     joint_file = self.read_joints(action, video)
+    #     return mat[]
 
     # def read_all_joints(self, path='/hom/linxin67/scratch/JHMDB/'):
     #     os.chdir(path)
@@ -127,8 +132,7 @@ class load_JHMDB(Dataset):
     def crop(self, action, video, path='/home/linxin67/scratch/JHMDB/'):
         os.chdir(path)
         # crop images. (but first, need to determine if we are given bounding boxes, and if I need to pass patchify my input.)
-
-    # finally, store the values into csv or wtv, and choose them randomly to be able to batch together the training
+        # finally, store the values into csv or wtv, and choose them randomly to be able to batch together the training
 
     def run_batch(self):
         pass
@@ -153,10 +157,14 @@ if __name__ == '__main__':
     # print(data.train_annotations['gttubes']['pour/Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1'][8]) # and I think each video is annotated such that the first index is the joint value, and the rest of the array are the positions
 
     # this is another dictionary.
-    print(type(data.get_names_train_test_split()))
-    print(len(data.get_names_train_test_split()[0]), len(
-        data.get_names_train_test_split()[1]), len(data.get_names_train_test_split()[2]))
-    print(data.get_names_train_test_split()[1])
+    # print(type(data.get_names_train_test_split()))
+    # print(len(data.get_names_train_test_split()[0]), len(
+    #     data.get_names_train_test_split()[1]), len(data.get_names_train_test_split()[2]))
+    # print(data.get_names_train_test_split()[1])
+
+    example_joint = data.read_joints_full_video(action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1')
+    print(example_joint['pos_image'])
+    print(example_joint.keys())
 
 
 
