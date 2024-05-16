@@ -94,7 +94,7 @@ print(model)
 loss_fn = PoseEstimationLoss()
 
 batch_size = 16
-num_frames = 64
+num_frames = 64 # in actuality, can't have 64, cuz most videos has 40 frames in them.
 height = 224
 width = 224
 channels = 3
