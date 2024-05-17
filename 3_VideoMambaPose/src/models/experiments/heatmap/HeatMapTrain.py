@@ -12,7 +12,7 @@ wandb.init(
         "learning_rate":0.001,
         "architecture":"12 Video BiMamba blocks + 3 layers 2D Deconvolutions + 1 layers Convolution + Joint Regressor (Linear + Relu + Linear)",
         "dataset":"JHMDB, no cropping.",
-        "epochs":100,
+        "epochs":200,
     }
 )
 
@@ -64,7 +64,7 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_inputs, val_inputs,
 
         wandb.log({"loss": loss})
 
-        if epoch == 1 or epoch % 100 == 0:
+        if epoch == 1 or epoch % 50 == 0:
             print(f"Epoch {epoch}, Training loss {loss_train.item():.4f},"
                   f" Validation loss {loss_val.item():.4f}")
 
@@ -135,5 +135,5 @@ torch.optim.Adam(model.parameters())
 
 # Training loop
 loss_fn = PoseEstimationLoss()
-training_loop(100, optimizer, model, loss_fn, train_inputs,
+training_loop(200, optimizer, model, loss_fn, train_inputs,
               val_inputs, train_labels, val_labels)

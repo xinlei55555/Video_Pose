@@ -124,8 +124,7 @@ class Deconv(nn.Module):
                            # the larger kernel size capture more information from neighbour
                         #    num_kernels=(4, 3, 2)):
                         #! larger kernel sizes
-                            num_kernels=(4, 4), 
-                            stride=()):
+                            num_kernels=(4, 4)):
         """The middle deconvolution layers"""
         if num_layers != len(num_filters):
             error_msg = f'num_layers({num_layers}) ' \
