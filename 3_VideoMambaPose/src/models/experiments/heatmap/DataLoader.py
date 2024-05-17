@@ -6,6 +6,8 @@ import pickle
 import pandas as pd
 
 from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms
+from PIL import Image
 
 import scipy
 
@@ -59,6 +61,12 @@ class load_JHMDB(Dataset):
         # if index < 
         # return 
 
+    def index_to_frame(self, index):
+        '''
+        Returns a list of frames associated with a given index.
+        '''
+        pass
+
     def unpickle_JHMDB(self, path="/home/linxin67/scratch/JHMDB_old/annotations"):
         os.chdir(path)
 
@@ -107,14 +115,6 @@ class load_JHMDB(Dataset):
         torch_joint = rearrange(torch_joint, 'd n f->f n d')
         return torch_joint
     
-    # def read_joints(self, action, video, line_num, path='/home/linxin67/scratch/JHMDB/'):
-    #     joint_file = self.read_joints(action, video)
-    #     return mat[]
-
-    # def read_all_joints(self, path='/hom/linxin67/scratch/JHMDB/'):
-    #     os.chdir(path)
-
-    #     return (action, video, )
     def get_num_frames(self, action, video):
         # os.chdir(path+'annotations')
         if action+'/'+video in self.nframes_train:
@@ -176,7 +176,36 @@ class load_JHMDB(Dataset):
         # crop images. (but first, need to determine if we are given bounding boxes, and if I need to pass patchify my input.)
         # finally, store the values into csv or wtv, and choose them randomly to be able to batch together the training
 
-    def run_batch(self):
+    def image_to_tensor(self, image_path):
+        '''Returns a torch tensor for a given image associated with the path'''
+        image = Image.open(image_path).convert('RGB')
+        transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor()
+        ])
+        tensor = transform(image)
+        return tensor
+
+    def video_to_tensors(self, action, video, path='/home/linxin67/scratch/JHMDB/Rename_Images/'):
+        '''
+        Returns a tensor with the following:
+        (n_frames, num_channels (3), 224, 224)
+        '''
+        directory_path = os.path.join(path, action, video)
+        image_tensors = []
+
+        for filename in os.listdir(directory_path):
+            file_path = os.path.join(directory_path, filename)
+            if os.path.isfile(file_path) and filename.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
+                image_tensor = self.image_to_tensor(file_path)
+                image_tensors.append(image_tensor)
+
+        # Concatenates a sequence of tensors along a new dimension.
+        batch_tensor = torch.stack(image_tensors)
+        return batch_tensor
+
+
+    def draw_joint_on_image(self, action, video, frame_number=1, path='/home/linxin67/scratch/JHMDB/'):
         pass
 
 
@@ -204,14 +233,17 @@ if __name__ == '__main__':
     #     data.get_names_train_test_split()[1]), len(data.get_names_train_test_split()[2]))
     # print(data.get_names_train_test_split()[1])
 
-    example_joint = data.rearranged_joints(action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1')
-    print(example_joint)
-    print(example_joint.shape)
+    # example_joint = data.rearranged_joints(action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1')
+    # print(example_joint)
+    # print(example_joint.shape)
     # print(len(example_joint['pos_img'][0][0]))
     # print(type(example_joint))
     # print(example_joint.keys())
     # print(data.get_num_frames(action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1'))
 
+    test = data.video_to_tensors(action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1')
+    print(test.shape)
+    print(test[0])
 
 
     # then the rest is handled by pytorch:
