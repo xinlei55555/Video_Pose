@@ -102,7 +102,7 @@ class load_JHMDB(Dataset):
         '''
         Return a torch tensor with num frames, num joints, (x,y) joints.
         '''
-        joint_dct = read_joints_full_video(action, video, path)
+        joint_dct = self.read_joints_full_video(action, video, path)
         torch_joint = torch.tensor(joint_dct['pos_img'])
         torch_joint = rearrange(torch_joint, 'd n f->f n d')
         return torch_joint
@@ -153,9 +153,9 @@ class load_JHMDB(Dataset):
                     value = int(row[1])
                     if value == 1:
                         # remove the .avi
-                        train.append((action[:-16], file_name[:-4]), get_num_frames(action[:-16], file_name[:-4]))
+                        train.append((action[:-16], file_name[:-4], self.get_num_frames(action[:-16], file_name[:-4])))
                     elif value == 2:
-                        test.append((action[:-16], file_name[:-4]), get_num_frames(action[:-16], file_name[:-4]))
+                        test.append((action[:-16], file_name[:-4], self.get_num_frames(action[:-16], file_name[:-4])))
                     else:
                         print(type(value), value)
                         print("unknownIndexError")
@@ -204,12 +204,13 @@ if __name__ == '__main__':
     #     data.get_names_train_test_split()[1]), len(data.get_names_train_test_split()[2]))
     # print(data.get_names_train_test_split()[1])
 
-    example_joint = data.read_joints_full_video(action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1')
-
-    print(len(example_joint['pos_img'][0][0]))
-    print(type(example_joint))
+    example_joint = data.rearranged_joints(action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1')
+    print(example_joint)
+    print(example_joint.shape)
+    # print(len(example_joint['pos_img'][0][0]))
+    # print(type(example_joint))
     # print(example_joint.keys())
-    print(data.get_num_frames(action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1'))
+    # print(data.get_num_frames(action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1'))
 
 
 
