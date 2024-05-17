@@ -168,19 +168,11 @@ class load_JHMDB(Dataset):
     # then we need a function to crop the images to 224x224, and need to generate batches of 8 frames in a row. (videos)
     # this will also need to transform the images into three channels (use torch.vision transforms.)
 
-    def crop(self, action, video):
-        pass
-        # self.nframes_train[]
-        # self.nframes_test = self.test_annotations['nframes']
-
-        # crop images. (but first, need to determine if we are given bounding boxes, and if I need to pass patchify my input.)
-        # finally, store the values into csv or wtv, and choose them randomly to be able to batch together the training
-
     def image_to_tensor(self, image_path):
         '''Returns a torch tensor for a given image associated with the path'''
         image = Image.open(image_path).convert('RGB')
         transform = transforms.Compose([
-            transforms.Resize((224, 224)),
+            transforms.Resize((224, 224)), # notice that all the images are 320x240. Hence, resizing all to 224 224 is generalized, and should be equally skewed
             transforms.ToTensor()
         ])
         tensor = transform(image)
@@ -206,7 +198,7 @@ class load_JHMDB(Dataset):
 
 
     def draw_joint_on_image(self, action, video, frame_number=1, path='/home/linxin67/scratch/JHMDB/'):
-        pass
+        
 
 
 if __name__ == '__main__':
