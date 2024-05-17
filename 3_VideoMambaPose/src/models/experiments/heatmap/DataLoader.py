@@ -9,6 +9,8 @@ from torch.utils.data import Dataset, DataLoader
 
 import scipy
 
+from einops import rearrange
+
 
 class load_JHMDB(Dataset):
     '''
@@ -46,7 +48,16 @@ class load_JHMDB(Dataset):
 
     # should return the image/video at that index, as well as the label for the video. (Should I make a sliding window, or a striding window and return the value of the first frame)
     def __getitem__(self, index):
-        return 
+        '''
+        Each file will have nframe-7 datapoints. Each video will be 8 frames long.
+        The goal will always be to predict the last frame of the 8.
+        To determine the index:
+        1. I will load all the frames.
+        2. Then, I will generate the 8 previous frames for a given index on the fly. 
+        '''
+        pass
+        # if index < 
+        # return 
 
     def unpickle_JHMDB(self, path="/home/linxin67/scratch/JHMDB_old/annotations"):
         os.chdir(path)
@@ -75,10 +86,26 @@ class load_JHMDB(Dataset):
     def read_joints_full_video(self, action, video, path="/home/linxin67/scratch/JHMDB/"):
         '''Returns a dictionary
         dict_keys(['__header__', '__version__', '__globals__', 'pos_img', 'pos_world', 'scale', 'viewpoint'])
+
+        Each file is the following dimension:
+        (2, 15 (num joints), n_frames)
+
+        First, there are two dimension, which is x, y
+        Then, 
+        In pos image, each array has n number of values, where n is the number of frames in the video.
         '''
         os.chdir(path)
         mat = scipy.io.loadmat(f'{path}joint_positions/{action}/{video}/joint_positions.mat')
         return mat
+
+    def rearranged_joints(self, action, video, path='/home/linxin67/scratch/JHMDB/'):
+        '''
+        Return a torch tensor with num frames, num joints, (x,y) joints.
+        '''
+        joint_dct = read_joints_full_video(action, video, path)
+        torch_joint = torch.tensor(joint_dct['pos_img'])
+        torch_joint = rearrange(torch_joint, 'd n f->f n d')
+        return torch_joint
     
     # def read_joints(self, action, video, line_num, path='/home/linxin67/scratch/JHMDB/'):
     #     joint_file = self.read_joints(action, video)
@@ -88,8 +115,20 @@ class load_JHMDB(Dataset):
     #     os.chdir(path)
 
     #     return (action, video, )
-
+    def get_num_frames(self, action, video):
+        # os.chdir(path+'annotations')
+        if action+'/'+video in self.nframes_train:
+            return self.nframes_train[action+'/'+video]
+        else:
+            return self.nframes_test[action+'/'+video]
+            
     def get_names_train_test_split(self, path="/home/linxin67/scratch/JHMDB/"):
+        '''
+        Returns three lists:
+        1. First one with all the possible actions.
+        2. The training set (with 3-tuple: (action_name, file_name, n_frames))
+        3. The test set (idem)
+        '''
         directory = path+'splits'
         os.chdir(directory)
 
@@ -114,9 +153,9 @@ class load_JHMDB(Dataset):
                     value = int(row[1])
                     if value == 1:
                         # remove the .avi
-                        train.append((action[:-16], file_name[:-4]))
+                        train.append((action[:-16], file_name[:-4]), get_num_frames(action[:-16], file_name[:-4]))
                     elif value == 2:
-                        test.append((action[:-16], file_name[:-4]))
+                        test.append((action[:-16], file_name[:-4]), get_num_frames(action[:-16], file_name[:-4]))
                     else:
                         print(type(value), value)
                         print("unknownIndexError")
@@ -129,8 +168,11 @@ class load_JHMDB(Dataset):
     # then we need a function to crop the images to 224x224, and need to generate batches of 8 frames in a row. (videos)
     # this will also need to transform the images into three channels (use torch.vision transforms.)
 
-    def crop(self, action, video, path='/home/linxin67/scratch/JHMDB/'):
-        os.chdir(path)
+    def crop(self, action, video):
+        pass
+        # self.nframes_train[]
+        # self.nframes_test = self.test_annotations['nframes']
+
         # crop images. (but first, need to determine if we are given bounding boxes, and if I need to pass patchify my input.)
         # finally, store the values into csv or wtv, and choose them randomly to be able to batch together the training
 
@@ -163,8 +205,11 @@ if __name__ == '__main__':
     # print(data.get_names_train_test_split()[1])
 
     example_joint = data.read_joints_full_video(action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1')
-    print(example_joint['pos_image'])
-    print(example_joint.keys())
+
+    print(len(example_joint['pos_img'][0][0]))
+    print(type(example_joint))
+    # print(example_joint.keys())
+    print(data.get_num_frames(action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1'))
 
 
 
