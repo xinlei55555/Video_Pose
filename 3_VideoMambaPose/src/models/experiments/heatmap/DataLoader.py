@@ -30,7 +30,9 @@ class load_JHMDB(Dataset):
 
     # use 16, because transformers can already do 8
     # also we cannot just load all the frames directly into memory, because not enough GPU, but here less than 64GB should be okay
-    def __init__(self, frames_per_vid=16, joints=False, unpickle=False):
+    def __init__(self, train_set=True, frames_per_vid=16, joints=False, unpickle=False):
+        self.frames_per_vid = frames_per_vid
+        self.train_set = train_set
         if unpickle:
             self.train_annotations, self.test_annotations = self.unpickle_JHMDB()
         # this is another dictionary
@@ -41,37 +43,52 @@ class load_JHMDB(Dataset):
         if joints:
             self.actions, self.train, self.test = self.get_names_train_test_split()
 
-        # frames with joint values
-        self.train_frames_with_joints = [(action,
-                                          file_name,
-                                          n_frames,
-                                          self.video_to_tensors(
-                                              action, file_name),
-                                          self.rearranged_joints(
-                                              action, file_name))
-                                         for action_name, file_name, n_frames in self.train]
-        self.test_frames_with_joints = [(action,
-                                         file_name,
-                                         n_frames,
-                                         self.video_to_tensors(
-                                             action, file_name),
-                                         self.rearranged_joints(
-                                             action, file_name))
-                                        for action_name, file_name, n_frames in self.test]
+        if train_set:
+            # frames with joint values
+            self.frames_with_joints = [(self.video_to_tensors(
+                                                action, file_name),
+                                            self.rearranged_joints(
+                                                action, file_name))
+                                            for action_name, file_name, n_frames in self.train]
+            # arr where arr[idx] = idx in the self.frames_with_joints
+            self.arr = []
+            jump = 1 # this is the number of frames to skip between datapoints
+            for k in range(len(self.frames_with_joints)):
+                video, joints = self.frames_with_joints[k]
+                assert len(list(video)) == len(list(joints))
+                # going through each frame in the video
+                for i in range(len(list(video)), jump): 
+                    if i >= self.frames_per_vid:
+                        # 3-tuple: (index in self.train_frames_with_joints, index in the video, joint values)
+                        self.arr.append(k, i, joint)
+        else:
+            self.frames_with_joints = [(self.video_to_tensors(
+                                                action, file_name),
+                                            self.rearranged_joints(
+                                                action, file_name))
+                                            for action_name, file_name, n_frames in self.test]
 
-        # arr where arr[idx] = idx in the self.frames_with_joints
-
-        # then __getitem__ just returns the index in arr
+            
+            self.arr = []
+            for k in range(len(self.frames_with_joints)):
+                video, joints = self.frames_with_joints[k]
+                assert len(list(video)) == len(list(joints))
+                # going through each frame in the video
+                for i in range(len(list(video)), jump): 
+                    if i >= self.frames_per_vid:
+                        # 3-tuple: (index in self.train_frames_with_joints, index in the video, joint values)
+                        self.arr.append(k, i, joint)
 
     # some default torch methods:
-
     def __len__(self):
-        return len(self.train) + len(self.test)
+        # if self.train_set:
+        #     return len(self.train_arr)
+        return len(self.arr)
 
     # should return the image/video at that index, as well as the label for the video. (Should I make a sliding window, or a striding window and return the value of the first frame)
     def __getitem__(self, index):
         '''
-        Each file will have nframe-7 datapoints. Each video will be 8 frames long.
+        Each file will have nframe-self.n_frames_in_vid datapoints. Each video will be 8 frames long.
         The goal will always be to predict the last frame of the 8.
         To determine the index:
         1. I will load all the frames.
@@ -81,15 +98,11 @@ class load_JHMDB(Dataset):
         #
         Answer: I will load everything, and parse from there.
         '''
-        # if index <
-        # return
+        video_num, frame_num, joint_values = self.arr[index]
+        
 
-    def index_to_frame(self, index):
-        '''
-        Returns a list of frames associated with a given index.
-        '''
-        pass
-
+        
+    # this folder is useless
     def unpickle_JHMDB(self, path="/home/linxin67/scratch/JHMDB_old/annotations"):
         os.chdir(path)
 
@@ -268,7 +281,7 @@ class load_JHMDB(Dataset):
 
 
 if __name__ == '__main__':
-    data = load_JHMDB(joints=True, unpickle=True)
+    data = load_JHMDB(train=True, frames_per_vid=16, joints=True, unpickle=True)
     # print([type(x) for x in data.train_annotations.keys()]) # a list of strings.
     # print(data.test_annotations.keys()) # a dictionary
 
