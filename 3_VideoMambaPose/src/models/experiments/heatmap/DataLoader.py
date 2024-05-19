@@ -99,7 +99,7 @@ class load_JHMDB(Dataset):
         Answer: I will load everything, and parse from there.
         '''
         video_num, frame_num, joint_values = self.arr[index]
-        
+        video = torch.tensor(self.frames_with_joints[0][video_num-:video_num+1])
 
         
     # this folder is useless
