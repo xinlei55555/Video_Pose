@@ -13,6 +13,9 @@ import scipy
 
 from einops import rearrange
 
+import matplotlib
+from matplotlib import pyplot as plt
+
 
 class load_JHMDB(Dataset):
     '''
@@ -196,9 +199,46 @@ class load_JHMDB(Dataset):
         batch_tensor = torch.stack(image_tensors)
         return batch_tensor
 
-
+    #! this function has not been tested, but since I am not yet in production, I will test it tomorrow.
     def draw_joint_on_image(self, action, video, frame_number=1, path='/home/linxin67/scratch/JHMDB/'):
-        
+        video = self.video_to_tensors(action, video)
+        frame = video[frame_number]
+
+        # print(frame.shape) # torch.Size([3, 224, 224])
+
+        # transform back, note that if the input is a torch tensor, then no need to use compose
+        transform = transforms.Compose([
+            transforms.ToPILImage(), # need to first transform the torch tensor to pil image.
+            # should be height, width
+            transforms.Resize((240, 320)), # notice that all the images are 320x240. Hence, resizing all to 224 224 is generalized, and should be equally skewed
+            transforms.ToTensor()
+        ])
+
+        frame = transform(frame)
+
+        # so need to rearrange to h, w, c or else plt won't work
+        frame = frame.permute(1, 2, 0)
+        plt.imshow(frame)
+        plt.show()
+
+        # adding the joints
+        draw = ImageDraw.Draw(frame_pil)
+
+        joints = self.rearranged_joints(action, video, path)
+        joint = joints[frame_number] # num_joints, [x,y]
+
+        rearrange(joint, 'n x -> x n')
+        x_coords, y_coords = joint[0], joint[1]
+
+        plt.figure()
+        plt.scatter(x_coords, y_coords, c='red', marker='o')
+        plt.xlim(0, 320)
+        plt.ylim(240, 0)  # Invert y-axis for correct orientation
+        plt.xlabel('X Coordinates')
+        plt.ylabel('Y Coordinates')
+        plt.title('Joint Coordinates')
+        plt.grid(True)
+        plt.show()
 
 
 if __name__ == '__main__':
@@ -233,9 +273,12 @@ if __name__ == '__main__':
     # print(example_joint.keys())
     # print(data.get_num_frames(action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1'))
 
-    test = data.video_to_tensors(action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1')
-    print(test.shape)
-    print(test[0])
+    # test = data.video_to_tensors(action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1')
+    # print(test.shape)
+    # print(test[0])
+    
+
+    data.draw_joint_on_image(action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1')
 
 
     # then the rest is handled by pytorch:
