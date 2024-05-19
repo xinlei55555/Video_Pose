@@ -28,28 +28,45 @@ class load_JHMDB(Dataset):
 
     '''
 
-    def __init__(self, joints=False, unpickle=False):
+    # use 16, because transformers can already do 8
+    # also we cannot just load all the frames directly into memory, because not enough GPU, but here less than 64GB should be okay
+    def __init__(self, frames_per_vid=16, joints=False, unpickle=False):
         if unpickle:
             self.train_annotations, self.test_annotations = self.unpickle_JHMDB()
         # this is another dictionary
+        # I also reformatted the dictionary nframes:video_name
         self.nframes_train = self.train_annotations['nframes']
         self.nframes_test = self.test_annotations['nframes']
 
-        # in the end, implement this
         if joints:
             self.actions, self.train, self.test = self.get_names_train_test_split()
-            # self.joints = 
-        #     self.joint_values = torch.zeros()
-        #     # collect all joint values. In the same way, collect all the titles
-        #     # store them into csv files or wtv. with the joint values, train test;
 
-        #     # store the images in torch format.
+        # frames with joint values
+        self.train_frames_with_joints = [(action,
+                                          file_name,
+                                          n_frames,
+                                          self.video_to_tensors(
+                                              action, file_name),
+                                          self.rearranged_joints(
+                                              action, file_name))
+                                         for action_name, file_name, n_frames in self.train]
+        self.test_frames_with_joints = [(action,
+                                         file_name,
+                                         n_frames,
+                                         self.video_to_tensors(
+                                             action, file_name),
+                                         self.rearranged_joints(
+                                             action, file_name))
+                                        for action_name, file_name, n_frames in self.test]
 
-        #     self.joints = self.read_joints()
+        # arr where arr[idx] = idx in the self.frames_with_joints
+
+        # then __getitem__ just returns the index in arr
 
     # some default torch methods:
+
     def __len__(self):
-        return len(self.train) + len(self.test);
+        return len(self.train) + len(self.test)
 
     # should return the image/video at that index, as well as the label for the video. (Should I make a sliding window, or a striding window and return the value of the first frame)
     def __getitem__(self, index):
@@ -59,9 +76,13 @@ class load_JHMDB(Dataset):
         To determine the index:
         1. I will load all the frames.
         2. Then, I will generate the 8 previous frames for a given index on the fly. 
+
+
+        #
+        Answer: I will load everything, and parse from there.
         '''
-        # if index < 
-        # return 
+        # if index <
+        # return
 
     def index_to_frame(self, index):
         '''
@@ -105,7 +126,8 @@ class load_JHMDB(Dataset):
         In pos image, each array has n number of values, where n is the number of frames in the video.
         '''
         os.chdir(path)
-        mat = scipy.io.loadmat(f'{path}joint_positions/{action}/{video}/joint_positions.mat')
+        mat = scipy.io.loadmat(
+            f'{path}joint_positions/{action}/{video}/joint_positions.mat')
         return mat
 
     def rearranged_joints(self, action, video, path='/home/linxin67/scratch/JHMDB/'):
@@ -116,14 +138,14 @@ class load_JHMDB(Dataset):
         torch_joint = torch.tensor(joint_dct['pos_img'])
         torch_joint = rearrange(torch_joint, 'd n f->f n d')
         return torch_joint
-    
+
     def get_num_frames(self, action, video):
         # os.chdir(path+'annotations')
         if action+'/'+video in self.nframes_train:
             return self.nframes_train[action+'/'+video]
         else:
             return self.nframes_test[action+'/'+video]
-            
+
     def get_names_train_test_split(self, path="/home/linxin67/scratch/JHMDB/"):
         '''
         Returns three lists:
@@ -155,9 +177,11 @@ class load_JHMDB(Dataset):
                     value = int(row[1])
                     if value == 1:
                         # remove the .avi
-                        train.append((action[:-16], file_name[:-4], self.get_num_frames(action[:-16], file_name[:-4])))
+                        train.append(
+                            (action[:-16], file_name[:-4], self.get_num_frames(action[:-16], file_name[:-4])))
                     elif value == 2:
-                        test.append((action[:-16], file_name[:-4], self.get_num_frames(action[:-16], file_name[:-4])))
+                        test.append(
+                            (action[:-16], file_name[:-4], self.get_num_frames(action[:-16], file_name[:-4])))
                     else:
                         print(type(value), value)
                         print("unknownIndexError")
@@ -174,7 +198,8 @@ class load_JHMDB(Dataset):
         '''Returns a torch tensor for a given image associated with the path'''
         image = Image.open(image_path).convert('RGB')
         transform = transforms.Compose([
-            transforms.Resize((224, 224)), # notice that all the images are 320x240. Hence, resizing all to 224 224 is generalized, and should be equally skewed
+            # notice that all the images are 320x240. Hence, resizing all to 224 224 is generalized, and should be equally skewed
+            transforms.Resize((224, 224)),
             transforms.ToTensor()
         ])
         tensor = transform(image)
@@ -207,9 +232,11 @@ class load_JHMDB(Dataset):
 
         # transform back, note that if the input is a torch tensor, then no need to use compose
         transform = transforms.Compose([
-            transforms.ToPILImage(), # need to first transform the torch tensor to pil image.
+            # need to first transform the torch tensor to pil image.
+            transforms.ToPILImage(),
             # should be height, width
-            transforms.Resize((240, 320)), # notice that all the images are 320x240. Hence, resizing all to 224 224 is generalized, and should be equally skewed
+            # notice that all the images are 320x240. Hence, resizing all to 224 224 is generalized, and should be equally skewed
+            transforms.Resize((240, 320)),
             transforms.ToTensor()
         ])
 
@@ -224,7 +251,7 @@ class load_JHMDB(Dataset):
         draw = ImageDraw.Draw(frame_pil)
 
         joints = self.rearranged_joints(action, video, path)
-        joint = joints[frame_number] # num_joints, [x,y]
+        joint = joints[frame_number]  # num_joints, [x,y]
 
         rearrange(joint, 'n x -> x n')
         x_coords, y_coords = joint[0], joint[1]
@@ -275,10 +302,9 @@ if __name__ == '__main__':
     # test = data.video_to_tensors(action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1')
     # print(test.shape)
     # print(test[0])
-    
 
-    data.draw_joint_on_image(action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1')
-
+    data.draw_joint_on_image(
+        action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1')
 
     # then the rest is handled by pytorch:
     # Example usage
