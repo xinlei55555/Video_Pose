@@ -60,7 +60,6 @@ class load_JHMDB(Dataset):
         1. I will load all the frames.
         2. Then, I will generate the 8 previous frames for a given index on the fly. 
         '''
-        pass
         # if index < 
         # return 
 
