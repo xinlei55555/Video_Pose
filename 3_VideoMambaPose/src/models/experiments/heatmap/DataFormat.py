@@ -66,7 +66,7 @@ class load_JHMDB(Dataset):
                 for i in range(0, len(list(video)), jump): 
                     if i >= self.frames_per_vid:
                         # 3-tuple: (index in self.train_frames_with_joints, index in the video, joint values)
-                        self.arr.append([k, i, joint])
+                        self.arr.append([k, i, joints])
         else:
             self.frames_with_joints = [(self.video_to_tensors(
                                                 action_name, file_name),
@@ -83,9 +83,8 @@ class load_JHMDB(Dataset):
                 for i in range(0, len(list(video)), jump): # if you are using jump, then need to define start and endpoint
                     if i >= self.frames_per_vid:
                         # 3-tuple: (index in self.train_frames_with_joints, index in the video, joint values)
-                        self.arr.append([k, i, joint])
+                        self.arr.append([k, i, joints])
 
-        self.arr = torch.tensor(self.arr)
     # some default torch methods:
     def __len__(self):
         # if self.train_set:
@@ -107,8 +106,8 @@ class load_JHMDB(Dataset):
         '''
         video_num, frame_num, joint_values = self.arr[index][0], self.arr[index][1], self.arr[index][2]
         # slicing with pytorch tensors.
-        video = torch.tensor(self.frames_with_joints[0][video_num][frame_num+1-self.frames_per_vid:frame_num+1])
-        return torch.tensor(video, joints_values[frame_num])
+        video = torch.tensor(self.frames_with_joints[video_num][0][frame_num+1-self.frames_per_vid:frame_num+1])
+        return torch.tensor(video, joint_values[frame_num])
 
         
     # this folder is useless
@@ -298,10 +297,10 @@ class load_JHMDB(Dataset):
 if __name__ == '__main__':
     train = load_JHMDB(train_set=True, frames_per_vid=16, joints=True, unpickle=True, real_job=False)
     # in real context, would definitely need to move the training set in the GPU
-    print(train)
     print(train.arr)
-    print(train.frames_with_joints)
-    print(len(train))
+    print("len(train), ", len(train))
+    print("len(arr), ", len(train.arr))
+    print("len(frames_with_joints)", len(train.frames_with_joints))
     print(train[len(train)-1])
     print(train[len(train)-1].shape)
     print(len(train))
