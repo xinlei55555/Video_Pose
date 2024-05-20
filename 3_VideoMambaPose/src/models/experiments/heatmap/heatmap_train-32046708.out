@@ -1,0 +1,210 @@
+wandb: Currently logged in as: xinlei55555 (linxin67). Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.17.0
+wandb: Run data is saved locally in /project/6005917/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/wandb/run-20240519_223830-1l8etj9p
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run snowy-deluge-3
+wandb: ⭐️ View project at https://wandb.ai/linxin67/1heatmap_video_mamba
+wandb: 🚀 View run at https://wandb.ai/linxin67/1heatmap_video_mamba/runs/1l8etj9p
+Use checkpoint: False
+Checkpoint number: 0
+HeatMapVideoMambaPose(
+  (mamba): VisionMamba(
+    (patch_embed): PatchEmbed(
+      (proj): Conv3d(3, 192, kernel_size=(1, 16, 16), stride=(1, 16, 16))
+    )
+    (pos_drop): Dropout(p=0.0, inplace=False)
+    (head_drop): Identity()
+    (head): Linear(in_features=192, out_features=1000, bias=True)
+    (drop_path): DropPath(drop_prob=0.100)
+    (layers): ModuleList(
+      (0-1): 2 x Block(
+        (mixer): Mamba(
+          (in_proj): Linear(in_features=192, out_features=768, bias=False)
+          (conv1d): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (act): SiLU()
+          (x_proj): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj): Linear(in_features=12, out_features=384, bias=True)
+          (conv1d_b): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (x_proj_b): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj_b): Linear(in_features=12, out_features=384, bias=True)
+          (out_proj): Linear(in_features=384, out_features=192, bias=False)
+        )
+        (norm): RMSNorm()
+        (drop_path): Identity()
+      )
+      (2): Block(
+        (mixer): Mamba(
+          (in_proj): Linear(in_features=192, out_features=768, bias=False)
+          (conv1d): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (act): SiLU()
+          (x_proj): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj): Linear(in_features=12, out_features=384, bias=True)
+          (conv1d_b): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (x_proj_b): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj_b): Linear(in_features=12, out_features=384, bias=True)
+          (out_proj): Linear(in_features=384, out_features=192, bias=False)
+        )
+        (norm): RMSNorm()
+        (drop_path): DropPath(drop_prob=0.009)
+      )
+      (3): Block(
+        (mixer): Mamba(
+          (in_proj): Linear(in_features=192, out_features=768, bias=False)
+          (conv1d): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (act): SiLU()
+          (x_proj): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj): Linear(in_features=12, out_features=384, bias=True)
+          (conv1d_b): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (x_proj_b): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj_b): Linear(in_features=12, out_features=384, bias=True)
+          (out_proj): Linear(in_features=384, out_features=192, bias=False)
+        )
+        (norm): RMSNorm()
+        (drop_path): DropPath(drop_prob=0.018)
+      )
+      (4): Block(
+        (mixer): Mamba(
+          (in_proj): Linear(in_features=192, out_features=768, bias=False)
+          (conv1d): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (act): SiLU()
+          (x_proj): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj): Linear(in_features=12, out_features=384, bias=True)
+          (conv1d_b): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (x_proj_b): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj_b): Linear(in_features=12, out_features=384, bias=True)
+          (out_proj): Linear(in_features=384, out_features=192, bias=False)
+        )
+        (norm): RMSNorm()
+        (drop_path): DropPath(drop_prob=0.027)
+      )
+      (5): Block(
+        (mixer): Mamba(
+          (in_proj): Linear(in_features=192, out_features=768, bias=False)
+          (conv1d): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (act): SiLU()
+          (x_proj): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj): Linear(in_features=12, out_features=384, bias=True)
+          (conv1d_b): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (x_proj_b): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj_b): Linear(in_features=12, out_features=384, bias=True)
+          (out_proj): Linear(in_features=384, out_features=192, bias=False)
+        )
+        (norm): RMSNorm()
+        (drop_path): DropPath(drop_prob=0.036)
+      )
+      (6): Block(
+        (mixer): Mamba(
+          (in_proj): Linear(in_features=192, out_features=768, bias=False)
+          (conv1d): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (act): SiLU()
+          (x_proj): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj): Linear(in_features=12, out_features=384, bias=True)
+          (conv1d_b): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (x_proj_b): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj_b): Linear(in_features=12, out_features=384, bias=True)
+          (out_proj): Linear(in_features=384, out_features=192, bias=False)
+        )
+        (norm): RMSNorm()
+        (drop_path): DropPath(drop_prob=0.045)
+      )
+      (7): Block(
+        (mixer): Mamba(
+          (in_proj): Linear(in_features=192, out_features=768, bias=False)
+          (conv1d): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (act): SiLU()
+          (x_proj): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj): Linear(in_features=12, out_features=384, bias=True)
+          (conv1d_b): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (x_proj_b): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj_b): Linear(in_features=12, out_features=384, bias=True)
+          (out_proj): Linear(in_features=384, out_features=192, bias=False)
+        )
+        (norm): RMSNorm()
+        (drop_path): DropPath(drop_prob=0.055)
+      )
+      (8): Block(
+        (mixer): Mamba(
+          (in_proj): Linear(in_features=192, out_features=768, bias=False)
+          (conv1d): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (act): SiLU()
+          (x_proj): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj): Linear(in_features=12, out_features=384, bias=True)
+          (conv1d_b): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (x_proj_b): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj_b): Linear(in_features=12, out_features=384, bias=True)
+          (out_proj): Linear(in_features=384, out_features=192, bias=False)
+        )
+        (norm): RMSNorm()
+        (drop_path): DropPath(drop_prob=0.064)
+      )
+      (9): Block(
+        (mixer): Mamba(
+          (in_proj): Linear(in_features=192, out_features=768, bias=False)
+          (conv1d): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (act): SiLU()
+          (x_proj): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj): Linear(in_features=12, out_features=384, bias=True)
+          (conv1d_b): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (x_proj_b): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj_b): Linear(in_features=12, out_features=384, bias=True)
+          (out_proj): Linear(in_features=384, out_features=192, bias=False)
+        )
+        (norm): RMSNorm()
+        (drop_path): DropPath(drop_prob=0.073)
+      )
+      (10): Block(
+        (mixer): Mamba(
+          (in_proj): Linear(in_features=192, out_features=768, bias=False)
+          (conv1d): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (act): SiLU()
+          (x_proj): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj): Linear(in_features=12, out_features=384, bias=True)
+          (conv1d_b): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (x_proj_b): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj_b): Linear(in_features=12, out_features=384, bias=True)
+          (out_proj): Linear(in_features=384, out_features=192, bias=False)
+        )
+        (norm): RMSNorm()
+        (drop_path): DropPath(drop_prob=0.082)
+      )
+      (11): Block(
+        (mixer): Mamba(
+          (in_proj): Linear(in_features=192, out_features=768, bias=False)
+          (conv1d): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (act): SiLU()
+          (x_proj): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj): Linear(in_features=12, out_features=384, bias=True)
+          (conv1d_b): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (x_proj_b): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj_b): Linear(in_features=12, out_features=384, bias=True)
+          (out_proj): Linear(in_features=384, out_features=192, bias=False)
+        )
+        (norm): RMSNorm()
+        (drop_path): DropPath(drop_prob=0.091)
+      )
+    )
+    (norm_f): RMSNorm()
+  )
+  (deconv): Deconv(
+    (conv_layers): Conv2d(256, 17, kernel_size=(1, 1), stride=(1, 1))
+    (deconv_layers): Sequential(
+      (0): ConvTranspose2d(192, 256, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), bias=False)
+      (1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (2): ReLU(inplace=True)
+      (3): ConvTranspose2d(256, 256, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), bias=False)
+      (4): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (5): ReLU(inplace=True)
+    )
+  )
+  (joints): JointOutput()
+)
+Traceback (most recent call last):
+  File "/project/6005917/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/HeatMapTrain.py", line 132, in <module>
+    train_set = load_JHMDB(train_set=True)
+  File "/project/6005917/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/DataFormat.py", line 58, in __init__
+    assert len(list(video)) == len(list(joints))
+AssertionError
+wandb: - 0.004 MB of 0.004 MB uploadedwandb: \ 0.004 MB of 0.004 MB uploadedwandb: | 0.004 MB of 0.004 MB uploadedwandb: / 0.004 MB of 0.004 MB uploadedwandb: - 0.013 MB of 0.032 MB uploadedwandb: \ 0.014 MB of 0.032 MB uploadedwandb: 🚀 View run snowy-deluge-3 at: https://wandb.ai/linxin67/1heatmap_video_mamba/runs/1l8etj9p
+wandb: ⭐️ View project at: https://wandb.ai/linxin67/1heatmap_video_mamba
+wandb: Synced 5 W&B file(s), 0 media file(s), 2 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20240519_223830-1l8etj9p/logs
