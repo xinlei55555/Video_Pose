@@ -12,3 +12,4 @@ VideoMamba
 __pycache__/
 .vscode/
 wandb/
+*.out
