@@ -46,9 +46,9 @@ class load_JHMDB(Dataset):
         if train_set:
             # frames with joint values
             self.frames_with_joints = [(self.video_to_tensors(
-                                                action, file_name),
+                                                action_name, file_name),
                                             self.rearranged_joints(
-                                                action, file_name))
+                                                action_name, file_name))
                                             for action_name, file_name, n_frames in self.train]
             # arr where arr[idx] = idx in the self.frames_with_joints
             self.arr = []
@@ -63,9 +63,9 @@ class load_JHMDB(Dataset):
                         self.arr.append(k, i, joint)
         else:
             self.frames_with_joints = [(self.video_to_tensors(
-                                                action, file_name),
+                                                action_name, file_name),
                                             self.rearranged_joints(
-                                                action, file_name))
+                                                action_name, file_name))
                                             for action_name, file_name, n_frames in self.test]
 
             
@@ -99,7 +99,9 @@ class load_JHMDB(Dataset):
         Answer: I will load everything, and parse from there.
         '''
         video_num, frame_num, joint_values = self.arr[index]
-        video = torch.tensor(self.frames_with_joints[0][video_num-:video_num+1])
+        # slicing with pytorch tensors.
+        video = torch.tensor(self.frames_with_joints[0][video_num][frame_num+1-self.frames_per_vid:frame_num+1])
+        return torch.tensor(video, joints_values[frame_num])
 
         
     # this folder is useless
@@ -281,7 +283,15 @@ class load_JHMDB(Dataset):
 
 
 if __name__ == '__main__':
-    data = load_JHMDB(train=True, frames_per_vid=16, joints=True, unpickle=True)
+    train = load_JHMDB(train_set=True, frames_per_vid=16, joints=True, unpickle=True)
+    print(train[100])
+    print(train[100].shape)
+    print(len(train))
+
+    test = load_JHMDB(train_set=False)
+    print(test[len(test)-1])
+    print(len(test))
+    print(test[len(test)-1].shape)
     # print([type(x) for x in data.train_annotations.keys()]) # a list of strings.
     # print(data.test_annotations.keys()) # a dictionary
 
@@ -316,8 +326,8 @@ if __name__ == '__main__':
     # print(test.shape)
     # print(test[0])
 
-    data.draw_joint_on_image(
-        action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1')
+    # data.draw_joint_on_image(
+    #     action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1')
 
     # then the rest is handled by pytorch:
     # Example usage
