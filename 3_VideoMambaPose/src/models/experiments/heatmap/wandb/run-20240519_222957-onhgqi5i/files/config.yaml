@@ -1,0 +1,53 @@
+wandb_version: 1
+
+learning_rate:
+  desc: null
+  value: 0.001
+architecture:
+  desc: null
+  value: 12 Video BiMamba blocks + 3 layers 2D Deconvolutions + 1 layers Convolution
+    + Joint Regressor (Linear + Relu + Linear)
+dataset:
+  desc: null
+  value: JHMDB, no cropping.
+epochs:
+  desc: null
+  value: 200
+_wandb:
+  desc: null
+  value:
+    python_version: 3.10.13
+    cli_version: 0.17.0
+    framework: huggingface
+    huggingface_version: 4.40.2
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    start_time: 1716182997
+    t:
+      1:
+      - 1
+      - 11
+      - 37
+      - 41
+      - 49
+      - 55
+      - 63
+      - 82
+      2:
+      - 1
+      - 11
+      - 37
+      - 41
+      - 49
+      - 55
+      - 63
+      - 82
+      3:
+      - 16
+      - 23
+      4: 3.10.13
+      5: 0.17.0
+      6: 4.40.2
+      8:
+      - 5
+      13: linux-x86_64

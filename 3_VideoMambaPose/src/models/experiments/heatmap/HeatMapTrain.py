@@ -2,6 +2,10 @@ import torch
 import torch.nn as nn
 
 from HeatVideoMamba import HeatMapVideoMambaPose
+from torch.utils.data import Dataset, DataLoader
+
+from DataFormat import load_JHMDB
+
 
 # wandb stuff
 import wandb
@@ -35,40 +39,56 @@ class PoseEstimationLoss(nn.Module):
         return loss
 
 
-def training_loop(n_epochs, optimizer, model, loss_fn, train_inputs, val_inputs, train_labels, val_labels):
+def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, device):
     checkpoints_dir = 'checkpoints'
     os.makedirs(checkpoint_dir, exist_ok=True)
     best_val_loss = float('inf')
 
+    train_set, test_set = train_set.to(device), test_set.to(device)
+
     for epoch in range(1, n_epochs + 1):
-        # first make an initial guess as to the weights (Note: training is done in parallel)
-        train_outputs = model(train_inputs)
+        model.train() # so that the model keeps updating its weights.
+        train_loss = 0.0
+        for train_inputs, train_labels in train_set:
 
-        # determine the loss using the loss_fn which is passed into the training loop
-        loss_train = loss_fn(train_outputs, train_labels)
+            # first make an initial guess as to the weights (Note: training is done in parallel)
+            train_outputs = model(train_inputs)
 
-        # repeat for the validation
-        val_outputs = model(val_inputs)
+            # determine the loss using the loss_fn which is passed into the training loop
+            loss_train = loss_fn(train_outputs, train_labels)
 
-        # get the loss again for the validation
-        loss_val = loss_fn(val_outputs, val_labels)
+            # optimizer changes the weight and biases to zero, before starting the training again.
+            optimizer.zero_grad()
 
-        # optimizer changes the weight and biases to zero, before starting the training again.
-        optimizer.zero_grad()
+            # this is what computes the derivative of the loss
+            loss_train.backward()  # !this will accumulate the gradients at the leaf nodes
 
-        # this is what computes the derivative of the loss
-        loss_train.backward()  # !this will accumulate the gradients at the leaf nodes
+            # then, the optimizer will update the values of the weights based on all the derivatives of the losses computed by loss_train.backward()
+            optimizer.step()
 
-        # then, the optimizer will update the values of the weights based on all the derivatives of the losses computed by loss_train.backward()
-        optimizer.step()
+            train_loss += loss_train
 
-        wandb.log({"loss": loss})
+        wandb.log({"training loss": train_loss})
+        
+        model.eval() # so that the model does not change the values of the parameters
+        test_loss = 0.0
+        for test_inputs, test_labels in test_set:
+
+            # repeat for the validation
+            val_outputs = model(val_inputs)
+
+            # get the loss again for the validation
+            loss_val = loss_fn(val_outputs, val_labels)
+
+            test_loss += loss_val
+        wandb.log({"testing loss": test_loss})
+
 
         if epoch == 1 or epoch % 50 == 0:
-            print(f"Epoch {epoch}, Training loss {loss_train.item():.4f},"
-                  f" Validation loss {loss_val.item():.4f}")
+            print(f"Epoch {epoch}, Training loss {train_loss.item():.4f},"
+                  f" Validation loss {test_loss.item():.4f}")
 
-        if loss_val < best_val_loss:
+        if test_loss < best_val_loss:
             best_val_loss = loss_val
 
             # Save the model checkpoint, since this is classification, there isn't really an accuracy...
@@ -94,16 +114,27 @@ print(model)
 loss_fn = PoseEstimationLoss()
 
 batch_size = 16
-num_frames = 64
-height = 224
-width = 224
-channels = 3
+num_workers = 0 # keep it low for testing purposes, but for training, increase to 4
+# num_frames = x64x # i'll actually be using 16
+# height = 224
+# width = 224
+# channels = 3
 
+# * testing purposes:
 # Generate a random input tensor
-test_video = torch.rand(batch_size, channels, num_frames, height, width)
+# test_video = torch.rand(batch_size, channels, num_frames, height, width)
 
-# Check the shape of the random tensor
-print("Shape of the random tensor:", test_video.shape)
+# # Check the shape of the random tensor
+# print("Shape of the random tensor:", test_video.shape)
+# -----------------
+
+# loading the data
+train_set = load_JHMDB(train_set=True)
+train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+
+test_set = load_JHMDB(train_set=False)
+test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+
 
 # defining model
 model = HeatMapVideoMambaPose()
@@ -135,5 +166,4 @@ torch.optim.Adam(model.parameters())
 
 # Training loop
 loss_fn = PoseEstimationLoss()
-training_loop(200, optimizer, model, loss_fn, train_inputs,
-              val_inputs, train_labels, val_labels)
+training_loop(1, optimizer, model, loss_fn, train_set, test_set, device)
