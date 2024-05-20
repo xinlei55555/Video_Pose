@@ -25,3 +25,4 @@ config: {'learning_rate': 0.001, 'architecture': '12 Video BiMamba blocks + 3 la
 2024-05-19 22:29:58,055 INFO    MainThread:5586 [wandb_run.py:_redirect():2294] Wrapping output streams.
 2024-05-19 22:29:58,055 INFO    MainThread:5586 [wandb_run.py:_redirect():2319] Redirects installed.
 2024-05-19 22:29:58,059 INFO    MainThread:5586 [wandb_init.py:init():838] run started, returning control to user process
+2024-05-19 22:40:29,825 WARNING MsgRouterThr:5586 [router.py:message_loop():77] message_loop has been closed

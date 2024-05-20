@@ -190,3 +190,14 @@ HeatMapVideoMambaPose(
     )
   )
   (joints): JointOutput()
+)
+Traceback (most recent call last):
+  File "/project/6005917/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/HeatMapTrain.py", line 132, in <module>
+    train_set = load_JHMDB(train_set=True)
+  File "/project/6005917/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/DataFormat.py", line 48, in __init__
+    self.frames_with_joints = [(self.video_to_tensors(
+  File "/project/6005917/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/DataFormat.py", line 48, in <listcomp>
+    self.frames_with_joints = [(self.video_to_tensors(
+  File "/project/6005917/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/DataFormat.py", line 238, in video_to_tensors
+    batch_tensor = torch.stack(image_tensors)
+RuntimeError: [enforce fail at alloc_cpu.cpp:83] err == 0. DefaultCPUAllocator: can't allocate memory: you tried to allocate 22880256 bytes. Error code 12 (Cannot allocate memory)
