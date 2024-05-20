@@ -30,7 +30,7 @@ class load_JHMDB(Dataset):
 
     # use 16, because transformers can already do 8
     # also we cannot just load all the frames directly into memory, because not enough GPU, but here less than 64GB should be okay
-    def __init__(self, train_set=True, frames_per_vid=16, joints=False, unpickle=False):
+    def __init__(self, train_set=True, frames_per_vid=16, joints=True, unpickle=True):
         self.frames_per_vid = frames_per_vid
         self.train_set = train_set
         if unpickle:
