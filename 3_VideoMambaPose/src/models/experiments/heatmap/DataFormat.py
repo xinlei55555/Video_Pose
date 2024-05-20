@@ -107,7 +107,7 @@ class load_JHMDB(Dataset):
         video_num, frame_num, joint_values = self.arr[index][0], self.arr[index][1], self.arr[index][2]
         # slicing with pytorch tensors.
         video = torch.tensor(self.frames_with_joints[video_num][0][frame_num+1-self.frames_per_vid:frame_num+1])
-        return torch.tensor([video, joint_values[frame_num]])
+        return [video, joint_values[frame_num]]
 
         
     # this folder is useless
@@ -302,13 +302,12 @@ if __name__ == '__main__':
     print("len(arr), ", len(train.arr))
     print("len(frames_with_joints)", len(train.frames_with_joints))
     print(train[len(train)-1])
-    print(train[len(train)-1].shape)
-    print(len(train))
+    print(len(train[len(train)-1][0]))
 
-    test = load_JHMDB(train_set=False)
-    print(test[len(test)-1])
-    print(len(test))
-    print(test[len(test)-1].shape)
+    # test = load_JHMDB(train_set=False)
+    # print(test[len(test)-1])
+    # print(len(test))
+    # print(test[len(test)-1].shape)
     # print([type(x) for x in data.train_annotations.keys()]) # a list of strings.
     # print(data.test_annotations.keys()) # a dictionary
 
