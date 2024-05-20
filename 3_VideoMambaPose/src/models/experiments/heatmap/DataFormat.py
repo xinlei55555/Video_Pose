@@ -38,17 +38,23 @@ class load_JHMDB(Dataset):
         self.real_job = real_job
 
         if unpickle:
-            self.train_annotations, self.test_annotations = self.unpickle_JHMDB()
-        # this is another dictionary
-        # I also reformatted the dictionary nframes:video_name
-        self.nframes_train = self.train_annotations['nframes']
-        self.nframes_test = self.test_annotations['nframes']
+            # if self.train_set:
+            self.annotations = self.unpickle_JHMDB()
+            self.nframes = self.annotations['nframes']
+            # else:
+            #     self.test_annotations = self.unpickle_JHMDB()
+            #     # this is another dictionary
+            #     # I also reformatted the dictionary nframes:video_name
+            #     self.nframes_test = self.test_annotations['nframes']
 
         if joints:
-            self.actions, self.train, self.test = self.get_names_train_test_split()
+            if self.train_set:
+                self.actions, self.train, _ = self.get_names_train_test_split()
+            else:
+                self.actions, _, self.test = self.get_names_train_test_split()
 
         self.arr = []
-        if train_set:
+        if self.train_set:
             # frames with joint values
             self.frames_with_joints = [(self.video_to_tensors(
                                                 action_name, file_name),
@@ -107,6 +113,9 @@ class load_JHMDB(Dataset):
         video_num, frame_num, joint_values = self.arr[index][0], self.arr[index][1], self.arr[index][2]
         # slicing with pytorch tensors.
         video = torch.tensor(self.frames_with_joints[video_num][0][frame_num+1-self.frames_per_vid:frame_num+1])
+        video = rearrange(video, 'd c h w -> c d h w') # need to rearrange so that channel number is in front.
+        # print('The shape of the video is', video.shape)
+        # torch.Size([16, 3, 224, 224]) -> torch.Size([3, 16, 224, 224])
         return [video, joint_values[frame_num]]
 
         
@@ -116,23 +125,25 @@ class load_JHMDB(Dataset):
 
         # Open the first pickled file
         # with open('JHMDB-GT.pkl', 'rb') as pickled_one:
-
+        
         with open("JHMDB-GT.pkl", 'rb') as pickled_one:
             try:
                 # other times it is 'utf-8!!!
                 train = pickle.load(pickled_one, encoding='latin1')
             except UnicodeDecodeError as e:
                 print("UnicodeDecodeError:", e)
+        return train
 
-        # Open the second pickled file
-        with open('UCF101v2-GT.pkl', 'rb') as pickled_two:
-            try:
-                # other times it is 'utf-8!!!
-                test = pickle.load(pickled_two, encoding='latin1')
+        # else:
+        #     # Open the second pickled file
+        #     with open('UCF101v2-GT.pkl', 'rb') as pickled_two:
+        #         try:
+        #             # other times it is 'utf-8!!!
+        #             test = pickle.load(pickled_two, encoding='latin1')
 
-            except UnicodeDecodeError as e:
-                print("UnicodeDecodeError:", e)
-        return train, test
+        #         except UnicodeDecodeError as e:
+        #             print("UnicodeDecodeError:", e)
+        #     return test
 
     # first a function that given an action and a video returns the joints for each frame
     def read_joints_full_video(self, action, video, path="/home/linxin67/scratch/JHMDB/"):
@@ -162,10 +173,10 @@ class load_JHMDB(Dataset):
 
     def get_num_frames(self, action, video):
         # os.chdir(path+'annotations')
-        if action+'/'+video in self.nframes_train:
-            return self.nframes_train[action+'/'+video]
-        else:
-            return self.nframes_test[action+'/'+video]
+        # if self.train_set and action+'/'+video in self.nframes_train:
+        return self.nframes[action+'/'+video]
+        # else:
+        #     return self.nframes_test[action+'/'+video]
 
     def get_names_train_test_split(self, path="/home/linxin67/scratch/JHMDB/"):
         '''
@@ -201,14 +212,14 @@ class load_JHMDB(Dataset):
                 for index, row in df.iterrows():
                     file_name = row[0]
                     value = int(row[1])
-                    if value == 1:
+                    if value == 1 and self.train_set:
                         # remove the .avi
                         train.append(
                             (action[:-16], file_name[:-4], self.get_num_frames(action[:-16], file_name[:-4])))
-                    elif value == 2:
+                    elif value == 2 and not self.train_set:
                         test.append(
                             (action[:-16], file_name[:-4], self.get_num_frames(action[:-16], file_name[:-4])))
-                    else:
+                    elif value not in [1, 2]:
                         print(type(value), value)
                         print("unknownIndexError")
         print("The length of actions, train and test are", len(actions), ", ", len(train), ", ", len(test))

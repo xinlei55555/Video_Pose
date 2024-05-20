@@ -6,6 +6,7 @@ from torch.utils.data import Dataset, DataLoader
 
 from DataFormat import load_JHMDB
 
+import os
 
 # wandb stuff
 import wandb
@@ -41,15 +42,15 @@ class PoseEstimationLoss(nn.Module):
 
 def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, device):
     checkpoints_dir = 'checkpoints'
-    os.makedirs(checkpoint_dir, exist_ok=True)
+    os.makedirs(checkpoints_dir, exist_ok=True)
     best_val_loss = float('inf')
-
-    train_set, test_set = train_set.to(device), test_set.to(device)
 
     for epoch in range(1, n_epochs + 1):
         model.train() # so that the model keeps updating its weights.
         train_loss = 0.0
         for train_inputs, train_labels in train_set:
+            # should load individual batches to GPU
+            train_inputs, train_labels = train_inputs.to(device), train_labels.to(device) 
 
             # first make an initial guess as to the weights (Note: training is done in parallel)
             train_outputs = model(train_inputs)
@@ -73,6 +74,7 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
         model.eval() # so that the model does not change the values of the parameters
         test_loss = 0.0
         for test_inputs, test_labels in test_set:
+            test_inputs, test_labels = test_inputs.to(device), test_labels.to(device) 
 
             # repeat for the validation
             val_outputs = model(val_inputs)
@@ -100,6 +102,7 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
             checkpoint_path = os.path.join(checkpoint_dir, f'heatmap_{best_val_loss:.4f}.pt')
             torch.save(model.state_dict(), checkpoint_path)
             print(f'Best model saved at {checkpoint_path}')
+            print("Model parameters are", list(model.parameters()))
     wandb.finish()
 
 
@@ -114,7 +117,7 @@ print(model)
 loss_fn = PoseEstimationLoss()
 
 batch_size = 16
-num_workers = 0 # keep it low for testing purposes, but for training, increase to 4
+num_workers = 4 # ! keep it low for testing purposes, but for training, increase to 4
 # num_frames = x64x # i'll actually be using 16
 # height = 224
 # width = 224
@@ -128,11 +131,13 @@ num_workers = 0 # keep it low for testing purposes, but for training, increase t
 # print("Shape of the random tensor:", test_video.shape)
 # -----------------
 
-# loading the data
-train_set = load_JHMDB(train_set=True)
-train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+# ! loading the data, will need to set real_job to False when training
+train_set = load_JHMDB(train_set=True, real_job=True)
+test_set = load_JHMDB(train_set=False, real_job=True)
 
-test_set = load_JHMDB(train_set=False)
+# train_set, test_set = train_set.to(device), test_set.to(device) # do not load the data here to the gpu
+
+train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
 
@@ -141,29 +146,30 @@ model = HeatMapVideoMambaPose()
 
 # move the data to the GPU
 model = model.to(device)
-test_video = test_video.to(device)
 
 # Forward Pass
-y = model(test_video)
+# y = model(test_video)
 
 # * note: (B, C, T, H, W) returns 16, 192, 8, 14, 14
 # torch.Size([16, 1568, 192]), i.e. (Batch, 1568 is 8*14*14, 192 is the channel number )
-print(y.shape)
-print(y)
+# print(y.shape)
+# print(y)
 
 # Example target tensor (should be of the same shape as predicted_output)
-target_tensor = None  # TODO define this later
+# target_tensor = None  # TODO define this later
 
 # showing the parameters:
-list(model.parameters())
+# list(model.parameters())
 
 # Compute loss
-loss = loss_fn(predicted_output, target_tensor)
-print(f"Loss: {loss.item()}")
+# loss = loss_fn(predicted_output, target_tensor)
+# print(f"Loss: {loss.item()}")
 
 # optimizer
-torch.optim.Adam(model.parameters())
+optimizer = torch.optim.Adam(model.parameters())
 
 # Training loop
 loss_fn = PoseEstimationLoss()
-training_loop(1, optimizer, model, loss_fn, train_set, test_set, device)
+
+# ! will increase the number of epochs when not training
+training_loop(100, optimizer, model, loss_fn, train_loader, test_loader, device)
