@@ -30,20 +30,31 @@ class load_JHMDB(Dataset):
 
     # use 16, because transformers can already do 8
     # also we cannot just load all the frames directly into memory, because not enough GPU, but here less than 64GB should be okay
-    def __init__(self, train_set=True, frames_per_vid=16, joints=True, unpickle=True):
+    def __init__(self, train_set=True, frames_per_vid=16, joints=True, unpickle=True, real_job=True):
         self.frames_per_vid = frames_per_vid
         self.train_set = train_set
+
+        # determines whether to take the whole set of data, or just part of it
+        self.real_job = real_job
+
         if unpickle:
-            self.train_annotations, self.test_annotations = self.unpickle_JHMDB()
-        # this is another dictionary
-        # I also reformatted the dictionary nframes:video_name
-        self.nframes_train = self.train_annotations['nframes']
-        self.nframes_test = self.test_annotations['nframes']
+            # if self.train_set:
+            self.annotations = self.unpickle_JHMDB()
+            self.nframes = self.annotations['nframes']
+            # else:
+            #     self.test_annotations = self.unpickle_JHMDB()
+            #     # this is another dictionary
+            #     # I also reformatted the dictionary nframes:video_name
+            #     self.nframes_test = self.test_annotations['nframes']
 
         if joints:
-            self.actions, self.train, self.test = self.get_names_train_test_split()
+            if self.train_set:
+                self.actions, self.train, _ = self.get_names_train_test_split()
+            else:
+                self.actions, _, self.test = self.get_names_train_test_split()
 
-        if train_set:
+        self.arr = []
+        if self.train_set:
             # frames with joint values
             self.frames_with_joints = [(self.video_to_tensors(
                                                 action_name, file_name),
@@ -51,16 +62,17 @@ class load_JHMDB(Dataset):
                                                 action_name, file_name))
                                             for action_name, file_name, n_frames in self.train]
             # arr where arr[idx] = idx in the self.frames_with_joints
-            self.arr = []
             jump = 1 # this is the number of frames to skip between datapoints
             for k in range(len(self.frames_with_joints)):
                 video, joints = self.frames_with_joints[k]
-                assert len(list(video)) == len(list(joints))
+                if len(list(video)) != len(list(joints)):
+                    print('Wrong length! Video: ', len(list(video)))
+                    print('Joints: ', len(list(joints)))
                 # going through each frame in the video
-                for i in range(len(list(video)), jump): 
+                for i in range(0, len(list(video)), jump): 
                     if i >= self.frames_per_vid:
                         # 3-tuple: (index in self.train_frames_with_joints, index in the video, joint values)
-                        self.arr.append(k, i, joint)
+                        self.arr.append([k, i, joints])
         else:
             self.frames_with_joints = [(self.video_to_tensors(
                                                 action_name, file_name),
@@ -68,22 +80,22 @@ class load_JHMDB(Dataset):
                                                 action_name, file_name))
                                             for action_name, file_name, n_frames in self.test]
 
-            
-            self.arr = []
+            jump=1
             for k in range(len(self.frames_with_joints)):
                 video, joints = self.frames_with_joints[k]
-                assert len(list(video)) == len(list(joints))
-                # going through each frame in the video
-                for i in range(len(list(video)), jump): 
+                if len(list(video)) != len(list(joints)):
+                    print('Wrong length! Video: ', len(list(video)))
+                    print('Joints: ', len(list(joints)))
+                for i in range(0, len(list(video)), jump): # if you are using jump, then need to define start and endpoint
                     if i >= self.frames_per_vid:
                         # 3-tuple: (index in self.train_frames_with_joints, index in the video, joint values)
-                        self.arr.append(k, i, joint)
+                        self.arr.append([k, i, joints])
 
     # some default torch methods:
     def __len__(self):
         # if self.train_set:
         #     return len(self.train_arr)
-        return len(self.arr)
+        return len(list(self.arr))
 
     # should return the image/video at that index, as well as the label for the video. (Should I make a sliding window, or a striding window and return the value of the first frame)
     def __getitem__(self, index):
@@ -98,35 +110,40 @@ class load_JHMDB(Dataset):
         #
         Answer: I will load everything, and parse from there.
         '''
-        video_num, frame_num, joint_values = self.arr[index]
+        video_num, frame_num, joint_values = self.arr[index][0], self.arr[index][1], self.arr[index][2]
         # slicing with pytorch tensors.
-        video = torch.tensor(self.frames_with_joints[0][video_num][frame_num+1-self.frames_per_vid:frame_num+1])
-        return torch.tensor(video, joints_values[frame_num])
+        video = torch.tensor(self.frames_with_joints[video_num][0][frame_num+1-self.frames_per_vid:frame_num+1])
+        video = rearrange(video, 'd c h w -> c d h w') # need to rearrange so that channel number is in front.
+        # print('The shape of the video is', video.shape)
+        # torch.Size([16, 3, 224, 224]) -> torch.Size([3, 16, 224, 224])
+        return [video, joint_values[frame_num]]
 
         
     # this folder is useless
     def unpickle_JHMDB(self, path="/home/linxin67/scratch/JHMDB_old/annotations"):
-        os.chdir(path)
+        os.chdir(path)  
 
         # Open the first pickled file
         # with open('JHMDB-GT.pkl', 'rb') as pickled_one:
-
+        
         with open("JHMDB-GT.pkl", 'rb') as pickled_one:
             try:
                 # other times it is 'utf-8!!!
                 train = pickle.load(pickled_one, encoding='latin1')
             except UnicodeDecodeError as e:
                 print("UnicodeDecodeError:", e)
+        return train
 
-        # Open the second pickled file
-        with open('UCF101v2-GT.pkl', 'rb') as pickled_two:
-            try:
-                # other times it is 'utf-8!!!
-                test = pickle.load(pickled_two, encoding='latin1')
+        # else:
+        #     # Open the second pickled file
+        #     with open('UCF101v2-GT.pkl', 'rb') as pickled_two:
+        #         try:
+        #             # other times it is 'utf-8!!!
+        #             test = pickle.load(pickled_two, encoding='latin1')
 
-            except UnicodeDecodeError as e:
-                print("UnicodeDecodeError:", e)
-        return train, test
+        #         except UnicodeDecodeError as e:
+        #             print("UnicodeDecodeError:", e)
+        #     return test
 
     # first a function that given an action and a video returns the joints for each frame
     def read_joints_full_video(self, action, video, path="/home/linxin67/scratch/JHMDB/"):
@@ -156,10 +173,10 @@ class load_JHMDB(Dataset):
 
     def get_num_frames(self, action, video):
         # os.chdir(path+'annotations')
-        if action+'/'+video in self.nframes_train:
-            return self.nframes_train[action+'/'+video]
-        else:
-            return self.nframes_test[action+'/'+video]
+        # if self.train_set and action+'/'+video in self.nframes_train:
+        return self.nframes[action+'/'+video]
+        # else:
+        #     return self.nframes_test[action+'/'+video]
 
     def get_names_train_test_split(self, path="/home/linxin67/scratch/JHMDB/"):
         '''
@@ -177,10 +194,15 @@ class load_JHMDB(Dataset):
 
         # looping through gives you each action
         for action in os.listdir(directory):
-            # print(action[-1], action[-5], action[-4])
+            # if only testing, then just take 5 actions
+            if not self.real_job and len(actions) > 1:
+                print("length of actions", len(actions))
+                break
+
             # I just want to look at the ones with 1 after.
             if action[-5] != '1':
                 continue
+
             action_split = os.path.join(directory, action)
             actions.append(action[:-16])  # remove the _test_split<int>.txt
             # checking if it is a file
@@ -190,16 +212,17 @@ class load_JHMDB(Dataset):
                 for index, row in df.iterrows():
                     file_name = row[0]
                     value = int(row[1])
-                    if value == 1:
+                    if value == 1 and self.train_set:
                         # remove the .avi
                         train.append(
                             (action[:-16], file_name[:-4], self.get_num_frames(action[:-16], file_name[:-4])))
-                    elif value == 2:
+                    elif value == 2 and not self.train_set:
                         test.append(
                             (action[:-16], file_name[:-4], self.get_num_frames(action[:-16], file_name[:-4])))
-                    else:
+                    elif value not in [1, 2]:
                         print(type(value), value)
                         print("unknownIndexError")
+        print("The length of actions, train and test are", len(actions), ", ", len(train), ", ", len(test))
         return actions, train, test
 
         # looping through each split of each action gives you the name of each video.
@@ -283,16 +306,19 @@ class load_JHMDB(Dataset):
 
 
 if __name__ == '__main__':
-    train = load_JHMDB(train_set=True, frames_per_vid=16, joints=True, unpickle=True)
+    train = load_JHMDB(train_set=True, frames_per_vid=16, joints=True, unpickle=True, real_job=False)
     # in real context, would definitely need to move the training set in the GPU
-    print(train[100])
-    print(train[100].shape)
-    print(len(train))
+    print(train.arr)
+    print("len(train), ", len(train))
+    print("len(arr), ", len(train.arr))
+    print("len(frames_with_joints)", len(train.frames_with_joints))
+    print(train[len(train)-1])
+    print(len(train[len(train)-1][0]))
 
-    test = load_JHMDB(train_set=False)
-    print(test[len(test)-1])
-    print(len(test))
-    print(test[len(test)-1].shape)
+    # test = load_JHMDB(train_set=False)
+    # print(test[len(test)-1])
+    # print(len(test))
+    # print(test[len(test)-1].shape)
     # print([type(x) for x in data.train_annotations.keys()]) # a list of strings.
     # print(data.test_annotations.keys()) # a dictionary
 

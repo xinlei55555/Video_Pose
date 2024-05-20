@@ -39,10 +39,12 @@ class HeatMapVideoMambaPose(nn.Module):
         # decoder into heatmap
         # self.deconv = hmd.Deconv(4, 4, 4) 
         # self.deconv = hmd3D.Deconv(64, 14, 14)
-        self.deconv = hmd2D.Deconv(64, 14, 14) # Shape of final tensor torch.Size([64, 17, 112, 112])
+        # 16 batch size.
+        self.deconv = hmd2D.Deconv(16, 14, 14, 15) # Shape of final tensor torch.Size([64, 17, 112, 112])
+                # 15 is the number of output joints
 
         # output into joints
-        self.joints = hjr.JointOutput()
+        self.joints = hjr.JointOutput(input_channels = 15, joint_number=15) # for the JHMBD database
 
     def forward(self, x):
         print('Memory before (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary
@@ -53,6 +55,8 @@ class HeatMapVideoMambaPose(nn.Module):
         print(self.deconv)
         # the shape of this is a bit too big after the convolutions.
         # print('After deconvolution', x.shape)
+
+        # this should parallelize and apply it to each channel separately
         x = self.joints(x)
         print('Memory after (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary
         return x

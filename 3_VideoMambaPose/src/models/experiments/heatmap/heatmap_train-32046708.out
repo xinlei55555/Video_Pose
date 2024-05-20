@@ -204,7 +204,14 @@ Traceback (most recent call last):
   File "/project/6005917/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/DataFormat.py", line 58, in __init__
     assert len(list(video)) == len(list(joints))
 AssertionError
-wandb: - 0.004 MB of 0.004 MB uploadedwandb: \ 0.004 MB of 0.004 MB uploadedwandb: | 0.004 MB of 0.004 MB uploadedwandb: / 0.004 MB of 0.004 MB uploadedwandb: - 0.013 MB of 0.032 MB uploadedwandb: \ 0.014 MB of 0.032 MB uploadedwandb: 🚀 View run snowy-deluge-3 at: https://wandb.ai/linxin67/1heatmap_video_mamba/runs/1l8etj9p
+wandb: - 0.004 MB of 0.004 MB uploaded
+wandb: \ 0.004 MB of 0.004 MB uploaded
+wandb: | 0.004 MB of 0.004 MB uploaded
+wandb: / 0.004 MB of 0.004 MB uploaded
+wandb: - 0.013 MB of 0.032 MB uploaded
+wandb: \ 0.014 MB of 0.032 MB uploaded
+wandb: 🚀 View run snowy-deluge-3 at: https://wandb.ai/linxin67/1heatmap_video_mamba/runs/1l8etj9p
 wandb: ⭐️ View project at: https://wandb.ai/linxin67/1heatmap_video_mamba
 wandb: Synced 5 W&B file(s), 0 media file(s), 2 artifact file(s) and 0 other file(s)
 wandb: Find logs at: ./wandb/run-20240519_223830-1l8etj9p/logs
+--------------------------------------------------

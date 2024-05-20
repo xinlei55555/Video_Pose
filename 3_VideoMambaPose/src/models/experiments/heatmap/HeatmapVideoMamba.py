@@ -227,7 +227,7 @@ class VisionMamba(nn.Module):
             bimamba=True,
             # video
             kernel_size=1, 
-            num_frames=64, # !need to change this for the video based on number of frames.
+            num_frames=16, # !need to change this for the video based on number of frames.
             fc_drop_rate=0., 
             device=None,
             dtype=None,
