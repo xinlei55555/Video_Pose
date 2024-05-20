@@ -284,6 +284,7 @@ class load_JHMDB(Dataset):
 
 if __name__ == '__main__':
     train = load_JHMDB(train_set=True, frames_per_vid=16, joints=True, unpickle=True)
+    # in real context, would definitely need to move the training set in the GPU
     print(train[100])
     print(train[100].shape)
     print(len(train))
