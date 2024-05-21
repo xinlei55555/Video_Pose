@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from HeatVideoMamba import HeatMapVideoMambaPose
+from LatentMambaPose import LatentVideoMambaPose
 from torch.utils.data import Dataset, DataLoader
 
 from DataFormat import load_JHMDB
@@ -112,7 +112,7 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # Initialize the model and loss function
-model = HeatMapVideoMambaPose().to(device)
+model = LatentVideoMambaPose().to(device)
 print(model)
 loss_fn = PoseEstimationLoss()
 

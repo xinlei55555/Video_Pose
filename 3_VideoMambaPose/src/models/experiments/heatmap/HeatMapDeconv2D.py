@@ -25,7 +25,7 @@ class Deconv(nn.Module):
     https://github.com/ViTAE-Transformer/ViTPose/blob/d5216452796c90c6bc29f5c5ec0bdba94366768a/mmpose/models/heads/deconv_head.py#L12
     """
 
-    def __init__(self, d=8, h=14, w=14, out_channels=17):
+    def __init__(self, d=16, h=14, w=14, out_channels=17):
         super().__init__()
         # !using ViTPose
         # self.deconv = hdh.DeconvHead(in_channels = 192, out_channels = 3)
