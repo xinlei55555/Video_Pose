@@ -22,26 +22,17 @@ from timm.models.vision_transformer import _load_weights
 import math
 
 from mamba_ssm.modules.mamba_simple import Mamba
-import HeatmapVideoMamba as hvm
-import HeatMapDeconv2D as hmd2D
-import HeatMapDeconv3D as hmd3D
-import HeatMapJointRegressor as hjr
+import LatentVideoMamba as hvm
+import LatentJointRegressor as hjr
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
-class HeatMapVideoMambaPose(nn.Module):
+class LatentVideoMambaPose(nn.Module):
     def __init__(self):
         super().__init__()
         # encoder
         self.mamba = hvm.videomamba_tiny()
-
-        # decoder into heatmap
-        # self.deconv = hmd.Deconv(4, 4, 4) 
-        # self.deconv = hmd3D.Deconv(64, 14, 14)
-        # 16 batch size.
-        self.deconv = hmd2D.Deconv(16, 14, 14, 15) # Shape of final tensor torch.Size([64, 17, 112, 112])
-                # 15 is the number of output joints
 
         # output into joints
         self.joints = hjr.JointOutput(input_channels = 15, joint_number=15) # for the JHMBD database
@@ -50,12 +41,7 @@ class HeatMapVideoMambaPose(nn.Module):
         print('Memory before (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary
         x = self.mamba(x) # uses around 7gb of memory for tiny
 
-        x = self.deconv(x)
         
-        print(self.deconv)
-        # the shape of this is a bit too big after the convolutions.
-        # print('After deconvolution', x.shape)
-
         # this should parallelize and apply it to each channel separately
         x = self.joints(x)
         print('Memory after (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary

@@ -25,7 +25,7 @@ class Deconv(nn.Module):
     https://github.com/ViTAE-Transformer/ViTPose/blob/d5216452796c90c6bc29f5c5ec0bdba94366768a/mmpose/models/heads/deconv_head.py#L12
     """
 
-    def __init__(self, d=8, h=14, w=14):
+    def __init__(self, d=16, h=14, w=14, out_channels=17):
         super().__init__()
         # !using ViTPose
         # self.deconv = hdh.DeconvHead(in_channels = 192, out_channels = 3)
@@ -37,6 +37,7 @@ class Deconv(nn.Module):
 
         # * Initialize my layers with mmcv.cnn
         self.d, self.h, self.w = d, h, w
+        self.out_channels=out_channels
 
         self.conv_layers = self.define_conv_layers()
         self.deconv_layers = self.define_deconv_layers()
@@ -60,6 +61,9 @@ class Deconv(nn.Module):
                            conv_channels=256, 
                            out_channels=17,
                            num_conv_kernels=(1, 1, 1)):
+        # adjust out_channels before
+        out_channels = self.out_channels
+        
         layers = []
         for i in range(num_conv_layers):
             layers.append(
