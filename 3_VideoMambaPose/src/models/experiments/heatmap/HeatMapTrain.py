@@ -48,7 +48,9 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
     for epoch in range(1, n_epochs + 1):
         model.train() # so that the model keeps updating its weights.
         train_loss = 0.0
-        for train_inputs, train_labels in train_set:
+        for i, data in enumerate(train_set):
+            train_inputs, train_labels = data
+
             # should load individual batches to GPU
             train_inputs, train_labels = train_inputs.to(device), train_labels.to(device) 
 
@@ -73,7 +75,8 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
         
         model.eval() # so that the model does not change the values of the parameters
         test_loss = 0.0
-        for test_inputs, test_labels in test_set:
+        for i, data in enumerate(test_set):
+            test_inputs, test_labels = data
             test_inputs, test_labels = test_inputs.to(device), test_labels.to(device) 
 
             # repeat for the validation
