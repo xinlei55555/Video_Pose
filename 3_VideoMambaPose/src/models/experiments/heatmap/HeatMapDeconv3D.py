@@ -57,7 +57,7 @@ class Deconv(nn.Module):
         return x
 
     def define_conv_layers(self,
-                           num_conv_layers=1,
+                           num_conv_layers=2,
                            # number of input channels
                            conv_channels=256, 
                            out_channels=17,
