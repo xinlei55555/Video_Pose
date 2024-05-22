@@ -195,7 +195,7 @@ class load_JHMDB(Dataset):
         # looping through gives you each action
         for action in os.listdir(directory):
             # if only testing, then just take 5 actions
-            if not self.real_job and len(actions) > 1:
+            if not self.real_job and ((len(train) > 20 and len(test) > 2) or len(actions) > 1):
                 print("length of actions", len(actions))
                 break
 

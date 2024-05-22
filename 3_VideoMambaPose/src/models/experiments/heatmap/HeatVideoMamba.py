@@ -48,6 +48,7 @@ class HeatMapVideoMambaPose(nn.Module):
 
     def forward(self, x):
         print('Memory before (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary
+        print('Here is the input format', x.shape())
         x = self.mamba(x) # uses around 7gb of memory for tiny
 
         x = self.deconv(x)
