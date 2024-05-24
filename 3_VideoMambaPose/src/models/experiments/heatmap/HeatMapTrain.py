@@ -42,6 +42,7 @@ class PoseEstimationLoss(nn.Module):
 
 def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, device):
     checkpoints_dir = 'checkpoints'
+    os.chdir("/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap")
     os.makedirs(checkpoints_dir, exist_ok=True)
     best_val_loss = float('inf')
 
