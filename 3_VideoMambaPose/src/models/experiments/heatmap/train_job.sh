@@ -10,7 +10,7 @@
 module load python/3.10
 module load opencv
 module load gcc
-module load cudacore/.12.2.2
+module load cudacore/.11.8.0
 source /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/mamba_env2/bin/activate               # Activate your virtual environment
 
 python HeatMapTrain.py                    # Command to run your Python script
