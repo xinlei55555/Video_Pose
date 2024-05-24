@@ -10,8 +10,8 @@
 module load python/3.10
 module load opencv
 module load gcc
-module load cudacore/.12.2.2
-source /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/mamba_env2/bin/activate               # Activate your virtual environment
+module load cudacore/.11.8.0
+source /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/mamba_env118/bin/activate               # Activate your virtual environment
 export CUDA_LAUNCH_BLOCKING=1
 
 python verify_installation.py                    # Command to run your Python script
