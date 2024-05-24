@@ -24,3 +24,4 @@ model = Mamba(
 ).to("cuda")
 y = model(x)
 assert y.shape == x.shape
+print('everything worked', y, x, y.shape, x.shape)

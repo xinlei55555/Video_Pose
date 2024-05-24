@@ -5,13 +5,8 @@
 #SBATCH --cpus-per-task=1                 # Number of CPU cores per task
 #SBATCH --gres=gpu:1                      # Number of GPUs per node 
 #SBATCH --mem=4000M                    # Total memory per node (less means faster allocation) 
-#SBATCH --output=%x-%j.out                # Standard output and error log (%x = job name, %j = job ID)
+#SBATCH --output=outputs/%x-%j.out                # Standard output and error log (%x = job name, %j = job ID)
 
-module load python/3.10
-module load opencv
-module load gcc
-module load cudacore/.11.8.0
-source /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/mamba_env118/bin/activate               # Activate your virtual environment
-export CUDA_LAUNCH_BLOCKING=1
-
+source /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/mamba_env118/bin/activate
+module restore mamba_modules
 python verify_installation.py                    # Command to run your Python script
