@@ -146,7 +146,7 @@ loss_fn = PoseEstimationLoss()
 # on z
 batch_size = 16 # I'll maybe reduce the batch size to 12, just to be safe lol
 
-num_workers = 4 # ! keep it low for testing purposes, but for training, increase to 4
+num_workers = 2 # ! keep it low for testing purposes, but for training, increase to 4
 # num_frames = x64x # i'll actually be using 16
 # height = 224
 # width = 224
@@ -166,10 +166,10 @@ test_set = load_JHMDB(train_set=False, real_job=True)
 
 # train_set, test_set = train_set.to(device), test_set.to(device) # do not load the data here to the gpu
 
-train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-# half the batch size for the test loader.
-test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-
+train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=num_workers, jump=8)
+# i'll take 1/8 of the dataset lol, although there is actually no need! it was able to load it perfectly
+test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=num_workers, jump=8) 
+    
 
 # defining model
 model = HeatMapVideoMambaPose()
