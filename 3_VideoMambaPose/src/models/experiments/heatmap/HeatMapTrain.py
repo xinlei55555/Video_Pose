@@ -120,14 +120,14 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
 
             # Save the model checkpoint, since this is classification, there isn't really an accuracy...
             # ! delete the previous ones, because takes lots of space
-            os.rmdir(checkpoints_dir)
-            os.makedirs(checkpoint_dir, exist_ok=True)
+            # os.rmdir(checkpoints_dir)
+            # os.makedirs(checkpoints_dir, exist_ok=True)
 
             # save model locally
-            checkpoint_path = os.path.join(checkpoint_dir, f'heatmap_{best_val_loss:.4f}.pt')
+            checkpoint_path = os.path.join(checkpoints_dir, f'heatmap_{best_val_loss:.4f}.pt')
             torch.save(model.state_dict(), checkpoint_path)
             print(f'Best model saved at {checkpoint_path}')
-            print("Model parameters are", list(model.parameters()))
+            print("Model parameters are of the following size", len(list(model.parameters())))
     wandb.finish()
 
 
@@ -144,7 +144,7 @@ print(model)
 loss_fn = PoseEstimationLoss()
 
 # on z
-batch_size = 8 # I'll maybe reduce the batch size to 12, just to be safe lol
+batch_size = 16 # I'll maybe reduce the batch size to 12, just to be safe lol
 
 num_workers = 4 # ! keep it low for testing purposes, but for training, increase to 4
 # num_frames = x64x # i'll actually be using 16
@@ -161,8 +161,8 @@ num_workers = 4 # ! keep it low for testing purposes, but for training, increase
 # -----------------
 
 # ! loading the data, will need to set real_job to False when training
-train_set = load_JHMDB(train_set=True, real_job=False)
-test_set = load_JHMDB(train_set=False, real_job=False)
+train_set = load_JHMDB(train_set=True, real_job=True)
+test_set = load_JHMDB(train_set=False, real_job=True)
 
 # train_set, test_set = train_set.to(device), test_set.to(device) # do not load the data here to the gpu
 

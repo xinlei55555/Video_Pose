@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=model_info_and_shape   # Job name
+#SBATCH --job-name=bs_16_final_test   # Job name
 #SBATCH --account=def-btaati              # Replace with your account
 #SBATCH --time=00-03:00                   # Time limit (DD-HH:MM)
-#SBATCH --cpus-per-task=1                 # Number of CPU cores per task
+#SBATCH --cpus-per-task=4                 # Number of CPU cores per task
 #SBATCH --gres=gpu:1                      # Number of GPUs per node 
 #SBATCH --mem-per-gpu=32000M                    # Total memory per node (less means faster allocation) 
 #SBATCH --output=test-output/%x-%j.out                # Standard output and error log (%x = job name, %j = job ID)

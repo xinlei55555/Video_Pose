@@ -3,7 +3,7 @@
 #SBATCH --account=def-btaati              # Replace with your account
 #SBATCH --time=00-3:00                   # Time limit (DD-HH:MM) ! change this when training.
 #SBATCH --cpus-per-task=4                 # Number of CPU cores per task ! change this when training.
-#SBATCH --gres=gpu:2                      # Number of GPUs per node 
+#SBATCH --gres=gpu:1                      # Number of GPUs per node 
 #SBATCH --mem-per-gpu=32000M                    # Total memory per node (less means faster allocation) 
 #SBATCH --output=train-output/%x-%j.out                # Standard output and error log (%x = job name, %j = job ID)
 
