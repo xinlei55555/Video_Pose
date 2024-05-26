@@ -112,7 +112,8 @@ class load_JHMDB(Dataset):
         '''
         video_num, frame_num, joint_values = self.arr[index][0], self.arr[index][1], self.arr[index][2]
         # slicing with pytorch tensors.
-        video = torch.tensor(self.frames_with_joints[video_num][0][frame_num+1-self.frames_per_vid:frame_num+1])
+        video = self.frames_with_joints[video_num][0][frame_num+1-self.frames_per_vid:frame_num+1]
+        # video = torch.tensor() # I think it was already a toch tensor
         video = rearrange(video, 'd c h w -> c d h w') # need to rearrange so that channel number is in front.
         # print('The shape of the video is', video.shape)
         # torch.Size([16, 3, 224, 224]) -> torch.Size([3, 16, 224, 224])

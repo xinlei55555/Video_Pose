@@ -51,8 +51,14 @@ class Deconv(nn.Module):
         W the width of the image
         """
         # I want to combine batch and depth, for the 2d
-        x = rearrange(x, 'b (d h w) c -> (b d) c h w', d=self.d, h=self.h, w=self.w)
-        # x has the following sizes: (16,192 channels, 8, 14, 14) --> The 192 channels were initiated from the patching
+        x = rearrange(x, 'b (d h w) c -> b d c h w', d=self.d, h=self.h, w=self.w)
+
+        # and I can just discard the depth, and keep the last layer of the mamba (at least for the 2D deconv)
+        # Select the last element in the 'd' dimension
+        x = x[:, -1, :, :, :]  # x.shape now should be [batch, c, h, w]
+
+        # x has the following sizes: (12,192 channels, 8, 14, 14) --> The 192 channels were initiated from the patching
+        # hence, for 2d deconv, i pass in (12, 1, c, h, w)
         return x
 
     def define_conv_layers(self,
@@ -175,7 +181,7 @@ class Deconv(nn.Module):
         
         # deconvolutions
         x = self.deconv_layers(x)
-        print("before convolution", x.shape)
+        print("before convolution (after deconvolution)", x.shape)
 
         # heatmap output, through convolutions
         x = self.conv_layers(x)

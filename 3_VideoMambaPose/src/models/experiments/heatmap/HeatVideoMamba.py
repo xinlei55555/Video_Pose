@@ -51,14 +51,16 @@ class HeatMapVideoMambaPose(nn.Module):
         print('Here is the input format', x.shape) # this prints Here is the input format torch.Size([12, 3, 16, 224, 224])k
         x = self.mamba(x) # uses around 7gb of memory for tiny
 
+        print('Output of the mamba model, before the deconvolution', x.shape)
         x = self.deconv(x)
         
-        print(self.deconv)
+        # print(self.deconv)
         # the shape of this is a bit too big after the convolutions.
-        # print('After deconvolution', x.shape)
+        print('After deconvolution', x.shape)
 
         # this should parallelize and apply it to each channel separately
         x = self.joints(x)
+        print('Final shape', x.shape)
         print('Memory after (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary
         return x
 
@@ -70,7 +72,7 @@ if __name__ == "__main__":
 
     # Define the dimensions
     batch_size = 1 # ! can train on cedar with batch size of 32 (no more)
-    num_frames = 64 #memory usage is linearly growing with the input size.
+    num_frames = 64 # I did 16 memory usage is linearly growing with the input size.
     height = 224 # *Note: VitPose doesn't use square, to reduce number of pixels. (bounding box with YolO)
     width = 224
     channels = 3
