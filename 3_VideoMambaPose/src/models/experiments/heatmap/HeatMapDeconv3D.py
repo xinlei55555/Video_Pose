@@ -172,7 +172,7 @@ class Deconv(nn.Module):
         
         # deconvolutions
         x = self.deconv_layers(x)
-        print("before convolution", x.shape)
+        # print("before convolution", x.shape)
 
         # heatmap output, through convolutions
         x = self.conv_layers(x)

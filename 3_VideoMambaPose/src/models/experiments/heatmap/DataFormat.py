@@ -128,7 +128,7 @@ class load_JHMDB(Dataset):
         # torch.Size([16, 3, 224, 224]) -> torch.Size([3, 16, 224, 224])
 
         # show this for debug:
-        print(f'index: {index}, video_num: {video_num}, frame_num: {frame_num}, len(joint_values), {len(list(joint_values))}')
+        # print(f'index: {index}, video_num: {video_num}, frame_num: {frame_num}, len(joint_values), {len(list(joint_values))}')
         return [video, joint_values[frame_num]]
 
         

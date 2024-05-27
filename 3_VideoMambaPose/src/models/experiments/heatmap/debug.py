@@ -1,15 +1,16 @@
 # run through it and go through every index that is 35.
 import torch
 from torch.utils.data import Dataset, DataLoader
+import os
 
 from DataFormat import load_JHMDB
 
 print('Started')
 
 # The length of actions, train and test are 21 ,  660 ,  0, if its 1/8 of the data.
-train_set = load_JHMDB(train_set=True, real_job=True, jump=8)
+train_set = load_JHMDB(train_set=True, real_job=True, jump=1)
 
-test_set = load_JHMDB(train_set=False, real_job=True, jump=8)
+test_set = load_JHMDB(train_set=False, real_job=True, jump=1)
 
 # train_set, test_set = train_set.to(device), test_set.to(device) # do not load the data here to the gpu
 
