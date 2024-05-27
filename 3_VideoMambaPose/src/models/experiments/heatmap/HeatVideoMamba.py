@@ -47,7 +47,7 @@ class HeatMapVideoMambaPose(nn.Module):
         self.joints = hjr.JointOutput(input_channels = 15, joint_number=15) # for the JHMBD database
 
     def forward(self, x):
-        print('Memory before (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary
+        # print('Memory before (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary
         # print('Here is the input format', x.shape) # this prints Here is the input format torch.Size([12, 3, 16, 224, 224])k
         x = self.mamba(x) # uses around 7gb of memory for tiny
 
@@ -61,7 +61,7 @@ class HeatMapVideoMambaPose(nn.Module):
         # this should parallelize and apply it to each channel separately
         x = self.joints(x)
         # print('Final shape', x.shape)
-        print('Memory after (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary
+        # print('Memory after (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary
         return x
 
 

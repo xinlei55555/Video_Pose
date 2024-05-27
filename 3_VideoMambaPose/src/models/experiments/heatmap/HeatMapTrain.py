@@ -40,17 +40,35 @@ class PoseEstimationLoss(nn.Module):
         loss = self.mse_loss(predicted, target)
         return loss
 
+def load_checkpoint(filepath, model):
+    checkpoint = torch.load(filepath)
+    model.load_state_dict(checkpoint) # this depends on how I saved the model
+    # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    # epoch = checkpoint['epoch']
+    # loss = checkpoint['loss']
+    return model
 
-def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, device):
+
+def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, device, follow_up=(False, 1, None)):
     checkpoints_dir = 'checkpoints'
     os.chdir("/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap")
     os.makedirs(checkpoints_dir, exist_ok=True)
     best_val_loss = float('inf')
 
-    for epoch in range(1, n_epochs + 1):
+    start_epoch = 1
+    # then load checkpoint to follow up on the model
+    if follow_up[0]:
+        checkpoint_path = follow_up[2]
+        model = load_checkpoint(checkpoint_path, model)
+        start_epoch = follow_up[1]
+
+    for epoch in range(start_epoch, n_epochs + start_epoch):
         model.train()  # so that the model keeps updating its weights.
         train_loss = 0.0
         # print('train batch for epoch # ', epoch)
+
+        if epoch == start_epoch:
+            print('Memory before (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary
 
         if epoch == 1:
             print(f'The length of the train_set is {len(train_set)}')
@@ -70,7 +88,7 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
             # first make an initial guess as to the weights (Note: training is done in parallel)
             train_outputs = model(train_inputs)
 
-            if epoch == 1:
+            if epoch == start_epoch:
                 print('The shape of the outputs is ', train_outputs.shape)
                 print('The shape of the labels are ', train_labels.shape)
 
@@ -89,6 +107,9 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
 
             # .item transforms loss from pytorch tensor to python value
             train_loss += loss_train.item()
+
+            if epoch == start_epoch:
+                print('Memory after train_batch (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary
 
             torch.cuda.empty_cache()  # Clear cache to save memory
 
@@ -111,6 +132,9 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
                 loss_val = loss_fn(test_outputs.float(), test_labels.float())
 
                 test_loss += loss_val.item()
+                
+                if epoch == start_epoch:
+                    print('Memory after test_batch (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary
 
                 torch.cuda.empty_cache()  # Clear cache to save memory
 
@@ -139,6 +163,12 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
             checkpoint_path = os.path.join(
                 checkpoints_dir, f'heatmap_{best_val_loss:.4f}.pt')
             torch.save(model.state_dict(), checkpoint_path)
+            # torch.save({
+            #     'model_state_dict': model.state_dict(),
+            #     'optimizer_state_dict': optimizer.state_dict(),
+            #     'epoch': epoch,
+            #     'loss': loss.item(),
+            # }, checkpoint_path)
             print(f'Best model saved at {checkpoint_path}')
             print("Model parameters are of the following size",
                   len(list(model.parameters())))
@@ -223,4 +253,5 @@ loss_fn = PoseEstimationLoss()
 
 # ! will increase the number of epochs when not training
 training_loop(300, optimizer, model, loss_fn,
-              train_loader, test_loader, device)
+              train_loader, test_loader, device,
+              (True, 50, '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_22069.0820.pt'))
