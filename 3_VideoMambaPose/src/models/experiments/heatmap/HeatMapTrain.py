@@ -161,14 +161,14 @@ num_workers = 2 # ! keep it low for testing purposes, but for training, increase
 # -----------------
 
 # ! loading the data, will need to set real_job to False when training
-train_set = load_JHMDB(train_set=True, real_job=True)
-test_set = load_JHMDB(train_set=False, real_job=True)
+train_set = load_JHMDB(train_set=True, real_job=True, jump=8)
+test_set = load_JHMDB(train_set=False, real_job=True, jump=8)
 
 # train_set, test_set = train_set.to(device), test_set.to(device) # do not load the data here to the gpu
 
-train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=num_workers, jump=8)
+train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 # i'll take 1/8 of the dataset lol, although there is actually no need! it was able to load it perfectly
-test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=num_workers, jump=8) 
+test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=num_workers) 
     
 
 # defining model

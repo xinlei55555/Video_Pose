@@ -62,15 +62,17 @@ class load_JHMDB(Dataset):
                                                 action_name, file_name))
                                             for action_name, file_name, n_frames in self.train]
             # arr where arr[idx] = idx in the self.frames_with_joints
-            jump = 1 # this is the number of frames to skip between datapoints
+            self.jump=jump# this is the number of frames to skip between datapoints
             for k in range(len(self.frames_with_joints)):
                 video, joints = self.frames_with_joints[k]
+
                 if len(list(video)) != len(list(joints)):
                     print('Wrong length! Video: ', len(list(video)))
                     print('Joints: ', len(list(joints)))
-                # going through each frame in the video
-                for i in range(0, len(list(video)), jump): 
-                    if i >= self.frames_per_vid:
+                
+                else:
+                    # going through each frame in the video
+                    for i in range(self.frames_per_vid, len(list(video)), self.jump): 
                         # 3-tuple: (index in self.train_frames_with_joints, index in the video, joint values)
                         self.arr.append([k, i, joints])
         else:
@@ -124,6 +126,9 @@ class load_JHMDB(Dataset):
         video = rearrange(video, 'd c h w -> c d h w') # need to rearrange so that channel number is in front.
         # print('The shape of the video is', video.shape)
         # torch.Size([16, 3, 224, 224]) -> torch.Size([3, 16, 224, 224])
+
+        # show this for debug:
+        print(f'index: {index}, video_num: {video_num}, frame_num: {frame_num}, len(joint_values), {len(list(joint_values))}')
         return [video, joint_values[frame_num]]
 
         
