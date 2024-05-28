@@ -53,20 +53,21 @@ class JointOutput(nn.Module):
         self.joint_number = joint_number
         self.input_channels = input_channels
         self.c, self.d, self.h, self.w = input_channels, d, h, w
+        self.b = 16 # although could change later.
         self.regressor = self.regressors()
         # self.flatten = self.input_flatten()
 
     # update the shapes that are passed in
-    # def get_shape(self):
-        # if len(list(x.shape)) == 5:
-        # self.b, self.c, self.d, self.h, self.w = x.shape
-        # else:
-        # self.b, self.c, self.h, self.w = x.shape
-        # self.d = 1
+    def get_shape(self):
+        if len(list(x.shape)) == 5:
+            self.b, self.c, self.d, self.h, self.w = x.shape
+        else:
+            self.b, self.c, self.h, self.w = x.shape
+            self.d = 1
 
     def input_flatten(self, x):
         # first get the shape of the input
-        # self.get_shape(x)
+        self.get_shape()
 
         # x has the following sizes: (16,17 channels, 8, 14, 14) --> The 192 channels were initiated from the patching
         # * I want each channel to be processed separately, as a whole. So flatten each layer.
