@@ -90,6 +90,21 @@ def video_to_tensors(video_path='/home/linxin67/scratch/JHMDB/Rename_Images/'):
 
 
 def visualize(joints, frames, file_name):
+    '''1: neck
+    2: belly
+    3: face
+    4: right shoulder
+    5: left  shoulder
+    6: right hip
+    7: left  hip
+    8: right elbow
+    9: left elbow
+    10: right knee
+    11: left knee
+    12: right wrist
+    13: left wrist
+    14: right ankle
+    15: left ankle'''
     # ground truth:
     # Extract x and y values
 
@@ -97,10 +112,19 @@ def visualize(joints, frames, file_name):
     # Replace this with your actual tensor
     num_frames = min(len(list(joints)), len(list(frames)))  # Number of frames in the video
 
+    width = 320
+    height = 240
+
+    # width = 720
+    # height = 512
+    # width = 480
+    # height= 360
+
+    os.mkdir(file_name)
+
     # Create a video writer to save the output
     video_writer = cv2.VideoWriter(
-        f'{file_name}.mp4', cv2.VideoWriter_fourcc(*'mp4v'), num_frames, (320, 240))
-
+        f'{file_name}{width}x{height}/{file_name}.mp4', cv2.VideoWriter_fourcc(*'mp4v'), num_frames, (width, height))
     for frame_idx in range(num_frames):
         # Get the joints for the current frame
 
@@ -113,7 +137,7 @@ def visualize(joints, frames, file_name):
         transform = transforms.Compose([
             # notice that all the images are 320x240. Hence, resizing all to 224 224 is generalized, and should be equally skewed
             transforms.ToPILImage(),
-            transforms.Resize((240, 320)),
+            transforms.Resize((height, width)), # mayb they had the wrong size
             transforms.ToTensor()
         ])
         image = transform(image)
@@ -138,25 +162,27 @@ def visualize(joints, frames, file_name):
         for i, pos in enumerate(joints_per_frame):
             # print('pos ', pos)
             x, y = pos[0], pos[1]
-            plt.text(x, y, str(i), color="blue",
+            plt.text(x, y, str(i+1), color="blue",
                      fontsize=12, ha='right', va='bottom')
+            
 
         plt.title(f'Frame {frame_idx + 1}')
         plt.xlabel('X Coordinate')
         plt.ylabel('Y Coordinate')
-        plt.xlim(0, 320)
-        plt.ylim(240, 0)  # Invert y-axis to match image coordinate system
+        plt.xlim(0, width)
+        plt.ylim(height, 0)  # Invert y-axis to match image coordinate system
         plt.legend()
 
         # Save the current plot to an image file
-        plt.savefig('frame.png')
+        plt.savefig(f'{file_name}/frame_{frame_idx}.png')
         plt.close()
 
         # Read the saved image
-        frame_image = cv2.imread('frame.png')
-        # Ensure the size is correct
-        frame_image = cv2.resize(frame_image, (320, 240))
+        frame_image = cv2.imread(f'{file_name}/frame_{frame_idx}.png')
 
+        # Ensure the size is correct
+        frame_image = cv2.resize(frame_image, (width, height))
+# 
         # Write the frame to the video
         video_writer.write(frame_image)
 
@@ -170,9 +196,19 @@ def main():
     # model_path = '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_27345.4473.pt'
     model_path='/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_8652135.9131.pt'
     # model_path = '/mnt/DATA/Personnel/Other learning/Programming/Professional_Opportunities/KITE - Video Pose ViT/KITE - Video Pose Landmark Detection/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_8639121.0703.pt'
-    action_path = 'test_visualization/20_good_form_pullups_pullup_f_nm_np1_ri_goo_2'
-    joint_path = 'test_visualization/Copy-of-20_good_form_pullups_pullup_f_nm_np1_ri_goo_2'
+    action_path = 'test_visualization/Pirates_5_wave_h_nm_np1_fr_med_8'
+    joint_path = 'test_visualization/Copy-of-Pirates_5_wave_h_nm_np1_fr_med_8'
     
+    # load the whole joint file and the video
+    joints, frames = get_input_and_label(joint_path, action_path, model_path)
+
+    print(joints)
+
+    # ground truth
+    visualize(joints, frames, 'ground_truth_pirate')
+
+    return
+
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Load the model from the .pt file
@@ -180,14 +216,6 @@ def main():
     model = model.to(device)
 
     print(model)
-
-    # load the whole joint file and the video
-    joints, frames = get_input_and_label(joint_path, action_path, model_path)
-
-    print(joints)
-
-    # ground truth
-    visualize(joints, frames, 'ground_truth')
 
     frames_per_vid = 16
     outputs = torch.zeros(len(frames)-15, 15, 2) # all frames, except first 15 (because each video is 16 frames) with 15 joints, and x y
