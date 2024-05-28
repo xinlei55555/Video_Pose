@@ -58,7 +58,7 @@ class JointOutput(nn.Module):
         # self.flatten = self.input_flatten()
 
     # update the shapes that are passed in
-    def get_shape(self):
+    def get_shape(self, x):
         if len(list(x.shape)) == 5:
             self.b, self.c, self.d, self.h, self.w = x.shape
         else:
@@ -67,7 +67,7 @@ class JointOutput(nn.Module):
 
     def input_flatten(self, x):
         # first get the shape of the input
-        self.get_shape()
+        self.get_shape(x)
 
         # x has the following sizes: (16,17 channels, 8, 14, 14) --> The 192 channels were initiated from the patching
         # * I want each channel to be processed separately, as a whole. So flatten each layer.

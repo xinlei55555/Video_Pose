@@ -104,7 +104,7 @@ def visualize(joints, frames, file_name):
     for frame_idx in range(num_frames):
         # Get the joints for the current frame
 
-        joints_per_frame = joints[frame_idx].numpy()
+        joints_per_frame = joints[frame_idx]
 
         # Create a blank 320x240 image (white background)
         image = frames[frame_idx]
@@ -117,7 +117,14 @@ def visualize(joints, frames, file_name):
             transforms.ToTensor()
         ])
         image = transform(image)
-        image = rearrange(image, 'c w d->w d c').numpy()
+        image = rearrange(image, 'c w d->w d c')
+
+        # converting and changing to cpu before plotting
+        image = image.clone().to('cpu')
+        image = image.numpy()
+
+        joints_per_frame = joints_per_frame.clone().to('cpu')
+        joints_per_frame = joints_per_frame.numpy()
 
         # Plotting the joints onto the image
         plt.figure(figsize=(8, 6))
@@ -158,35 +165,48 @@ def visualize(joints, frames, file_name):
 def main():
     # model_path = '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_22069.0820.pt'
     # model_path = '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_27345.4473.pt'
-    # model_path='/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_8652135.9131.pt'
-    model_path = '/mnt/DATA/Personnel/Other learning/Programming/Professional_Opportunities/KITE - Video Pose ViT/KITE - Video Pose Landmark Detection/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_8639121.0703.pt'
+    model_path='/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_8652135.9131.pt'
+    # model_path = '/mnt/DATA/Personnel/Other learning/Programming/Professional_Opportunities/KITE - Video Pose ViT/KITE - Video Pose Landmark Detection/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_8639121.0703.pt'
     action_path = 'test_visualization/20_good_form_pullups_pullup_f_nm_np1_ri_goo_2'
     joint_path = 'test_visualization/Copy-of-20_good_form_pullups_pullup_f_nm_np1_ri_goo_2'
+    
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
     # Load the model from the .pt file
     model = load_model(model_path)
+    model = model.to(device)
+
     print(model)
 
     # load the whole joint file and the video
     joints, frames = get_input_and_label(joint_path, action_path, model_path)
 
+    print(joints)
+
     # ground truth
-    # visualize(joints, frames, 'ground_truth')
+    visualize(joints, frames, 'ground_truth')
 
     frames_per_vid = 16
-    joints_outputted = []
+    outputs = torch.zeros(len(frames)-15, 15, 2) # all frames, except first 15 (because each video is 16 frames) with 15 joints, and x y
     for frame in range(15, len(frames)):
         input_frame = frames[frame-(frames_per_vid)+1:frame+1]
 
-        input_frame = rearrange(input_frame, 'd c h w -> c d h w')         
+        input_frame = rearrange(input_frame, 'd c h w -> c d h w')
+
+        input_frame = input_frame.to(device)          
         
         # videos.append(input_frame) # need cuda GPU!
         output = inference(model, input_frame)
 
-    # predict
+        outputs[frame-15] = output
+
+    # outputs = torch.as_tensor(outputs)
+
+    # prints the last output
     print('output', output)
 
     # visualize
-    visualize(output, frames, 'predicted')
+    visualize(outputs, frames, 'predicted')
 
 
 

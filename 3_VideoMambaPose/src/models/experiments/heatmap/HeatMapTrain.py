@@ -174,81 +174,47 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
                   len(list(model.parameters())))
     wandb.finish()
 
+def main():
+    # currently, only taking the first GPU, but later will use DDP will need to change.
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-# Example usage:
-# Assuming `model` is an instance of `HeatMapVideoMambaPose`
-# and `target` is the ground truth tensor.
-# device = 'cuda' if torch.cuda.is_available() else 'cpu'
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    # Initialize the model and loss function
+    model = HeatMapVideoMambaPose().to(device)
 
+    # making sure to employ parallelization!!!
+    if torch.cuda.device_count() > 1:
+        model = nn.DataParallel(model)
 
-# Initialize the model and loss function
-model = HeatMapVideoMambaPose().to(device)
+    # move the data to the GPU
+    model = model.to(device)
 
+    print(model)
 
-# making sure to employ parallelization!!! ANd it workkkeddd
-if torch.cuda.device_count() > 1:
-    model = nn.DataParallel(model)
+    loss_fn = PoseEstimationLoss()
 
-# move the data to the GPU
-model = model.to(device)
+    batch_size = 16 
+    num_workers = 0
+    # num_frames = x64x # i'll actually be using 16
+    # height = 224
+    # width = 224
+    # channels = 3
 
-print(model)
+     # ! loading the data, will need to set real_job to False when training
+    train_set = load_JHMDB(train_set=True, real_job=True, jump=1)
+    test_set = load_JHMDB(train_set=False, real_job=True, jump=1)
 
-loss_fn = PoseEstimationLoss()
+    train_loader = DataLoader(train_set, batch_size=batch_size,
+                            shuffle=True, num_workers=num_workers, pin_memory=True)
+    test_loader = DataLoader(test_set, batch_size=batch_size,
+                            shuffle=False, num_workers=num_workers, pin_memory=True) 
 
-# on z
-batch_size = 16  # I'll maybe reduce the batch size to 12, just to be safe lol
+    # optimizer
+    optimizer = torch.optim.Adam(model.parameters())
 
-num_workers = 2  # ! keep it low for testing purposes, but for training, increase to 4
-# num_frames = x64x # i'll actually be using 16
-# height = 224
-# width = 224
-# channels = 3
+    # Training loop
+    training_loop(300, optimizer, model, loss_fn,
+                train_loader, test_loader, device,
+                (True, 50, '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_22069.0820.pt'))
 
-# * testing purposes:
-# Generate a random input tensor
-# test_video = torch.rand(batch_size, channels, num_frames, height, width)
-
-# # Check the shape of the random tensor
-# print("Shape of the random tensor:", test_video.shape)
-# -----------------
-
-# ! loading the data, will need to set real_job to False when training
-train_set = load_JHMDB(train_set=True, real_job=True, jump=1)
-test_set = load_JHMDB(train_set=False, real_job=True, jump=1)
-
-# train_set, test_set = train_set.to(device), test_set.to(device) # do not load the data here to the gpu
-
-train_loader = DataLoader(train_set, batch_size=batch_size,
-                          shuffle=True, num_workers=num_workers)
-# i'll take 1/8 of the dataset lol, although there is actually no need! it was able to load it perfectly
-test_loader = DataLoader(test_set, batch_size=batch_size,
-                         shuffle=False, num_workers=num_workers)
-
-# Forward Pass
-# y = model(test_video)
-
-# * note: (B, C, T, H, W) returns 16, 192, 8, 14, 14
-# torch.Size([16, 1568, 192]), i.e. (Batch, 1568 is 8*14*14, 192 is the channel number )
-# print(y.shape)
-# print(y)
-
-# Example target tensor (should be of the same shape as predicted_output)
-# target_tensor = None  # TODO define this later
-
-# showing the parameters:
-# list(model.parameters())
-
-# Compute loss
-# loss = loss_fn(predicted_output, target_tensor)
-# print(f"Loss: {loss.item()}")
-
-# optimizer
-optimizer = torch.optim.Adam(model.parameters())
-
-# Training loop
-# ! will increase the number of epochs when not training
-training_loop(300, optimizer, model, loss_fn,
-              train_loader, test_loader, device,
-              (True, 50, '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_22069.0820.pt'))
+if __name__ == '__main__':
+    main()
