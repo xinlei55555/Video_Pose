@@ -17,7 +17,7 @@ import matplotlib
 from matplotlib import pyplot as plt
 
 
-class load_JHMDB(Dataset):
+class JHMDBLoad(Dataset):
     '''
     train_annotations: training set annotations
     test_annotations: testing set annotations
@@ -326,7 +326,7 @@ class load_JHMDB(Dataset):
 
 
 if __name__ == '__main__':
-    train = load_JHMDB(train_set=True, frames_per_vid=16, joints=True, unpickle=True, real_job=False)
+    train = JHMDBLoad(train_set=True, frames_per_vid=16, joints=True, unpickle=True, real_job=False)
     # in real context, would definitely need to move the training set in the GPU
     print(train.arr)
     print("len(train), ", len(train))
@@ -335,7 +335,7 @@ if __name__ == '__main__':
     print(train[len(train)-1])
     print(len(train[len(train)-1][0]))
 
-    # test = load_JHMDB(train_set=False)
+    # test = JHMDBLoad(train_set=False)
     # print(test[len(test)-1])
     # print(len(test))
     # print(test[len(test)-1].shape)

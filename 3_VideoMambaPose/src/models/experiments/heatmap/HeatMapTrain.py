@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
-
-from HeatVideoMamba import HeatMapVideoMambaPose
 from torch.utils.data import Dataset, DataLoader
 
-from DataFormat import load_JHMDB
+from HeatMapLoss import PoseEstimationLoss
+from HeatVideoMamba import HeatMapVideoMambaPose
+from DataFormat import JHMDBLoad
 
 import os
 
@@ -22,25 +22,6 @@ wandb.init(
 )
 
 
-class PoseEstimationLoss(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.mse_loss = nn.MSELoss()
-
-    def forward(self, predicted, target):
-        """
-        Args:
-            predicted (torch.Tensor): The predicted joint positions or heatmaps.
-            target (torch.Tensor): The ground truth joint positions or heatmaps.
-
-        Returns:
-            torch.Tensor: Computed loss.
-        """
-        # !TODO I need to change that, because it's not just MSE, I am taking the mse of a 3D value, idk if mse works.
-        loss = self.mse_loss(predicted, target)
-        return loss
-
-
 def load_checkpoint(filepath, model):
     checkpoint = torch.load(filepath)
     model.load_state_dict(checkpoint)  # this depends on how I saved the model
@@ -51,7 +32,7 @@ def load_checkpoint(filepath, model):
 
 
 def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, device, follow_up=(False, 1, None)):
-    checkpoints_dir = 'checkpoints'
+    checkpoints_dir = 'checkpoint_fixed_joint_regressor'
     os.chdir("/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap")
     os.makedirs(checkpoints_dir, exist_ok=True)
     best_val_loss = float('inf')
@@ -110,7 +91,7 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
             # .item transforms loss from pytorch tensor to python value
             train_loss += loss_train.item()
 
-            if epoch == start_epoch:
+            if epoch == start_epoch and i == 1:
                 # Prints GPU memory summary
                 print('Memory after train_batch (in MB)',
                       torch.cuda.memory_allocated()/1e6)
@@ -137,7 +118,7 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
 
                 test_loss += loss_val.item()
 
-                if epoch == start_epoch:
+                if epoch == start_epoch and i == 1:
                     # Prints GPU memory summary
                     print('Memory after test_batch (in MB)',
                           torch.cuda.memory_allocated()/1e6)
@@ -207,8 +188,8 @@ def main():
     # channels = 3
 
     # ! loading the data, will need to set real_job to False when training
-    train_set = load_JHMDB(train_set=True, real_job=True, jump=1)
-    test_set = load_JHMDB(train_set=False, real_job=True, jump=1)
+    train_set = JHMDBLoad(train_set=True, real_job=True, julearning_ratemp=1)
+    test_set = JHMDBLoad(train_set=False, real_job=True, jump=1)
 
     train_loader = DataLoader(train_set, batch_size=batch_size,
                               shuffle=True, num_workers=num_workers, pin_memory=True)

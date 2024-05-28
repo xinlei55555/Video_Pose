@@ -1,0 +1,26 @@
+model_name: VideoMambaPose
+
+#architecture
+num_mamba_blocks: 12
+num_deconv: 3
+2d_deconv: True
+num_conv: 1
+joint_regressor: True
+
+# training
+epoch_number: 300
+batch_size: 16
+learning_rate: 0.001
+start_epoch: 1
+
+# checkpoints
+checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap
+
+# data
+data_path: /home/linxin67/scratch/JHMDB
+num_frames: 16
+image_height: 240
+image_width: 320
+image_tensor_height: 224
+image_tensor_width: 224
+

@@ -37,16 +37,9 @@ class JointOutput(nn.Module):
     https://github.com/ViTAE-Transformer/ViTPose/blob/d5216452796c90c6bc29f5c5ec0bdba94366768a/mmpose/models/heads/deeppose_regression_head.py#L13
     """
 
-    def __init__(self,
-                 input_channels=15,
-                 joint_number=15,
-                 #  d=16,
-                 d=1, # remember that after the 2d deconvolution, I have removed the d layer!!!!
-                 h=56,
-                 w=56
-                 ):
+    # remember that after the 2d deconvolution, I have removed the d layer!!!!                 
+    def __init__(self, input_channels=15, joint_number=15, d=1, h=56, w=56):
         super().__init__()
-
         # For example, in PyTorch, this method is used to define the layers of the network, such as convolutional layers, linear layers, activation functions, etc.
         # hence need to have the regressor in the initializer if it wants to be saved properly
         # * I need to verify the output layer size
@@ -76,24 +69,22 @@ class JointOutput(nn.Module):
         else:
             return rearrange(x, 'b c h w -> (b c) (h w)')
 
-    def regressors(self):
+    def regressors(self, dim_hidden=512, dim_out=2):
         # self.get_shape(x)
 
         # Assuming the input tensor x has shape (batch_size, input_size)
         input_size = self.d * self.h * self.w
-        # need to verify the input size! although this is still hugeeeeeee
-        layers = [nn.Linear(input_size, self.w),  # reduce one dimension
+
+        layers = [nn.Linear(input_size, dim_hidden),  # use power of 2
                   nn.ReLU(),
-                  nn.Linear(self.w, 2)]  # I will return 3, which are the values for x, y, z
+                  nn.Linear(dim_hidden, dim_out), # I will return 3, which are the values for x, y, z
+                  nn.Tanh()]  # Tanh makes all the values between -1 and 1
         return nn.Sequential(*layers)
 
     def forward(self, x):
         x = self.input_flatten(x)
 
-        # ! unsure Apply regressors to all channels simultaneously
-        # This will apply regressors to all channels at once
-
-        # need to apply regressor to each channel
+        # need to apply regressor to each channel. (will parallelize)
         output = self.regressor(x)
 
         # need to reshape the output

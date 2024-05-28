@@ -129,7 +129,10 @@ def visualize(joints, frames, file_name):
         # Plotting the joints onto the image
         plt.figure(figsize=(8, 6))
         plt.imshow(image)
+        # testing for if its the normalization that made the values very
+        # plt.scatter(joints_per_frame[:, 0]*320, joints_per_frame[:, 1]*240, c='red', s=10, label='Joints')
         plt.scatter(joints_per_frame[:, 0], joints_per_frame[:, 1], c='red', s=10, label='Joints')
+
 
         # Annotate the joints with their indices
         for i, pos in enumerate(joints_per_frame):
