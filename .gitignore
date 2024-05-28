@@ -16,3 +16,7 @@ wandb/
 *.sh
 checkpoints/
 checkpoint_fixed_joint_regressor/
+*.png
+*.jpg
+*.mp4
+test_visualization/
