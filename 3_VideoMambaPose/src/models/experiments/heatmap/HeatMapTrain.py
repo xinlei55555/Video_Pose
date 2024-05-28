@@ -40,9 +40,10 @@ class PoseEstimationLoss(nn.Module):
         loss = self.mse_loss(predicted, target)
         return loss
 
+
 def load_checkpoint(filepath, model):
     checkpoint = torch.load(filepath)
-    model.load_state_dict(checkpoint) # this depends on how I saved the model
+    model.load_state_dict(checkpoint)  # this depends on how I saved the model
     # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     # epoch = checkpoint['epoch']
     # loss = checkpoint['loss']
@@ -68,7 +69,8 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
         # print('train batch for epoch # ', epoch)
 
         if epoch == start_epoch:
-            print('Memory before (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary
+            # Prints GPU memory summary
+            print('Memory before (in MB)', torch.cuda.memory_allocated()/1e6)
 
         if epoch == 1:
             print(f'The length of the train_set is {len(train_set)}')
@@ -109,7 +111,9 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
             train_loss += loss_train.item()
 
             if epoch == start_epoch:
-                print('Memory after train_batch (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary
+                # Prints GPU memory summary
+                print('Memory after train_batch (in MB)',
+                      torch.cuda.memory_allocated()/1e6)
 
             torch.cuda.empty_cache()  # Clear cache to save memory
 
@@ -132,9 +136,11 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
                 loss_val = loss_fn(test_outputs.float(), test_labels.float())
 
                 test_loss += loss_val.item()
-                
+
                 if epoch == start_epoch:
-                    print('Memory after test_batch (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary
+                    # Prints GPU memory summary
+                    print('Memory after test_batch (in MB)',
+                          torch.cuda.memory_allocated()/1e6)
 
                 torch.cuda.empty_cache()  # Clear cache to save memory
 
@@ -174,6 +180,7 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
                   len(list(model.parameters())))
     wandb.finish()
 
+
 def main():
     # currently, only taking the first GPU, but later will use DDP will need to change.
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -192,29 +199,30 @@ def main():
 
     loss_fn = PoseEstimationLoss()
 
-    batch_size = 16 
+    batch_size = 16
     num_workers = 0
     # num_frames = x64x # i'll actually be using 16
     # height = 224
     # width = 224
     # channels = 3
 
-     # ! loading the data, will need to set real_job to False when training
+    # ! loading the data, will need to set real_job to False when training
     train_set = load_JHMDB(train_set=True, real_job=True, jump=1)
     test_set = load_JHMDB(train_set=False, real_job=True, jump=1)
 
     train_loader = DataLoader(train_set, batch_size=batch_size,
-                            shuffle=True, num_workers=num_workers, pin_memory=True)
+                              shuffle=True, num_workers=num_workers, pin_memory=True)
     test_loader = DataLoader(test_set, batch_size=batch_size,
-                            shuffle=False, num_workers=num_workers, pin_memory=True) 
+                             shuffle=False, num_workers=num_workers, pin_memory=True)
 
     # optimizer
     optimizer = torch.optim.Adam(model.parameters())
 
     # Training loop
     training_loop(300, optimizer, model, loss_fn,
-                train_loader, test_loader, device,
-                (True, 50, '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_22069.0820.pt'))
+                  train_loader, test_loader, device,
+                  (True, 50, '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_22069.0820.pt'))
+
 
 if __name__ == '__main__':
     main()
