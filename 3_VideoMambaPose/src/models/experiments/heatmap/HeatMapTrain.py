@@ -184,7 +184,17 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Initialize the model and loss function
 model = HeatMapVideoMambaPose().to(device)
+
+
+# making sure to employ parallelization!!! ANd it workkkeddd
+if torch.cuda.device_count() > 1:
+    model = nn.DataParallel(model)
+
+# move the data to the GPU
+model = model.to(device)
+
 print(model)
+
 loss_fn = PoseEstimationLoss()
 
 # on z
@@ -216,17 +226,6 @@ train_loader = DataLoader(train_set, batch_size=batch_size,
 test_loader = DataLoader(test_set, batch_size=batch_size,
                          shuffle=False, num_workers=num_workers)
 
-
-# defining model
-model = HeatMapVideoMambaPose()
-
-# making sure to employ parallelization!!! ANd it workkkeddd
-if torch.cuda.device_count() > 1:
-    model = nn.DataParallel(model)
-
-# move the data to the GPU
-model = model.to(device)
-
 # Forward Pass
 # y = model(test_video)
 
@@ -249,9 +248,7 @@ model = model.to(device)
 optimizer = torch.optim.Adam(model.parameters())
 
 # Training loop
-loss_fn = PoseEstimationLoss()
-
 # ! will increase the number of epochs when not training
 training_loop(300, optimizer, model, loss_fn,
               train_loader, test_loader, device,
-              (True, 50, '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_22069.0820.pt'))
+              (False, 50, '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_22069.0820.pt'))

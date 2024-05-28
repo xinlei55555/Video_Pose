@@ -19,7 +19,7 @@ def load_model(filepath):
     # Load the state dictionary from the .pt file
     # model.load_state_dict(torch.load(filepath))
     checkpoint = torch.load(filepath, map_location=torch.device('cpu'))
-    print(checkpoint)
+    # print(checkpoint)
     print(type(checkpoint))
     # model.load_state_dict(checkpoint['model_state_dict'])
     # print(checkpoint.keys())
@@ -27,7 +27,7 @@ def load_model(filepath):
     print('checking whether they have the same keys, ', model.state_dict().keys()==checkpoint.keys())
     # checking which keys differ
     x = set(model.state_dict().keys()).intersection(set(checkpoint.keys()))
-    print(x)
+    # print(x)
     print('that was the intersection ^')
 
     # checking the keys that are not common
@@ -35,14 +35,14 @@ def load_model(filepath):
 
     diff = y.difference(x)
 
-    print(diff, 'differeneeceee') #{'joints.regressor.2.bias', 'joints.regressor.0.bias', 'joints.regressor.2.weight', 'joints.regressor.0.weight'}
+    # print(diff, 'differeneeceee') #{'joints.regressor.2.bias', 'joints.regressor.0.bias', 'joints.regressor.2.weight', 'joints.regressor.0.weight'}
 
     # just print the ones with joints.
     joint = {val for val in y if ('joint' in val)}
-    print(joint, ' --->>>joint')
+    # print(joint, ' --->>>joint')
 
-    print(joint.intersection(set(model.state_dict().keys())))
-    print(joint.intersection(set(checkpoint.keys()))) # the joints are in the checkpoint, but not in them odel I am loading?
+    # print(joint.intersection(set(model.state_dict().keys())))
+    # print(joint.intersection(set(checkpoint.keys()))) # the joints are in the checkpoint, but not in them odel I am loading?
 
     # THE EERRRO was because in my joint regressor, I had not put the layesr in the initisqueuealization funcgtion.
     model.load_state_dict(checkpoint) # strict = False makes it so that even though some layer are missing, it will work (although idk why some layesr are missing)
@@ -59,6 +59,7 @@ def inference(model, input_tensor):
         output = model(input_tensor)
     return output
 
+# i'll finish the code on my local machine
 def get_input_and_label(action, file_name, path='/home/linxin67/scratch/JHMDB'):
     # os.
     pass

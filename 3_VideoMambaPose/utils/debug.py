@@ -1,7 +1,13 @@
+import sys
+import os
+
+# change the system directory
+sys.path.append('/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap')
+
 # run through it and go through every index that is 35.
 import torch
 from torch.utils.data import Dataset, DataLoader
-import os
+
 
 from DataFormat import load_JHMDB
 

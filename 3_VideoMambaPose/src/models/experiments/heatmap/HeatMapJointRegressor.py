@@ -38,21 +38,36 @@ class JointOutput(nn.Module):
     """
 
     def __init__(self,
-                 input_channels=17,
-                 joint_number=17):
+                 input_channels=15,
+                 joint_number=15,
+                 #  d=16,
+                 d=1, # remember that after the 2d deconvolution, I have removed the d layer!!!!
+                 h=56,
+                 w=56
+                 ):
         super().__init__()
+
+        # For example, in PyTorch, this method is used to define the layers of the network, such as convolutional layers, linear layers, activation functions, etc.
+        # hence need to have the regressor in the initializer if it wants to be saved properly
         # * I need to verify the output layer size
         self.joint_number = joint_number
         self.input_channels = input_channels
+        self.c, self.d, self.h, self.w = input_channels, d, h, w
+        self.regressor = self.regressors()
+        # self.flatten = self.input_flatten()
 
-    def get_shape(self, x):
-        if len(list(x.shape)) == 5:
-            self.b, self.c, self.d, self.h, self.w = x.shape
-        else:
-            self.b, self.c, self.h, self.w = x.shape
-            self.d = 1
+    # update the shapes that are passed in
+    # def get_shape(self):
+        # if len(list(x.shape)) == 5:
+        # self.b, self.c, self.d, self.h, self.w = x.shape
+        # else:
+        # self.b, self.c, self.h, self.w = x.shape
+        # self.d = 1
 
     def input_flatten(self, x):
+        # first get the shape of the input
+        # self.get_shape(x)
+
         # x has the following sizes: (16,17 channels, 8, 14, 14) --> The 192 channels were initiated from the patching
         # * I want each channel to be processed separately, as a whole. So flatten each layer.
         if len(list(x.size())) == 5:
@@ -61,25 +76,17 @@ class JointOutput(nn.Module):
             return rearrange(x, 'b c h w -> (b c) (h w)')
 
     def regressors(self):
+        # self.get_shape(x)
+
         # Assuming the input tensor x has shape (batch_size, input_size)
         input_size = self.d * self.h * self.w
         # need to verify the input size! although this is still hugeeeeeee
-        layers = [nn.Linear(input_size, self.w), # reduce one dimension
+        layers = [nn.Linear(input_size, self.w),  # reduce one dimension
                   nn.ReLU(),
                   nn.Linear(self.w, 2)]  # I will return 3, which are the values for x, y, z
         return nn.Sequential(*layers)
 
-    def define_regressor(self):
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-        self.regressor = self.regressors()
-
-        self.regressor = self.regressor.to(device)
-
     def forward(self, x):
-        self.get_shape(x)
-        self.define_regressor()
-
         x = self.input_flatten(x)
 
         # ! unsure Apply regressors to all channels simultaneously
