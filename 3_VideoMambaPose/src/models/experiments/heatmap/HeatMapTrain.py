@@ -251,4 +251,4 @@ optimizer = torch.optim.Adam(model.parameters())
 # ! will increase the number of epochs when not training
 training_loop(300, optimizer, model, loss_fn,
               train_loader, test_loader, device,
-              (False, 50, '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_22069.0820.pt'))
+              (True, 50, '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_22069.0820.pt'))

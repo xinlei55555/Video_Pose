@@ -53,6 +53,7 @@ class JointOutput(nn.Module):
         self.joint_number = joint_number
         self.input_channels = input_channels
         self.c, self.d, self.h, self.w = input_channels, d, h, w
+        self.b = 16 # although could change later.
         self.regressor = self.regressors()
         # self.flatten = self.input_flatten()
 
