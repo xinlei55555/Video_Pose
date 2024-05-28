@@ -192,16 +192,16 @@ class load_JHMDB(Dataset):
         train = []
         test = []
 
+        value = True
         # looping through gives you each action
         for action in os.listdir(directory):
-            # if only testing, then just take 5 actions
-            if not self.real_job and len(actions) > 1:
-                print("length of actions", len(actions))
-                break
-
-            # I just want to look at the ones with 1 after.
+           # I just want to look at the ones with 1 after.
             if action[-5] != '1':
                 continue
+
+            # value only becomes False if I break it inside
+            if not value:
+                break
 
             action_split = os.path.join(directory, action)
             actions.append(action[:-16])  # remove the _test_split<int>.txt
@@ -212,6 +212,13 @@ class load_JHMDB(Dataset):
                 for index, row in df.iterrows():
                     file_name = row[0]
                     value = int(row[1])
+                    
+                    # if only testing, then just take the minimum number of actions
+                    if not self.real_job and (len(train) > 20 or len(test) > 1 or len(actions) > 1):
+                        print("length of actions", len(actions))
+                        value = False
+                        break
+
                     if value == 1 and self.train_set:
                         # remove the .avi
                         train.append(
