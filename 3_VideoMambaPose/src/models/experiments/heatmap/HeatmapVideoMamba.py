@@ -183,9 +183,12 @@ def segm_init_weights(m):
 class PatchEmbed(nn.Module):
     """ Image to Patch Embedding
     """
+    # okay, notice that the embedding dimensions is 768 = 4*4*3*16, and 4 is the size of the (224/4), Although it shouldn't really be the batch size...
+    # 768 = 3 channels * 256 = 3 * 16 * 16 (which are the patch sizes, in other word, in each patch, there are 16 pixels by 16 pixels, for three channels.)
+    # hence, for me, it should be 3 * 4 * 4 (! by the way, it does each image indiviudally)
     # def __init__(self, img_size=224, patch_size=16, kernel_size=1, in_chans=3, embed_dim=768):
     # ! change the patch_size to be 4, by default
-    def __init__(self, img_size=224, patch_size=4, kernel_size=1, in_chans=3, embed_dim=768):
+    def __init__(self, img_size=224, patch_size=4, kernel_size=1, in_chans=3, embed_dim=48): #768):
         super().__init__()
         img_size = to_2tuple(img_size)
         patch_size = to_2tuple(patch_size)
@@ -195,6 +198,7 @@ class PatchEmbed(nn.Module):
         self.num_patches = num_patches
         self.tubelet_size = kernel_size
 
+        # so they are using conv3d, because you have 3 channels, 16 by 16! (so three diemsni
         self.proj = nn.Conv3d(
             in_chans, embed_dim, 
             kernel_size=(kernel_size, patch_size[0], patch_size[1]),
