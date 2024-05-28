@@ -160,8 +160,8 @@ def main():
     # model_path = '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_27345.4473.pt'
     # model_path='/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_8652135.9131.pt'
     model_path = '/mnt/DATA/Personnel/Other learning/Programming/Professional_Opportunities/KITE - Video Pose ViT/KITE - Video Pose Landmark Detection/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_8639121.0703.pt'
-    action_path = '/mnt/DATA/Personnel/Other learning/Programming/Professional_Opportunities/KITE - Video Pose ViT/KITE - Video Pose Landmark Detection/3_VideoMambaPose/data/JHMDB/test_visualization/20_good_form_pullups_pullup_f_nm_np1_ri_goo_2'
-    joint_path = '/mnt/DATA/Personnel/Other learning/Programming/Professional_Opportunities/KITE - Video Pose ViT/KITE - Video Pose Landmark Detection/3_VideoMambaPose/data/JHMDB/test_visualization/Copy-of-20_good_form_pullups_pullup_f_nm_np1_ri_goo_2'
+    action_path = 'test_visualization/20_good_form_pullups_pullup_f_nm_np1_ri_goo_2'
+    joint_path = 'test_visualization/Copy-of-20_good_form_pullups_pullup_f_nm_np1_ri_goo_2'
     # Load the model from the .pt file
     model = load_model(model_path)
     print(model)
