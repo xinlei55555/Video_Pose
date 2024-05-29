@@ -188,7 +188,7 @@ def main():
     # channels = 3
 
     # ! loading the data, will need to set real_job to False when training
-    train_set = JHMDBLoad(train_set=True, real_job=True, julearning_ratemp=1)
+    train_set = JHMDBLoad(train_set=True, real_job=True, jump=1)
     test_set = JHMDBLoad(train_set=False, real_job=True, jump=1)
 
     train_loader = DataLoader(train_set, batch_size=batch_size,
@@ -202,7 +202,7 @@ def main():
     # Training loop
     training_loop(300, optimizer, model, loss_fn,
                   train_loader, test_loader, device,
-                  (True, 50, '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_22069.0820.pt'))
+                  (False, 50, '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_22069.0820.pt'))
 
 
 if __name__ == '__main__':

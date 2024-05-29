@@ -77,8 +77,8 @@ class JointOutput(nn.Module):
 
         layers = [nn.Linear(input_size, dim_hidden),  # use power of 2
                   nn.ReLU(),
-                  nn.Linear(dim_hidden, dim_out), # I will return 3, which are the values for x, y, z
-                  nn.Tanh()]  # Tanh makes all the values between -1 and 1
+                  nn.Linear(dim_hidden, dim_out)]#, # I will return 3, which are the values for x, y, z
+                #   nn.Tanh()]  # Tanh makes all the values between -1 and 1
         return nn.Sequential(*layers)
 
     def forward(self, x):

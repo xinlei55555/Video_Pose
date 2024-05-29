@@ -16,6 +16,32 @@ from einops import rearrange
 import matplotlib
 from matplotlib import pyplot as plt
 
+# Defined as global functions, to be able to use them without initializing JHMDBLoad (notably during inference)
+def normalize(x, h=240.0, w=320.0):
+        # x has num_frames, joint_numbers, (x, y)
+        x[:, :, 0] = (x[:, :, 0] / (w / 2.0)) - 1.0 # bewteen -1 and 1
+        x[:, :, 1] = (x[:, :, 1] / (h / 2.0)) - 1.0
+        return x
+
+def denormalize(x, h=240.0, w=320.0):
+    # actually, you should do denormalization AFTER the loss funciton. so when doing inference.
+    x[:, :, 0] = x[:, :, 0] * ((w / 2.0) + 1.0) # bewteen -1 and 1
+    x[:, :, 1] = x[:, :, 1] * ((h / 2.0) + 1.0)
+    return x
+
+def denormalize_default(x, h=240.0, w=320.0):
+    # since the data was normalize with respect to the w, and h, then if I use my new width, h, would it change somethign?
+        '''
+    Default initial normalizer:
+    (4) pos_world is the normalization of pos_img with respect to the frame size and puppet scale,Â
+        the formula is as below
+
+        pos_world(1,:,:) = (pos_img(1,:,:)/W-0.5)*W/H    ./scale;
+        pos_world(2,:,:) = (pos_img(2,:,:)/H-0.5)       ./scale;
+    '''
+    x[:, :, 0] = (x[:, :, 0] / (w/h) + 0.5) * w # bewteen -1 and 1
+    x[:, :, 1] = (x[:, :, 1] + 0.5) * h
+    return x
 
 class JHMDBLoad(Dataset):
     '''
@@ -38,14 +64,8 @@ class JHMDBLoad(Dataset):
         self.real_job = real_job
 
         if unpickle:
-            # if self.train_set:
             self.annotations = self.unpickle_JHMDB()
             self.nframes = self.annotations['nframes']
-            # else:
-            #     self.test_annotations = self.unpickle_JHMDB()
-            #     # this is another dictionary
-            #     # I also reformatted the dictionary nframes:video_name
-            #     self.nframes_test = self.test_annotations['nframes']
 
         if joints:
             if self.train_set:
@@ -53,6 +73,7 @@ class JHMDBLoad(Dataset):
             else:
                 self.actions, _, self.test = self.get_names_train_test_split()
 
+        # I will remove all 'wave' actions, because the data seems corrupted
         self.arr = []
         if self.train_set:
             # frames with joint values
@@ -60,9 +81,9 @@ class JHMDBLoad(Dataset):
                                                 action_name, file_name),
                                             self.rearranged_joints(
                                                 action_name, file_name))
-                                            for action_name, file_name, n_frames in self.train]
+                                            for action_name, file_name, n_frames in self.train if action_name != 'wave']
             # arr where arr[idx] = idx in the self.frames_with_joints
-            self.jump=jump# this is the number of frames to skip between datapoints
+            self.jump=jump # this is the number of frames to skip between datapoints
             for k in range(len(self.frames_with_joints)):
                 video, joints = self.frames_with_joints[k]
 
@@ -80,7 +101,7 @@ class JHMDBLoad(Dataset):
                                                 action_name, file_name),
                                             self.rearranged_joints(
                                                 action_name, file_name))
-                                            for action_name, file_name, n_frames in self.test]
+                                            for action_name, file_name, n_frames in self.test if action_name != 'wave']
 
             self.jump = jump # this is the partition/the number of frames skipped between each video
             for k in range(len(self.frames_with_joints)):
@@ -131,14 +152,11 @@ class JHMDBLoad(Dataset):
         # print(f'index: {index}, video_num: {video_num}, frame_num: {frame_num}, len(joint_values), {len(list(joint_values))}')
         return [video, joint_values[frame_num]]
 
-        
     # this folder is useless
     def unpickle_JHMDB(self, path="/home/linxin67/scratch/JHMDB_old/annotations"):
         os.chdir(path)  
 
-        # Open the first pickled file
-        # with open('JHMDB-GT.pkl', 'rb') as pickled_one:
-        
+        # Open the first pickled file        
         with open("JHMDB-GT.pkl", 'rb') as pickled_one:
             try:
                 # other times it is 'utf-8!!!
@@ -146,17 +164,6 @@ class JHMDBLoad(Dataset):
             except UnicodeDecodeError as e:
                 print("UnicodeDecodeError:", e)
         return train
-
-        # else:
-        #     # Open the second pickled file
-        #     with open('UCF101v2-GT.pkl', 'rb') as pickled_two:
-        #         try:
-        #             # other times it is 'utf-8!!!
-        #             test = pickle.load(pickled_two, encoding='latin1')
-
-        #         except UnicodeDecodeError as e:
-        #             print("UnicodeDecodeError:", e)
-        #     return test
 
     # first a function that given an action and a video returns the joints for each frame
     def read_joints_full_video(self, action, video, path="/home/linxin67/scratch/JHMDB/"):
@@ -180,8 +187,13 @@ class JHMDBLoad(Dataset):
         Return a torch tensor with num frames, num joints, (x,y) joints.
         '''
         joint_dct = self.read_joints_full_video(action, video, path)
-        torch_joint = torch.tensor(joint_dct['pos_img'])
+
+        # pos_world was already normalized with respect to the image. (unlike pos_img)
+        torch_joint = torch.tensor(joint_dct['pos_world']) 
+
+        # rearrange for training and normalization.
         torch_joint = rearrange(torch_joint, 'd n f->f n d')
+        
         return torch_joint
 
     def get_num_frames(self, action, video):
@@ -245,12 +257,6 @@ class JHMDBLoad(Dataset):
         print("The length of actions, train and test are", len(actions), ", ", len(train), ", ", len(test))
         return actions, train, test
 
-        # looping through each split of each action gives you the name of each video.
-
-        # I'll load all of that into one file, which has action, video, train/test on each row
-
-    # then we need a function to crop the images to 224x224, and need to generate batches of 8 frames in a row. (videos)
-    # this will also need to transform the images into three channels (use torch.vision transforms.)
 
     def image_to_tensor(self, image_path):
         '''Returns a torch tensor for a given image associated with the path'''
@@ -328,12 +334,14 @@ class JHMDBLoad(Dataset):
 if __name__ == '__main__':
     train = JHMDBLoad(train_set=True, frames_per_vid=16, joints=True, unpickle=True, real_job=False)
     # in real context, would definitely need to move the training set in the GPU
-    print(train.arr)
-    print("len(train), ", len(train))
-    print("len(arr), ", len(train.arr))
-    print("len(frames_with_joints)", len(train.frames_with_joints))
-    print(train[len(train)-1])
-    print(len(train[len(train)-1][0]))
+    # print(train.arr)
+    # print("len(train), ", len(train))
+    # print("len(arr), ", len(train.arr))
+    # print("len(frames_with_joints)", len(train.frames_with_joints))
+    # print(train[len(train)-1])
+    # print(len(train[len(train)-1][0]))
+    # print(len(train[len(train)-1][1]))
+
 
     # test = JHMDBLoad(train_set=False)
     # print(test[len(test)-1])
