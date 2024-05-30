@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
+import torch.distributed as dist
+import torch.multiprocessing as mp
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.utils.data import Dataset, DataLoader, DistributedSampler
 import wandb
 
 from HeatMapLoss import PoseEstimationLoss
@@ -14,13 +17,11 @@ import os
 def load_checkpoint(filepath, model):
     checkpoint = torch.load(filepath)
     model.load_state_dict(checkpoint)  # this depends on how I saved the model
-    # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-    # epoch = checkpoint['epoch']
-    # loss = checkpoint['loss']
     return model
 
 
-def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, device, checkpoint_directory, checkpoint_name, follow_up=(False, 1, None)):
+def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, device, rank, world_size,
+                  checkpoint_directory, checkpoint_name, follow_up=(False, 1, None)):
     os.chdir(checkpoint_directory)
     os.makedirs(checkpoint_name, exist_ok=True)
     best_val_loss = float('inf')
@@ -110,32 +111,32 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
         show_loss_train, show_loss_test = train_loss / \
             len(train_set), test_loss / len(test_set)
 
-        wandb.log({"Pointwise training loss": show_loss_train})
-        wandb.log({"Pointwise testing loss": show_loss_train})
+        if rank == 0:
+            wandb.log({"Pointwise training loss": show_loss_train})
+            wandb.log({"Pointwise testing loss": show_loss_train})
 
-        print(f"Epoch {epoch}, Pointwise Training loss {float(show_loss_train)},"
-              f" Pointwise Validation loss {float(show_loss_test)}")
-        print(
-            f"Full training loss: {float(train_loss)}, Full test loss: {float(test_loss)}")
+            print(f"Epoch {epoch}, Pointwise Training loss {float(show_loss_train)},"
+                f" Pointwise Validation loss {float(show_loss_test)}")
+            print(
+                f"Full training loss: {float(train_loss)}, Full test loss: {float(test_loss)}")
 
-        # I use the full loss when comparing, to avoid having too small numbers.
-        if test_loss < best_val_loss:
-            best_val_loss = test_loss
+            # I use the full loss when comparing, to avoid having too small numbers.
+            if test_loss < best_val_loss:
+                best_val_loss = test_loss
 
-            # save model locally
-            checkpoint_path = os.path.join(
-                checkpoints_dir, f'heatmap_{best_val_loss:.4f}.pt')
-            torch.save(model.state_dict(), checkpoint_path)
-            print(f'Best model saved at {checkpoint_path}')
-            print("Model parameters are of the following size",
-                  len(list(model.parameters())))
-    wandb.finish()
+                # save model locally
+                checkpoint_path = os.path.join(
+                    checkpoints_dir, f'heatmap_{best_val_loss:.4f}.pt')
+                torch.save(model.state_dict(), checkpoint_path)
+                print(f'Best model saved at {checkpoint_path}')
+                print("Model parameters are of the following size",
+                    len(list(model.parameters())))
+
+    if rank == 0:
+        wandb.finish()
 
 
-def main():
-    # import configurations:
-    config = open_config()
-
+def main(rank, world_size, config):
     wandb.init(
         project=config['model_name'],
         config={
@@ -144,30 +145,18 @@ def main():
         }
     )
 
-    # currently, only taking the first GPU, but later will use DDP will need to change.
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    # Initialize the model and loss function
-    model = HeatMapVideoMambaPose(config).to(device)
-
-    # making sure to employ parallelization!!!
-    if torch.cuda.device_count() > 1:
-        model = nn.DataParallel(model)
-
-    # move the data to the GPU
-    model = model.to(device)
-    print('Model loaded successfully as follows: ', model)
-
-    loss_fn = PoseEstimationLoss()
-
     # configuration
     pin_memory = False
     if torch.cuda.device_count() >= 1:
         pin_memory = True
 
+    num_cpu_cores = os.cpu_count()
+    num_workers = config['num_cpus'] * (num_cpu_cores) - 1
+
+    print(f'num_workers is: {num_workers}, for {num_cpu_cores} cores')
+
     num_epochs = config['epoch_number']
     batch_size = config['batch_size']
-    num_workers = config['num_cpus'] - 1
     normalize = config['normalized']
     default = config['default']  # custom normalization.
     follow_up = (config['follow_up'], config['previous_training_epoch'],
@@ -177,15 +166,51 @@ def main():
     checkpoint_dir = config['checkpoint_directory']
     checkpoint_name = config['checkpoint_name']
 
+    # loading the data initially:
     train_set = JHMDBLoad(config, train_set=True, real_job=real_job,
                           jump=jump, normalize=(normalize, default))
     test_set = JHMDBLoad(config, train_set=False, real_job=real_job,
-                               jump=jump, normalize=(normalize, default))
+                         jump=jump, normalize=(normalize, default))
 
-    train_loader = DataLoader(train_set, batch_size=batch_size,
-                              shuffle=True, num_workers=num_workers, pin_memory=pin_memory)
-    test_loader = DataLoader(test_set, batch_size=batch_size,
-                             shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
+    # currently, only taking the first GPU, but later will use DDP will need to change.
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    if torch.cuda.device_count() <= 1 or not config['parallelize']:
+        # Initialize the model and loss function
+        model = HeatMapVideoMambaPose(config).to(device)
+
+        # move the data to the GPU
+        model = model.to(device)
+        print('Model loaded successfully as follows: ', model)
+
+        loss_fn = PoseEstimationLoss()
+
+        train_loader = DataLoader(train_set, batch_size=batch_size,
+                                  shuffle=True, num_workers=num_workers, pin_memory=pin_memory)
+        test_loader = DataLoader(test_set, batch_size=batch_size,
+                                 shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
+
+        
+
+    else:
+        # making sure to employ parallelization!!! triton is not thread safe.
+        # model = nn.DataParallel(model)
+        # Initialize process group
+        dist.init_process_group("nccl", rank=rank, world_size=world_size)
+
+        model = HeatMapVideoMambaPose(config).to(device)
+        model = DDP(model, device_ids=[rank])
+        loss_fn = PoseEstimationLoss()
+
+        train_sampler = DistributedSampler(
+            train_set, num_replicas=world_size, rank=rank)
+        test_sampler = DistributedSampler(
+            test_set, num_replicas=world_size, rank=rank)
+
+        train_loader = DataLoader(
+            train_set, batch_size=batch_size, sampler=train_sampler)
+        test_loader = DataLoader(
+            test_set, batch_size=batch_size, sampler=test_sampler)
 
     # optimizer
     optimizer = torch.optim.Adam(model.parameters())
@@ -193,8 +218,20 @@ def main():
     # Training loop
     print(f"The model has started training, with the following characteristics:")
     training_loop(num_epochs, optimizer, model, loss_fn,
-                  train_loader, test_loader, device, checkpoint_dir, checkpoint_name, follow_up)
+                  train_loader, test_loader, device, rank, world_size, checkpoint_dir, checkpoint_name, follow_up)
+
+    # Cleanup
+    dist.destroy_process_group()
 
 
 if __name__ == '__main__':
-    main()
+    # import configurations:
+    config = open_config()
+
+    if torch.cuda.device_count() <= 1 or not config['parallelize']:
+        main()
+
+    else:
+        # world size determines the number of GPUs running together.
+        world_size = torch.cuda.device_count()
+        mp.spawn(main, args=(world_size, config), nprocs=world_size, join=True)

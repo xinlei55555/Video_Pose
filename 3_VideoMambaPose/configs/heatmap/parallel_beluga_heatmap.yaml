@@ -1,7 +1,7 @@
 model_name: VideoMambaPose
 
 # full_debug mode will enable a lot of information being printed
-full_debug: True
+full_debug: False
 
 # architecture mamba
 embed_channels: 192 # number of channels after the tiny mamba layers.
@@ -20,20 +20,20 @@ hidden_channels: 512
 output_dimensions: 2 # x, y
 
 # training
-epoch_number: 1
+epoch_number: 300
 batch_size: 16
 learning_rate: 0.001
 start_epoch: 1
 
 # device settings
   # (should be changed depending on the model)
-num_cpus: 2
+num_cpus: 3
 num_gpus: 1
-parallelize: False
+parallelize: True
 
 # checkpoints
 checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap
-checkpoint_name: 'testing'
+checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
 # checkpoint_name: 'testing_false_dataset'
 
 # Follow up on the training of another previous run?
@@ -46,9 +46,9 @@ previous_checkpoint: ''
 # data
 dataset_name: 'JHMDB'
 data_path: /home/linxin67/scratch/JHMDB
+num_frames: 16
 # actions to skip
 skip: ['wave']
-num_frames: 16
 # RGB
 channels: 3
 image_height: 240
@@ -61,7 +61,7 @@ jump: 1 # number of frames to skip between the different datapoints
 joint_number: 15
 
 # if False, uses subset of the data to run
-real_job: False
+real_job: True
 
 # normalization
 normalized: True
