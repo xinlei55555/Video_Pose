@@ -17,21 +17,25 @@ import matplotlib
 from matplotlib import pyplot as plt
 
 # Defined as global functions, to be able to use them without initializing JHMDBLoad (notably during inference)
+
+
 def normalize(x, h=240.0, w=320.0):
-        # x has num_frames, joint_numbers, (x, y)
-        x[:, :, 0] = (x[:, :, 0] / (w / 2.0)) - 1.0 # bewteen -1 and 1
-        x[:, :, 1] = (x[:, :, 1] / (h / 2.0)) - 1.0
-        return x
+    # x has num_frames, joint_numbers, (x, y)
+    x[:, :, 0] = (x[:, :, 0] / (w / 2.0)) - 1.0  # bewteen -1 and 1
+    x[:, :, 1] = (x[:, :, 1] / (h / 2.0)) - 1.0
+    return x
+
 
 def denormalize(x, h=240.0, w=320.0):
     # actually, you should do denormalization AFTER the loss funciton. so when doing inference.
-    x[:, :, 0] = x[:, :, 0] * ((w / 2.0) + 1.0) # bewteen -1 and 1
+    x[:, :, 0] = x[:, :, 0] * ((w / 2.0) + 1.0)  # bewteen -1 and 1
     x[:, :, 1] = x[:, :, 1] * ((h / 2.0) + 1.0)
     return x
 
-def denormalize_default(x, h=240.0, w=320.0):
+
+def denormalize_default(x, h=240.0, w=320.0, scale=1):
     # since the data was normalize with respect to the w, and h, then if I use my new width, h, would it change somethign?
-        '''
+    '''
     Default initial normalizer:
     (4) pos_world is the normalization of pos_img with respect to the frame size and puppet scale,Â
         the formula is as below
@@ -39,9 +43,19 @@ def denormalize_default(x, h=240.0, w=320.0):
         pos_world(1,:,:) = (pos_img(1,:,:)/W-0.5)*W/H    ./scale;
         pos_world(2,:,:) = (pos_img(2,:,:)/H-0.5)       ./scale;
     '''
-    x[:, :, 0] = (x[:, :, 0] / (w/h) + 0.5) * w # bewteen -1 and 1
-    x[:, :, 1] = (x[:, :, 1] + 0.5) * h
+    x[:, :, 0] = (x[:, :, 0] * scale / (w/h) + 0.5) * w  # bewteen -0.5 and 0.5
+    x[:, :, 1] = (x[:, :, 1] * scale + 0.5) * h
     return x
+
+
+def det_denormalize_values(x_norm, x_init, scale):
+    print(x_init.shape, x_norm.shape)
+    h = int(x_init[0][1][1].item() / (0.5 + x_norm[0][1][1].item()))
+    w = int(x_init[0][1][0].item() * 2 - 2 * x_norm[0][1][0].item() * h)
+    # to change later
+    w = abs(w)
+    h = abs(h)
+    return w, h
 
 class JHMDBLoad(Dataset):
     '''
@@ -56,7 +70,8 @@ class JHMDBLoad(Dataset):
 
     # use 16, because transformers can already do 8
     # also we cannot just load all the frames directly into memory, because not enough GPU, but here less than 64GB should be okay
-    def __init__(self, train_set=True, frames_per_vid=16, joints=True, unpickle=True, real_job=True, jump=1):
+    def __init__(self, train_set=True, frames_per_vid=16, joints=True, unpickle=True, real_job=True, jump=1, normalize=(True, True)):
+        self.normalized, self.default = normalize
         self.frames_per_vid = frames_per_vid
         self.train_set = train_set
 
@@ -78,32 +93,32 @@ class JHMDBLoad(Dataset):
         if self.train_set:
             # frames with joint values
             self.frames_with_joints = [(self.video_to_tensors(
-                                                action_name, file_name),
-                                            self.rearranged_joints(
-                                                action_name, file_name))
-                                            for action_name, file_name, n_frames in self.train if action_name != 'wave']
+                action_name, file_name),
+                self.rearranged_joints(
+                action_name, file_name))
+                for action_name, file_name, n_frames in self.train if action_name != 'wave']
             # arr where arr[idx] = idx in the self.frames_with_joints
-            self.jump=jump # this is the number of frames to skip between datapoints
+            self.jump = jump  # this is the number of frames to skip between datapoints
             for k in range(len(self.frames_with_joints)):
                 video, joints = self.frames_with_joints[k]
 
                 if len(list(video)) != len(list(joints)):
                     print('Wrong length! Video: ', len(list(video)))
                     print('Joints: ', len(list(joints)))
-                
+
                 else:
                     # going through each frame in the video
-                    for i in range(self.frames_per_vid, len(list(video)), self.jump): 
+                    for i in range(self.frames_per_vid, len(list(video)), self.jump):
                         # 3-tuple: (index in self.train_frames_with_joints, index in the video, joint values)
                         self.arr.append([k, i, joints])
         else:
             self.frames_with_joints = [(self.video_to_tensors(
-                                                action_name, file_name),
-                                            self.rearranged_joints(
-                                                action_name, file_name))
-                                            for action_name, file_name, n_frames in self.test if action_name != 'wave']
+                action_name, file_name),
+                self.rearranged_joints(
+                action_name, file_name))
+                for action_name, file_name, n_frames in self.test if action_name != 'wave']
 
-            self.jump = jump # this is the partition/the number of frames skipped between each video
+            self.jump = jump  # this is the partition/the number of frames skipped between each video
             for k in range(len(self.frames_with_joints)):
                 video, joints = self.frames_with_joints[k]
 
@@ -111,12 +126,12 @@ class JHMDBLoad(Dataset):
                 if len(list(video)) != len(list(joints)):
                     print('Wrong length! Video: ', len(list(video)))
                     print('Joints: ', len(list(joints)))
-                    
 
                 else:
                     # start looping at frames per vid number
-                    for i in range(self.frames_per_vid, len(list(video)), self.jump): # if you are using jump, then need to define start and endpoint
-                            # 3-tuple: (index in self.train_frames_with_joints, index in the video, joint values)
+                    # if you are using jump, then need to define start and endpoint
+                    for i in range(self.frames_per_vid, len(list(video)), self.jump):
+                        # 3-tuple: (index in self.train_frames_with_joints, index in the video, joint values)
                         self.arr.append([k, i, joints])
 
     # some default torch methods:
@@ -142,9 +157,11 @@ class JHMDBLoad(Dataset):
         # slicing with pytorch tensors.
 
         #!!!! TODOOOO I THink there is an index error hereeee
-        video = self.frames_with_joints[video_num][0][frame_num+1-self.frames_per_vid:frame_num+1]
+        video = self.frames_with_joints[video_num][0][frame_num +
+                                                      1-self.frames_per_vid:frame_num+1]
         # video = torch.tensor() # I think it was already a toch tensor
-        video = rearrange(video, 'd c h w -> c d h w') # need to rearrange so that channel number is in front.
+        # need to rearrange so that channel number is in front.
+        video = rearrange(video, 'd c h w -> c d h w')
         # print('The shape of the video is', video.shape)
         # torch.Size([16, 3, 224, 224]) -> torch.Size([3, 16, 224, 224])
 
@@ -154,9 +171,9 @@ class JHMDBLoad(Dataset):
 
     # this folder is useless
     def unpickle_JHMDB(self, path="/home/linxin67/scratch/JHMDB_old/annotations"):
-        os.chdir(path)  
+        os.chdir(path)
 
-        # Open the first pickled file        
+        # Open the first pickled file
         with open("JHMDB-GT.pkl", 'rb') as pickled_one:
             try:
                 # other times it is 'utf-8!!!
@@ -189,11 +206,19 @@ class JHMDBLoad(Dataset):
         joint_dct = self.read_joints_full_video(action, video, path)
 
         # pos_world was already normalized with respect to the image. (unlike pos_img)
-        torch_joint = torch.tensor(joint_dct['pos_world']) 
+        if self.normalized and self.default:
+            torch_joint = torch.tensor(joint_dct['pos_world'])
+        # then use custom normalization
+        elif self.normalized and not self.default:
+            torch_joint = torch.tensor(joint_dct['pos_img'])
+            torch_joint = normalize(torch_joint)
+        # then no normalization
+        else:
+            torch_joint = torch.tensor(joint_dct['pos_img'])
 
         # rearrange for training and normalization.
         torch_joint = rearrange(torch_joint, 'd n f->f n d')
-        
+
         return torch_joint
 
     def get_num_frames(self, action, video):
@@ -237,7 +262,7 @@ class JHMDBLoad(Dataset):
                 for index, row in df.iterrows():
                     file_name = row[0]
                     value = int(row[1])
-                    
+
                     # if only testing, then just take the minimum number of actions
                     if not self.real_job and (len(train) > 20 or len(test) > 1 or len(actions) > 1):
                         print("length of actions", len(actions))
@@ -254,9 +279,9 @@ class JHMDBLoad(Dataset):
                     elif value not in [1, 2]:
                         print(type(value), value)
                         print("unknownIndexError")
-        print("The length of actions, train and test are", len(actions), ", ", len(train), ", ", len(test))
+        print("The length of actions, train and test are",
+              len(actions), ", ", len(train), ", ", len(test))
         return actions, train, test
-
 
     def image_to_tensor(self, image_path):
         '''Returns a torch tensor for a given image associated with the path'''
@@ -332,7 +357,8 @@ class JHMDBLoad(Dataset):
 
 
 if __name__ == '__main__':
-    train = JHMDBLoad(train_set=True, frames_per_vid=16, joints=True, unpickle=True, real_job=False)
+    train = JHMDBLoad(train_set=True, frames_per_vid=16,
+                      joints=True, unpickle=True, real_job=False)
     # in real context, would definitely need to move the training set in the GPU
     # print(train.arr)
     # print("len(train), ", len(train))
@@ -341,7 +367,6 @@ if __name__ == '__main__':
     # print(train[len(train)-1])
     # print(len(train[len(train)-1][0]))
     # print(len(train[len(train)-1][1]))
-
 
     # test = JHMDBLoad(train_set=False)
     # print(test[len(test)-1])

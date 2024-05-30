@@ -38,7 +38,7 @@ class JointOutput(nn.Module):
     """
 
     # remember that after the 2d deconvolution, I have removed the d layer!!!!                 
-    def __init__(self, input_channels=15, joint_number=15, d=1, h=56, w=56):
+    def __init__(self, input_channels=15, joint_number=15, d=1, h=56, w=56, normalize=True):
         super().__init__()
         # For example, in PyTorch, this method is used to define the layers of the network, such as convolutional layers, linear layers, activation functions, etc.
         # hence need to have the regressor in the initializer if it wants to be saved properly
@@ -47,6 +47,7 @@ class JointOutput(nn.Module):
         self.input_channels = input_channels
         self.c, self.d, self.h, self.w = input_channels, d, h, w
         self.b = 16 # although could change later.
+        self.normalize = normalize
         self.regressor = self.regressors()
         # self.flatten = self.input_flatten()
 
@@ -78,7 +79,8 @@ class JointOutput(nn.Module):
         layers = [nn.Linear(input_size, dim_hidden),  # use power of 2
                   nn.ReLU(),
                   nn.Linear(dim_hidden, dim_out)]#, # I will return 3, which are the values for x, y, z
-                #   nn.Tanh()]  # Tanh makes all the values between -1 and 1
+        if self.normalize:
+            layers.append(nn.Tanh()) # restrict values at the end to be between -1 and 1
         return nn.Sequential(*layers)
 
     def forward(self, x):

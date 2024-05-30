@@ -32,7 +32,7 @@ def load_checkpoint(filepath, model):
 
 
 def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, device, follow_up=(False, 1, None)):
-    checkpoints_dir = 'checkpoint_fixed_joint_regressor'
+    checkpoints_dir = 'Custom_Tanh_normalized_checkpoints'
     os.chdir("/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap")
     os.makedirs(checkpoints_dir, exist_ok=True)
     best_val_loss = float('inf')
@@ -45,6 +45,7 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
         start_epoch = follow_up[1]
 
     for epoch in range(start_epoch, n_epochs + start_epoch):
+        print(f'Epoch {epoch} started ======>')
         model.train()  # so that the model keeps updating its weights.
         train_loss = 0.0
         # print('train batch for epoch # ', epoch)
@@ -52,8 +53,6 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
         if epoch == start_epoch:
             # Prints GPU memory summary
             print('Memory before (in MB)', torch.cuda.memory_allocated()/1e6)
-
-        if epoch == 1:
             print(f'The length of the train_set is {len(train_set)}')
             print(f'The length of the test_set is {len(test_set)}')
 
@@ -71,7 +70,7 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
             # first make an initial guess as to the weights (Note: training is done in parallel)
             train_outputs = model(train_inputs)
 
-            if epoch == start_epoch:
+            if epoch == start_epoch and i == 1:
                 print('The shape of the outputs is ', train_outputs.shape)
                 print('The shape of the labels are ', train_labels.shape)
 
@@ -127,7 +126,7 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
 
         # the shown loss should be for individual elements in the batch size
         show_loss_train, show_loss_test = train_loss / \
-            len(train_set), test_loss/len(test_set)
+            len(train_set), test_loss / len(test_set)
 
         wandb.log({"Pointwise training loss": show_loss_train})
         wandb.log({"Pointwise testing loss": show_loss_train})
@@ -179,17 +178,23 @@ def main():
     print(model)
 
     loss_fn = PoseEstimationLoss()
-
+    num_epochs = 300
     batch_size = 16
-    num_workers = 0
+    num_workers = 1
     # num_frames = x64x # i'll actually be using 16
     # height = 224
     # width = 224
     # channels = 3
-
+    normalize = True
+    default = False  # custom normalization.
+    follow_up = (False, 50, '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_22069.0820.pt')
+    jump = 1
+    real_job = True
     # ! loading the data, will need to set real_job to False when training
-    train_set = JHMDBLoad(train_set=True, real_job=True, jump=1)
-    test_set = JHMDBLoad(train_set=False, real_job=True, jump=1)
+    train_set = JHMDBLoad(train_set=True, real_job=real_job,
+                          jump=jump, normalize=(normalize, default))
+    test_set = JHMDBLbetteroad(train_set=False, real_job=real_job,
+                         jump=jump, normalize=(normalize, default))
 
     train_loader = DataLoader(train_set, batch_size=batch_size,
                               shuffle=True, num_workers=num_workers, pin_memory=True)
@@ -200,9 +205,9 @@ def main():
     optimizer = torch.optim.Adam(model.parameters())
 
     # Training loop
-    training_loop(300, optimizer, model, loss_fn,
-                  train_loader, test_loader, device,
-                  (False, 50, '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_22069.0820.pt'))
+    print(f"The model has started training, with the following characteristics:")
+    training_loop(num_epochs, optimizer, model, loss_fn,
+                  train_loader, test_loader, device, follow_up)
 
 
 if __name__ == '__main__':

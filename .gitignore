@@ -20,3 +20,4 @@ checkpoint_fixed_joint_regressor/
 *.jpg
 *.mp4
 test_visualization/
+*.pt

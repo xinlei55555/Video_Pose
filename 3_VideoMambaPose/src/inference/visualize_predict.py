@@ -16,7 +16,7 @@ sys.path.append(
     '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap')
 sys.path.append('/mnt/DATA/Personnel/Other learning/Programming/Professional_Opportunities/KITE - Video Pose ViT/KITE - Video Pose Landmark Detection/3_VideoMambaPose/src/models/experiments/heatmap')
 from HeatVideoMamba import HeatMapVideoMambaPose
-
+from DataFormat import denormalize_default, det_denormalize_values
 
 def load_model(filepath):
     # Create the model
@@ -45,11 +45,14 @@ def inference(model, input_tensor):
 # i'll finish the code on my local machine
 
 
-def get_input_and_label(joint_path, video_path, path='/home/linxin67/scratch/JHMDB'):
+def get_input_and_label(joint_path, video_path, normalized=True, path='/home/linxin67/scratch/JHMDB'):
     # for the sake of testing, I will just hard copy some files and the respective joint outputs
     # I'll also make sure they were in the test files
     joints = scipy.io.loadmat(joint_path+'/joint_positions.mat')
-    joints = torch.tensor(joints['pos_img'])
+    if normalized:
+        joints = torch.tensor(joints['pos_world'])
+    else:
+        joints = torch.tensor(joints['pos_img'])
     joints = rearrange(joints, 'd n f->f n d')
 
     video = video_to_tensors(video_path)
@@ -89,7 +92,7 @@ def video_to_tensors(video_path='/home/linxin67/scratch/JHMDB/Rename_Images/'):
     return batch_tensor
 
 
-def visualize(joints, frames, file_name):
+def visualize(joints, frames, file_name, width, height, normalized=True):
     '''1: neck
     2: belly
     3: face
@@ -105,26 +108,31 @@ def visualize(joints, frames, file_name):
     13: left wrist
     14: right ankle
     15: left ankle'''
-    # ground truth:
-    # Extract x and y values
-
-    # Sample PyTorch tensor with joint coordinates (x, y) for each frame
-    # Replace this with your actual tensor
+    # change to correct directory:    
     num_frames = min(len(list(joints)), len(list(frames)))  # Number of frames in the video
 
-    width = 320
-    height = 240
+    
+    print('The determined width and height are ', width, height)
 
-    # width = 720
-    # height = 512
-    # width = 480
-    # height= 360
-
+    
+    
+    # denormalize the joints.
+    if normalized:
+        joints = denormalize_default(joints, height, width)
+    
+    # generate a new folder name
+    idx = 1
+    while os.path.exists(file_name):
+        if idx == 1:
+            file_name = str(idx) + file_name
+        else:
+            file_name = str(idx) + file_name[1:]
+        idx += 1
     os.mkdir(file_name)
 
     # Create a video writer to save the output
-    video_writer = cv2.VideoWriter(
-        f'{file_name}{width}x{height}/{file_name}.mp4', cv2.VideoWriter_fourcc(*'mp4v'), num_frames, (width, height))
+    # video_writer = cv2.VideoWriter(
+        # f'{file_name}{width}x{height}/{file_name}.mp4', cv2.VideoWriter_fourcc(*'mp4v'), num_frames, (width, height))
     for frame_idx in range(num_frames):
         # Get the joints for the current frame
 
@@ -174,40 +182,48 @@ def visualize(joints, frames, file_name):
         plt.legend()
 
         # Save the current plot to an image file
-        plt.savefig(f'{file_name}/frame_{frame_idx}.png')
+        plt.savefig(f'results/{file_name}/frame_{frame_idx}.png')
         plt.close()
 
-        # Read the saved image
-        frame_image = cv2.imread(f'{file_name}/frame_{frame_idx}.png')
+#         # Read the saved image
+#         frame_image = cv2.imread(f'{file_name}/frame_{frame_idx}.png')
 
-        # Ensure the size is correct
-        frame_image = cv2.resize(frame_image, (width, height))
-# 
-        # Write the frame to the video
-        video_writer.write(frame_image)
+#         # Ensure the size is correct
+#         frame_image = cv2.resize(frame_image, (width, height))
+# # 
+#         # Write the frame to the video
+#         video_writer.write(frame_image)
 
     # Release the video writer
-    video_writer.release()
-    print(f"Video saved as {file_name}.mp4")
+    # video_writer.release()
+    print(f"Video saved as results/{file_name}")
 
 
 def main():
     # model_path = '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_22069.0820.pt'
     # model_path = '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_27345.4473.pt'
-    model_path='/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_8652135.9131.pt'
+    # model_path='/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_8652135.9131.pt'
+    model_path='/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoint_fixed_joint_regressor/heatmap_18.2411.pt'
     # model_path = '/mnt/DATA/Personnel/Other learning/Programming/Professional_Opportunities/KITE - Video Pose ViT/KITE - Video Pose Landmark Detection/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_8639121.0703.pt'
-    action_path = 'test_visualization/Pirates_5_wave_h_nm_np1_fr_med_8'
-    joint_path = 'test_visualization/Copy-of-Pirates_5_wave_h_nm_np1_fr_med_8'
+    # action_path = 'test_visualization/Pirates_5_wave_h_nm_np1_fr_med_8'
+    # joint_path = 'test_visualization/Copy-of-Pirates_5_wave_h_nm_np1_fr_med_8'
+    action_path='test_visualization/20_good_form_pullups_pullup_f_nm_np1_ri_goo_2'
+    joint_path='test_visualization/Copy-of-20_good_form_pullups_pullup_f_nm_np1_ri_goo_2'
+    normalized = True
     
     # load the whole joint file and the video
-    joints, frames = get_input_and_label(joint_path, action_path, model_path)
+    normalized_joints, frames = get_input_and_label(joint_path, action_path, True, model_path)
+    not_joints, frames = get_input_and_label(joint_path, action_path, False, model_path)
+    width, height = det_denormalize_values(normalized_joints, not_joints)
+    if normalized:    
+        joints = normalized_joints
+    else:
+        joints = not_joints[1]
 
     print(joints)
 
     # ground truth
-    visualize(joints, frames, 'ground_truth_pirate')
-
-    return
+    visualize(joints, frames, 'normalized_pull_ups', width, height, normalized=normalized)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -237,7 +253,7 @@ def main():
     print('output', output)
 
     # visualize
-    visualize(outputs, frames, 'predicted')
+    visualize(outputs, frames, 'predicted', width, height, normalized = normalized)
 
 
 
