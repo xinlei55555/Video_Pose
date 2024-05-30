@@ -22,7 +22,7 @@ def load_checkpoint(filepath, model):
 
 def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, device, checkpoint_directory, checkpoint_name, follow_up=(False, 1, None)):
     os.chdir(checkpoint_directory)
-    os.makedirs(checkpoints_name, exist_ok=True)
+    os.makedirs(checkpoint_name, exist_ok=True)
     best_val_loss = float('inf')
 
     start_epoch = 1

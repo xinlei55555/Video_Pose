@@ -453,14 +453,16 @@ def load_state_dict(model, state_dict, center=True):
 
 @register_model
 def videomamba_tiny(pretrained=False, **kwargs):
+    # i commented some of the arguments that will be passed by **kwargs
     model = VisionMamba(
-        patch_size=4, 
-        embed_dim=192, 
+        # patch_size=4, 
+        # embed_dim=192, 
         # depth=24, 
         depth=12, # this is what causes the increase in mempry usage.
         rms_norm=True, 
         residual_in_fp32=True, 
-        fused_add_norm=True, 
+        fused_add_norm=True,
+        # num_frames=16,
         **kwargs
     )
     model.default_cfg = _cfg()
@@ -474,7 +476,7 @@ def videomamba_tiny(pretrained=False, **kwargs):
 @register_model
 def videomamba_small(pretrained=False, **kwargs):
     model = VisionMamba(
-        patch_size=16, 
+        patch_size=4, 
         embed_dim=384, # number of channels
         depth=24, # number of mamba blocks in a row
         rms_norm=True, 
@@ -493,7 +495,7 @@ def videomamba_small(pretrained=False, **kwargs):
 @register_model
 def videomamba_middle(pretrained=False, **kwargs):
     model = VisionMamba(
-        patch_size=16, 
+        patch_size=4, 
         embed_dim=576, 
         depth=32, 
         rms_norm=True, 

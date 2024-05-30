@@ -16,16 +16,17 @@ from einops import rearrange
 import matplotlib
 from matplotlib import pyplot as plt
 
+from import_config import open_config
 
 # Defined as global functions, to be able to use them without initializing JHMDBLoad (notably during inference)
-def normalize(x, h=240.0, w=320.0):
+def normalize_fn(x, h=240.0, w=320.0):
     # x has num_frames, joint_numbers, (x, y)
     x[:, :, 0] = (x[:, :, 0] / (w / 2.0)) - 1.0  # bewteen -1 and 1
     x[:, :, 1] = (x[:, :, 1] / (h / 2.0)) - 1.0
     return x
 
 
-def denormalize(x, h=240.0, w=320.0):
+def denormalize_fn(x, h=240.0, w=320.0):
     # actually, you should do denormalization AFTER the loss funciton. so when doing inference.
     x[:, :, 0] = x[:, :, 0] * ((w / 2.0) + 1.0)  # bewteen -1 and 1
     x[:, :, 1] = x[:, :, 1] * ((h / 2.0) + 1.0)
@@ -72,6 +73,7 @@ class JHMDBLoad(Dataset):
     # also we cannot just load all the frames directly into memory, because not enough GPU, but here less than 64GB should be okay
     def __init__(self, config, train_set, real_job=True, jump=1, normalize=(True, True)):
         self.config = config
+        self.skip = config['skip']
         self.normalized, self.default = normalize
         self.frames_per_vid = self.config['num_frames']
         self.train_set = train_set
@@ -205,19 +207,21 @@ class JHMDBLoad(Dataset):
         # pos_world was already normalized with respect to the image. (unlike pos_img)
         if self.normalized and self.default:
             torch_joint = torch.tensor(joint_dct['pos_world'])
+            torch_joint = rearrange(torch_joint, 'd n f->f n d')
         # then use custom normalization
         elif self.normalized and not self.default:
             torch_joint = torch.tensor(joint_dct['pos_img'])
-            torch_joint = normalize(torch_joint)
+            torch_joint = rearrange(torch_joint, 'd n f->f n d')
+            torch_joint = normalize_fn(torch_joint)
         # then no normalization
         else:
             torch_joint = torch.tensor(joint_dct['pos_img'])
-
-        print(f'normalized: {self.normalized}, default: {self.default}')
-        print('example joint values', torch_joint[0][0])
-
-        # rearrange for training and normalization.
-        torch_joint = rearrange(torch_joint, 'd n f->f n d')
+            # rearrange for training and normalization.
+            torch_joint = rearrange(torch_joint, 'd n f->f n d')
+        
+        if self.config['full_debug']:
+            print(f'normalized: {self.normalized}, default: {self.default}')
+            print('example joint values', torch_joint[0][0])
 
         return torch_joint
 
@@ -250,7 +254,12 @@ class JHMDBLoad(Dataset):
                 break
 
             action_split = os.path.join(directory, action)
+
+            # skipping all actions that are in the blacklist.
+            if action[:-16] in self.skip:
+                continue
             actions.append(action[:-16])  # remove the _test_split<int>.txt
+
             # checking if it is a file
             if os.path.isfile(action_split):
                 df = pd.read_csv(action_split, sep=' ', header=None)
@@ -260,7 +269,7 @@ class JHMDBLoad(Dataset):
                     value = int(row[1])
 
                     # if only testing, then just take the minimum number of actions
-                    if not self.real_job and (len(train) > 20 or len(test) > 1 or len(actions) > 1):
+                    if not self.real_job and (len(train) > 20 or len(test) > 1 or (len(actions) > 1)):
                         print("length of actions", len(actions))
                         value = False
                         break
@@ -312,8 +321,24 @@ class JHMDBLoad(Dataset):
 
 
 if __name__ == '__main__':
-    train = JHMDBLoad(train_set=True, frames_per_vid=16,
-                      joints=True, unpickle=True, real_job=False)
+    config = open_config()
+    num_epochs = config['epoch_number']
+    batch_size = config['batch_size']
+    num_workers = config['num_cpus'] - 1
+    normalize = config['normalized']
+    default = config['default']  # custom normalization.
+    follow_up = (config['follow_up'], config['previous_training_epoch'],
+                 config['previous_checkpoint'])
+    jump = config['jump']
+    real_job = config['real_job']
+    checkpoint_dir = config['checkpoint_directory']
+    checkpoint_name = config['checkpoint_name']
+
+    train = JHMDBLoad(config, train_set=True, real_job=real_job,
+                          jump=jump, normalize=(True, False))
+    print(train.arr)
+    train_loader = DataLoader(train, batch_size=16,
+                              shuffle=True, num_workers=2, pin_memory=False)
     # in real context, would definitely need to move the training set in the GPU
     # print(train.arr)
     # print("len(train), ", len(train))

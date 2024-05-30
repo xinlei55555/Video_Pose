@@ -34,15 +34,15 @@ class HeatMapVideoMambaPose(nn.Module):
         self.config = config
 
         # encoder
-        self.mamba = hvm.videomamba_tiny(patch_size=self.config['patch_size'], embed_dim=self.config['embed_channels'])
+        self.mamba = hvm.videomamba_tiny(patch_size=self.config['patch_size'], embed_dim=self.config['embed_channels'], num_frames=self.config['num_frames'])
 
+        # patch sizes are image_size/patch_number
         patch_height = self.config['image_tensor_height'] / \
             self.config['patch_number']
         patch_width = self.config['image_tensor_width'] / \
-            self.oonfig['patch_number']
+            self.config['patch_number']
+
         if config['2d_deconv']:
-            # Shape of final tensor torch.Size([64, 17, 112, 112])
-            # sizes are image_size/patch_number
             self.deconv = hmd2D.Deconv(
                 self.config, self.config['num_frames'], patch_height, patch_width, self.config['joint_number'])
         else:
