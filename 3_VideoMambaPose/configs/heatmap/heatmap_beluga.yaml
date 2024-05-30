@@ -1,11 +1,20 @@
 model_name: VideoMambaPose
 
+# full_debug mode will enable a lot of information being printed
+full_debug: False
+
 # architecture
 num_mamba_blocks: 12
-num_deconv: 3
+num_deconv: 2
 2d_deconv: True
-num_conv: 1
+deconv_channels: 192
+  # using 2d or 3d deconvolutions
+num_conv: 2
+conv_channels: 256
 joint_regressor: True
+  # joint regressor
+hidden_channels: 512
+output_dimensions: 2 # x, y
 
 # training
 epoch_number: 300
@@ -15,7 +24,7 @@ start_epoch: 1
 
 # device settings
   # (should be changed depending on the model)
-num_cpus: 2
+num_cpus: 3
 num_gpus: 1
 
 # checkpoints
@@ -40,7 +49,9 @@ image_height: 240
 image_width: 320
 image_tensor_height: 224
 image_tensor_width: 224
-jump: 1
+patch_number: 16
+jump: 1 # number of frames to skip between the different datapoints
+joint_number: 15
 
 # if False, uses subset of the data to run
 real_job: True

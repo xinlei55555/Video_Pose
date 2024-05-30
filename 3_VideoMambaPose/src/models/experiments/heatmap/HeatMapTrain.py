@@ -137,10 +137,8 @@ def main():
     config = open_config()
 
     wandb.init(
-        project="1heatmap_video_mamba",
-
+        project=config['model_name'],
         config={
-            "model_name": config['model_name'],
             "dataset": config['dataset_name'],
             "epochs": config['epoch_number'],
         }
@@ -150,7 +148,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Initialize the model and loss function
-    model = HeatMapVideoMambaPose().to(device)
+    model = HeatMapVideoMambaPose(config).to(device)
 
     # making sure to employ parallelization!!!
     if torch.cuda.device_count() > 1:
@@ -179,9 +177,9 @@ def main():
     checkpoint_dir = config['checkpoint_directory']
     checkpoint_name = config['checkpoint_name']
 
-    train_set = JHMDBLoad(train_set=True, real_job=real_job,
+    train_set = JHMDBLoad(config, train_set=True, real_job=real_job,
                           jump=jump, normalize=(normalize, default))
-    test_set = JHMDBLbetteroad(train_set=False, real_job=real_job,
+    test_set = JHMDBLoad(config, train_set=False, real_job=real_job,
                                jump=jump, normalize=(normalize, default))
 
     train_loader = DataLoader(train_set, batch_size=batch_size,
