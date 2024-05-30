@@ -1,25 +1,14 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
+import wandb
 
 from HeatMapLoss import PoseEstimationLoss
 from HeatVideoMamba import HeatMapVideoMambaPose
 from DataFormat import JHMDBLoad
+from import_config import open_config
 
 import os
-
-# wandb stuff
-import wandb
-wandb.init(
-    project="1heatmap_video_mamba",
-
-    config={
-        "learning_rate": 0.001,
-        "architecture": "12 Video BiMamba blocks + 3 layers 2D Deconvolutions + 1 layers Convolution + Joint Regressor (Linear + Relu + Linear)",
-        "dataset": "JHMDB, no cropping.",
-        "epochs": 300,
-    }
-)
 
 
 def load_checkpoint(filepath, model):
@@ -31,10 +20,9 @@ def load_checkpoint(filepath, model):
     return model
 
 
-def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, device, follow_up=(False, 1, None)):
-    checkpoints_dir = 'Custom_Tanh_normalized_checkpoints'
-    os.chdir("/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap")
-    os.makedirs(checkpoints_dir, exist_ok=True)
+def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, device, checkpoint_directory, checkpoint_name, follow_up=(False, 1, None)):
+    os.chdir(checkpoint_directory)
+    os.makedirs(checkpoints_name, exist_ok=True)
     best_val_loss = float('inf')
 
     start_epoch = 1
@@ -56,11 +44,8 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
             print(f'The length of the train_set is {len(train_set)}')
             print(f'The length of the test_set is {len(test_set)}')
 
+        print('test batch for epoch # ', epoch, '==============>')
         for i, data in enumerate(train_set):
-
-            # update device based on GPU usage.
-            # device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
             train_inputs, train_labels = data
 
             # should load individual batches to GPU
@@ -100,11 +85,8 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
         model.eval()  # so that the model does not change the values of the parameters
         test_loss = 0.0
         with torch.no_grad():  # reduce memory while torch is using evaluation mode
-            # print('test batch for epoch # ', epoch)
+            print('test batch for epoch # ', epoch, '======================>')
             for i, data in enumerate(test_set):
-                # update device based on GPU usage, I think this is important to avoid parallelization error
-                # device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
                 test_inputs, test_labels = data
                 test_inputs, test_labels = test_inputs.to(
                     device), test_labels.to(device)
@@ -140,21 +122,10 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
         if test_loss < best_val_loss:
             best_val_loss = test_loss
 
-            # Save the model checkpoint, since this is classification, there isn't really an accuracy...
-            # ! delete the previous ones, because takes lots of space
-            # os.rmdir(checkpoints_dir)
-            # os.makedirs(checkpoints_dir, exist_ok=True)
-
             # save model locally
             checkpoint_path = os.path.join(
                 checkpoints_dir, f'heatmap_{best_val_loss:.4f}.pt')
             torch.save(model.state_dict(), checkpoint_path)
-            # torch.save({
-            #     'model_state_dict': model.state_dict(),
-            #     'optimizer_state_dict': optimizer.state_dict(),
-            #     'epoch': epoch,
-            #     'loss': loss.item(),
-            # }, checkpoint_path)
             print(f'Best model saved at {checkpoint_path}')
             print("Model parameters are of the following size",
                   len(list(model.parameters())))
@@ -162,8 +133,21 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
 
 
 def main():
+    # import configurations:
+    config = open_config()
+
+    wandb.init(
+        project="1heatmap_video_mamba",
+
+        config={
+            "model_name": config['model_name'],
+            "dataset": config['dataset_name'],
+            "epochs": config['epoch_number'],
+        }
+    )
+
     # currently, only taking the first GPU, but later will use DDP will need to change.
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Initialize the model and loss function
     model = HeatMapVideoMambaPose().to(device)
@@ -174,32 +158,36 @@ def main():
 
     # move the data to the GPU
     model = model.to(device)
-
-    print(model)
+    print('Model loaded successfully as follows: ', model)
 
     loss_fn = PoseEstimationLoss()
-    num_epochs = 300
-    batch_size = 16
-    num_workers = 1
-    # num_frames = x64x # i'll actually be using 16
-    # height = 224
-    # width = 224
-    # channels = 3
-    normalize = True
-    default = False  # custom normalization.
-    follow_up = (False, 50, '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_22069.0820.pt')
-    jump = 1
-    real_job = True
-    # ! loading the data, will need to set real_job to False when training
+
+    # configuration
+    pin_memory = False
+    if torch.cuda.device_count() >= 1:
+        pin_memory = True
+
+    num_epochs = config['epoch_number']
+    batch_size = config['batch_size']
+    num_workers = config['num_cpus'] - 1
+    normalize = config['normalized']
+    default = config['default']  # custom normalization.
+    follow_up = (config['follow_up'], config['previous_training_epoch'],
+                 config['previous_checkpoint'])
+    jump = config['jump']
+    real_job = config['real_job']
+    checkpoint_dir = config['checkpoint_directory']
+    checkpoint_name = config['checkpoint_name']
+
     train_set = JHMDBLoad(train_set=True, real_job=real_job,
                           jump=jump, normalize=(normalize, default))
     test_set = JHMDBLbetteroad(train_set=False, real_job=real_job,
-                         jump=jump, normalize=(normalize, default))
+                               jump=jump, normalize=(normalize, default))
 
     train_loader = DataLoader(train_set, batch_size=batch_size,
-                              shuffle=True, num_workers=num_workers, pin_memory=True)
+                              shuffle=True, num_workers=num_workers, pin_memory=pin_memory)
     test_loader = DataLoader(test_set, batch_size=batch_size,
-                             shuffle=False, num_workers=num_workers, pin_memory=True)
+                             shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
 
     # optimizer
     optimizer = torch.optim.Adam(model.parameters())
@@ -207,7 +195,7 @@ def main():
     # Training loop
     print(f"The model has started training, with the following characteristics:")
     training_loop(num_epochs, optimizer, model, loss_fn,
-                  train_loader, test_loader, device, follow_up)
+                  train_loader, test_loader, device, checkpoint_dir, checkpoint_name, follow_up)
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 model_name: VideoMambaPose
 
-#architecture
+# architecture
 num_mamba_blocks: 12
 num_deconv: 3
 2d_deconv: True
@@ -13,14 +13,39 @@ batch_size: 16
 learning_rate: 0.001
 start_epoch: 1
 
+# device settings
+  # (should be changed depending on the model)
+num_cpus: 2
+num_gpus: 1
+
 # checkpoints
 checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap
+checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
+# checkpoint_name: 'testing_false_dataset'
+
+# Follow up on the training of another previous run?
+follow_up: False
+
+  # if yes
+previous_training_epoch: 1
+previous_checkpoint: ''
 
 # data
+dataset_name: 'JHMDB'
 data_path: /home/linxin67/scratch/JHMDB
 num_frames: 16
+# RGB
+channels: 3
 image_height: 240
 image_width: 320
 image_tensor_height: 224
 image_tensor_width: 224
+jump: 1
+
+# if False, uses subset of the data to run
+real_job: True
+
+# normalization
+normalized: True
+default: False # not the default normalization
 
