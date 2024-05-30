@@ -21,13 +21,14 @@ output_dimensions: 2 # x, y
 
 # training
 epoch_number: 300
-batch_size: 16
+# batch_size: 16
+batch_size: 8
 learning_rate: 0.001
 start_epoch: 1
 
 # device settings
   # (should be changed depending on the model)
-num_cpus: 3
+num_cpus: 1
 num_gpus: 1
 parallelize: False
 

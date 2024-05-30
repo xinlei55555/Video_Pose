@@ -45,7 +45,7 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
             print(f'The length of the train_set is {len(train_set)}')
             print(f'The length of the test_set is {len(test_set)}')
 
-        print('test batch for epoch # ', epoch, '==============>')
+        print('train batch for epoch # ', epoch, '==============>')
         for i, data in enumerate(train_set):
             train_inputs, train_labels = data
 
@@ -116,7 +116,7 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
             wandb.log({"Pointwise testing loss": show_loss_train})
 
             print(f"Epoch {epoch}, Pointwise Training loss {float(show_loss_train)},"
-                f" Pointwise Validation loss {float(show_loss_test)}")
+                  f" Pointwise Validation loss {float(show_loss_test)}")
             print(
                 f"Full training loss: {float(train_loss)}, Full test loss: {float(test_loss)}")
 
@@ -130,10 +130,16 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
                 torch.save(model.state_dict(), checkpoint_path)
                 print(f'Best model saved at {checkpoint_path}')
                 print("Model parameters are of the following size",
-                    len(list(model.parameters())))
+                      len(list(model.parameters())))
 
     if rank == 0:
         wandb.finish()
+
+
+def setup(rank, world_size):
+    os.environ['MASTER_ADDR'] = 'localhost'
+    os.environ['MASTER_PORT'] = '12355'
+    dist.init_process_group("nccl", rank=rank, world_size=world_size)
 
 
 def main(rank, world_size, config):
@@ -144,17 +150,6 @@ def main(rank, world_size, config):
             "epochs": config['epoch_number'],
         }
     )
-
-    # configuration
-    pin_memory = False
-    if torch.cuda.device_count() >= 1:
-        pin_memory = True
-
-    num_cpu_cores = os.cpu_count()
-    num_workers = config['num_cpus'] * (num_cpu_cores) - 1
-
-    print(f'num_workers is: {num_workers}, for {num_cpu_cores} cores')
-
     num_epochs = config['epoch_number']
     batch_size = config['batch_size']
     normalize = config['normalized']
@@ -172,45 +167,54 @@ def main(rank, world_size, config):
     test_set = JHMDBLoad(config, train_set=False, real_job=real_job,
                          jump=jump, normalize=(normalize, default))
 
-    # currently, only taking the first GPU, but later will use DDP will need to change.
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.device_count() == 1 or not config['parallelize']:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    if torch.cuda.device_count() <= 1 or not config['parallelize']:
-        # Initialize the model and loss function
-        model = HeatMapVideoMambaPose(config).to(device)
+        # configuration
+        pin_memory = True  # if only 1 GPU
+        num_cpu_cores = os.cpu_count()
+        num_workers = config['num_cpus'] * (num_cpu_cores) - 1
+        print(f'num_workers is: {num_workers}, for {num_cpu_cores} cores')
 
-        # move the data to the GPU
-        model = model.to(device)
-        print('Model loaded successfully as follows: ', model)
-
-        loss_fn = PoseEstimationLoss()
-
+        # data loader
         train_loader = DataLoader(train_set, batch_size=batch_size,
                                   shuffle=True, num_workers=num_workers, pin_memory=pin_memory)
         test_loader = DataLoader(test_set, batch_size=batch_size,
                                  shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
 
-        
+        # Initialize the model
+        model = HeatMapVideoMambaPose(config).to(device)
+        model = model.to(device)  # to unique GPU
+        print('Model loaded successfully as follows: ', model)
+
+    elif torch.cuda.device_count() == 0:
+        print("ERROR! No GPU detected...")
 
     else:
-        # making sure to employ parallelization!!! triton is not thread safe.
-        # model = nn.DataParallel(model)
+        # When parallel, set = 0 and pin_memory = False
+        num_workers = 0
+        pin_memory = False
+
         # Initialize process group
-        dist.init_process_group("nccl", rank=rank, world_size=world_size)
+        setup(rank=rank, world_size=world_size)
 
-        model = HeatMapVideoMambaPose(config).to(device)
-        model = DDP(model, device_ids=[rank])
-        loss_fn = PoseEstimationLoss()
-
+        # Fixing data loader for parallelization
         train_sampler = DistributedSampler(
-            train_set, num_replicas=world_size, rank=rank)
+            train_set, num_replicas=world_size, rank=rank, shuffle=True, drop_last=False,)
         test_sampler = DistributedSampler(
-            test_set, num_replicas=world_size, rank=rank)
+            test_set, num_replicas=world_size, rank=rank, shuffle=False, drop_last=False,)
 
         train_loader = DataLoader(
-            train_set, batch_size=batch_size, sampler=train_sampler)
+            train_set, batch_size=batch_size, sampler=train_sampler, shuffle=True, num_workers=num_workers, pin_memory=pin_memory, drop_last=False,)
         test_loader = DataLoader(
-            test_set, batch_size=batch_size, sampler=test_sampler)
+            test_set, batch_size=batch_size, sampler=test_sampler, shuffle=False, num_workers=num_workers, pin_memory=pin_memory, drop_last=False,)
+
+        # loading the model
+        model = HeatMapVideoMambaPose(config).to(rank) # sending the model to the correct rank
+        model = DDP(model, device_ids=[rank], output_device=rank, find_unused_parameters=True)
+
+    # loss
+    loss_fn = PoseEstimationLoss()
 
     # optimizer
     optimizer = torch.optim.Adam(model.parameters())
