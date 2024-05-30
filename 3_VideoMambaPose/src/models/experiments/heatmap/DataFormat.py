@@ -70,10 +70,10 @@ class JHMDBLoad(Dataset):
 
     # use 16, because transformers can already do 8
     # also we cannot just load all the frames directly into memory, because not enough GPU, but here less than 64GB should be okay
-    def __init__(self, config, train_set, frames_per_vid, real_job=True, jump=1, normalize=(True, True)):
+    def __init__(self, config, train_set, real_job=True, jump=1, normalize=(True, True)):
         self.config = config
         self.normalized, self.default = normalize
-        self.frames_per_vid = frames_per_vid
+        self.frames_per_vid = self.config['num_frames']
         self.train_set = train_set
 
         # determines whether to take the whole set of data, or just part of it

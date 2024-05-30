@@ -199,6 +199,7 @@ class PatchEmbed(nn.Module):
         self.tubelet_size = kernel_size
 
         # so they are using conv3d, because you have 3 channels, 16 by 16! (so three diemsni
+        # the convolution is the size of the patch, and they are doing the convolution within each patch, because stride is also patch size
         self.proj = nn.Conv3d(
             in_chans, embed_dim, 
             kernel_size=(kernel_size, patch_size[0], patch_size[1]),
@@ -215,7 +216,7 @@ class VisionMamba(nn.Module):
     def __init__(
             self, 
             img_size=224, 
-            patch_size=16, 
+            patch_size=4, # changing the patch size from 16 to be 4 
             depth=24, 
             embed_dim=192, 
             channels=3, 
@@ -453,7 +454,7 @@ def load_state_dict(model, state_dict, center=True):
 @register_model
 def videomamba_tiny(pretrained=False, **kwargs):
     model = VisionMamba(
-        patch_size=16, 
+        patch_size=4, 
         embed_dim=192, 
         # depth=24, 
         depth=12, # this is what causes the increase in mempry usage.

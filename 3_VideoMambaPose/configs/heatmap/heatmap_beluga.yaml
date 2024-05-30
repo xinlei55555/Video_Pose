@@ -3,8 +3,11 @@ model_name: VideoMambaPose
 # full_debug mode will enable a lot of information being printed
 full_debug: False
 
-# architecture
+# architecture mamba
+embed_channels: 192 # number of channels after the tiny mamba layers.
 num_mamba_blocks: 12
+
+# deconv architectures
 num_deconv: 2
 2d_deconv: True
 deconv_channels: 192
@@ -49,7 +52,8 @@ image_height: 240
 image_width: 320
 image_tensor_height: 224
 image_tensor_width: 224
-patch_number: 16
+patch_number: 56 # number of patches, each of size 4 pixels by 4 pixels
+patch_size: 4 # each patch is 4x4
 jump: 1 # number of frames to skip between the different datapoints
 joint_number: 15
 

@@ -34,10 +34,12 @@ class HeatMapVideoMambaPose(nn.Module):
         self.config = config
 
         # encoder
-        self.mamba = hvm.videomamba_tiny()
+        self.mamba = hvm.videomamba_tiny(patch_size=self.config['patch_size'], embed_dim=self.config['embed_channels'])
 
-        patch_height = self.config['image_tensor_height']
-        patch_width = self.config['image_tensor_width']
+        patch_height = self.config['image_tensor_height'] / \
+            self.config['patch_number']
+        patch_width = self.config['image_tensor_width'] / \
+            self.oonfig['patch_number']
         if config['2d_deconv']:
             # Shape of final tensor torch.Size([64, 17, 112, 112])
             # sizes are image_size/patch_number
@@ -49,8 +51,8 @@ class HeatMapVideoMambaPose(nn.Module):
             # 15 is the number of output joints
 
         # output into joints
-        self.joints = hjr.JointOutput(self.config,
-                                      input_channels=self.config['joint_number'], joint_number=self.config['joint_number'], d=1, h=56, w=56, normalize=self.config['normalized'])  # for the JHMBD database
+        self.joints = hjr.JointOutput(
+            self.config, input_channels=self.config['joint_number'], joint_number=self.config['joint_number'], d=1, h=56, w=56, normalize=self.config['normalized'])  # for the JHMBD database
 
     def forward(self, x):
         if self.config['full_debug']:
