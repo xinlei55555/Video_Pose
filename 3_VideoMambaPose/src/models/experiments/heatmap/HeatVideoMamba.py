@@ -44,7 +44,8 @@ class HeatMapVideoMambaPose(nn.Module):
                 # 15 is the number of output joints
 
         # output into joints
-        self.joints = hjr.JointOutput(input_channels = 15, joint_number=15) # for the JHMBD database
+        # remember that the output layer has been replaced by 1 for deconv!!!
+        self.joints = hjr.JointOutput(input_channels = 15, joint_number=15, d=1, h=56, w=56) # for the JHMBD database
 
     def forward(self, x):
         # print('Memory before (in MB)', torch.cuda.memory_allocated()/1e6)  # Prints GPU memory summary

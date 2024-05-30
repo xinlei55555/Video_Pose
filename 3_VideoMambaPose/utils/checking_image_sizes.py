@@ -1,7 +1,9 @@
 import os
 from PIL import Image
 
-def get_image_sizes_in_folder(folder_path='/home/linxin67/scratch/JHMDB/Rename_Images'):
+# 320 by 240
+def get_image_sizes_in_folder(action='', folder_name='', folder_path='/home/linxin67/scratch/JHMDB/Rename_Images'):
+    folder_path = folder_path+'/'+action+'/'+folder_name
     total_size = 0
     image_count = 0
     sizes = set()
@@ -17,9 +19,10 @@ def get_image_sizes_in_folder(folder_path='/home/linxin67/scratch/JHMDB/Rename_I
                     image_count += 1
             except Exception as e:
                 print(f"Error processing {file}: {e}")
-    print('Here are the different sizes: ', size)
+    print('Here are the different sizes: ', sizes)
     print(f"Total images: {image_count}")
     print(f"Total size of images: {total_size / (1024 * 1024):.2f} MB")
 
 # Example usage
-get_image_sizes_in_folder()
+# get_image_sizes_in_folder()
+get_image_sizes_in_folder(action='wave', folder_name='Pirates_5_wave_h_nm_np1_fr_med_8')
