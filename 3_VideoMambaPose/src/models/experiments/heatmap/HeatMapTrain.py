@@ -5,6 +5,7 @@ import torch.multiprocessing as mp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import Dataset, DataLoader, DistributedSampler
 import wandb
+import argparse
 
 from HeatMapLoss import PoseEstimationLoss
 from HeatVideoMamba import HeatMapVideoMambaPose
@@ -236,13 +237,20 @@ def main(rank, world_size, config):
 
 
 if __name__ == '__main__':
+    # argparse to get the file path of the config file
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str, default='heatmap_beluga.yaml',
+                        help='Name of the configuration file')
+    args = parser.parse_args()
+    config_file = args.config
+
     # import configurations:
-    config = open_config()
+    config = open_config(config_file)
 
-    if torch.cuda.device_count() <= 1 or not config['parallelize']:
-        main(1, 1, config)
+    # if torch.cuda.device_count() <= 1 or not config['parallelize']:
+    #     main(1, 1, config)
 
-    else:
-        # world size determines the number of GPUs running together.
-        world_size = torch.cuda.device_count()
-        mp.spawn(main, args=(world_size, config), nprocs=world_size, join=True)
+    # else:
+    #     # world size determines the number of GPUs running together.
+    #     world_size = torch.cuda.device_count()
+    #     mp.spawn(main, args=(world_size, config), nprocs=world_size, join=True)

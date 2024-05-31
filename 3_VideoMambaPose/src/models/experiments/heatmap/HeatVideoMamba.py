@@ -32,15 +32,18 @@ class HeatMapVideoMambaPose(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
+        self.img_height = self.config['image_tensor_height']
+        self.img_width = self.config['image_tensor_width']
 
         # encoder
-        self.mamba = hvm.videomamba_tiny(patch_size=self.config['patch_size'], embed_dim=self.config['embed_channels'], num_frames=self.config['num_frames'])
+        self.mamba = hvm.videomamba_tiny(img_size=(self.img_width, self.img_height), patch_size=self.config['patch_size'], embed_dim=self.config['embed_channels'], num_frames=self.config['num_frames'])
 
         # patch sizes are image_size/patch_number
-        patch_height = self.config['image_tensor_height'] / \
-            self.config['patch_number']
-        patch_width = self.config['image_tensor_width'] / \
-            self.config['patch_number']
+        # patch_height = self.config['image_tensor_height'] / \
+        #     self.config['patch_number']
+        # patch_width = self.config['image_tensor_width'] / \
+        #     self.config['patch_number']
+        patch_height = patch_width = self.config['patch_size']
 
         if config['2d_deconv']:
             self.deconv = hmd2D.Deconv(

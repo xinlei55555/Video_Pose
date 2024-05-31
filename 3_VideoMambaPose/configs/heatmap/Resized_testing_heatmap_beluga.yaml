@@ -4,7 +4,8 @@ model_name: VideoMambaPose
 full_debug: False
 
 # architecture mamba
-embed_channels: 192 # number of channels after the tiny mamba layers.
+embed_channels: 192 # number of channels before and after the tiny mamba layers.
+# note: the embed channels within mamba is 768.
 num_mamba_blocks: 12
 
 # deconv
@@ -20,7 +21,7 @@ hidden_channels: 512
 output_dimensions: 2 # x, y
 
 # training
-epoch_number: 300
+epoch_number: 1 
 # batch_size: 16
 # batch_size: 8
 batch_size: 1 # just to see how scalable it is
@@ -55,10 +56,10 @@ skip: ['wave']
 channels: 3
 image_height: 240
 image_width: 320
-image_tensor_height: 224
-image_tensor_width: 224
-patch_number: 56 # number of patches, each of size 4 pixels by 4 pixels
-patch_size: 4 # each patch is 4x4
+image_tensor_height: 192 # changed to match VitPose
+image_tensor_width: 256
+patch_number: 192 # total number of patches, each of size 16 pixels by 16 pixels
+patch_size: 16 # each patch is 16x16
 jump: 1 # number of frames to skip between the different datapoints
 joint_number: 15
 
