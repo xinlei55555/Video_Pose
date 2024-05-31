@@ -20,7 +20,7 @@ def load_checkpoint(filepath, model):
     return model
 
 
-def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, device, rank, world_size,
+def training_loop(config, n_epochs, optimizer, model, loss_fn, train_set, test_set, device, rank, world_size,
                   checkpoint_directory, checkpoint_name, follow_up=(False, 1, None)):
     os.chdir(checkpoint_directory)
     os.makedirs(checkpoint_name, exist_ok=True)
@@ -35,6 +35,11 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
 
     for epoch in range(start_epoch, n_epochs + start_epoch):
         print(f'Epoch {epoch} started ======>')
+
+        # telling the data loader which epoch we are at
+        if torch.cuda.device_count() > 1 and config['parallelize']:
+            train_set.sampler.set_epoch(epoch) 
+
         model.train()  # so that the model keeps updating its weights.
         train_loss = 0.0
         # print('train batch for epoch # ', epoch)
@@ -201,17 +206,19 @@ def main(rank, world_size, config):
         # Fixing data loader for parallelization
         train_sampler = DistributedSampler(
             train_set, num_replicas=world_size, rank=rank, shuffle=True, drop_last=False,)
-        test_sampler = DistributedSampler(
-            test_set, num_replicas=world_size, rank=rank, shuffle=False, drop_last=False,)
-
+       
         train_loader = DataLoader(
             train_set, batch_size=batch_size, sampler=train_sampler, shuffle=True, num_workers=num_workers, pin_memory=pin_memory, drop_last=False,)
-        test_loader = DataLoader(
-            test_set, batch_size=batch_size, sampler=test_sampler, shuffle=False, num_workers=num_workers, pin_memory=pin_memory, drop_last=False,)
+      
+        # use normal test loader for the test set
+        test_loader = DataLoader(test_set, batch_size=batch_size,
+                                 shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
 
         # loading the model
-        model = HeatMapVideoMambaPose(config).to(rank) # sending the model to the correct rank
-        model = DDP(model, device_ids=[rank], output_device=rank, find_unused_parameters=True)
+        # sending the model to the correct rank
+        model = HeatMapVideoMambaPose(config).to(rank)
+        model = DDP(model, device_ids=[
+                    rank], output_device=rank, find_unused_parameters=True)
 
     # loss
     loss_fn = PoseEstimationLoss()
@@ -221,7 +228,7 @@ def main(rank, world_size, config):
 
     # Training loop
     print(f"The model has started training, with the following characteristics:")
-    training_loop(num_epochs, optimizer, model, loss_fn,
+    training_loop(config, num_epochs, optimizer, model, loss_fn,
                   train_loader, test_loader, device, rank, world_size, checkpoint_dir, checkpoint_name, follow_up)
 
     # Cleanup
@@ -233,7 +240,7 @@ if __name__ == '__main__':
     config = open_config()
 
     if torch.cuda.device_count() <= 1 or not config['parallelize']:
-        main()
+        main(1, 1, config)
 
     else:
         # world size determines the number of GPUs running together.
