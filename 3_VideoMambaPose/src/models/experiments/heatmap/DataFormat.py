@@ -4,6 +4,7 @@ import os
 
 import pickle
 import pandas as pd
+import cv2
 
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
@@ -19,6 +20,8 @@ from matplotlib import pyplot as plt
 from import_config import open_config
 
 # Defined as global functions, to be able to use them without initializing JHMDBLoad (notably during inference)
+
+
 def normalize_fn(x, h=240.0, w=320.0):
     # x has num_frames, joint_numbers, (x, y)
     x[:, :, 0] = (x[:, :, 0] / (w / 2.0)) - 1.0  # bewteen -1 and 1
@@ -74,6 +77,7 @@ class JHMDBLoad(Dataset):
     def __init__(self, config, train_set, real_job=True, jump=1, normalize=(True, True)):
         self.config = config
         self.skip = config['skip']
+        self.use_videos = config['use_videos']
         self.normalized, self.default = normalize
         self.frames_per_vid = self.config['num_frames']
         self.train_set = train_set
@@ -94,7 +98,7 @@ class JHMDBLoad(Dataset):
         if self.train_set:
             # frames with joint values
             self.frames_with_joints = [(self.video_to_tensors(
-                action_name, file_name),
+                action_name, file_name, self.use_videos),
                 self.rearranged_joints(
                 action_name, file_name))
                 for action_name, file_name, n_frames in self.train if action_name != 'wave']
@@ -113,7 +117,7 @@ class JHMDBLoad(Dataset):
                         self.arr.append([k, i, joints])
         else:
             self.frames_with_joints = [(self.video_to_tensors(
-                action_name, file_name),
+                action_name, file_name, self.use_videos),
                 self.rearranged_joints(
                 action_name, file_name))
                 for action_name, file_name, n_frames in self.test if action_name != 'wave']
@@ -218,7 +222,7 @@ class JHMDBLoad(Dataset):
             torch_joint = torch.tensor(joint_dct['pos_img'])
             # rearrange for training and normalization.
             torch_joint = rearrange(torch_joint, 'd n f->f n d')
-        
+
         if self.config['full_debug']:
             print(f'normalized: {self.normalized}, default: {self.default}')
             print('example joint values', torch_joint[0][0])
@@ -226,7 +230,7 @@ class JHMDBLoad(Dataset):
         return torch_joint
 
     def get_num_frames(self, action, video):
-        return self.nframes[action+'/'+video]
+        return self.nframes[os.path.join(action, video)]
 
     def get_names_train_test_split(self, path="/home/linxin67/scratch/JHMDB/"):
         '''
@@ -235,14 +239,14 @@ class JHMDBLoad(Dataset):
         2. The training set (with 3-tuple: (action_name, file_name, n_frames))
         3. The test set (idem)
         '''
-        directory = path+'splits'
+        directory = os.path.join(path, 'splits')
         os.chdir(directory)
 
         actions = []
         train = []
         test = []
 
-        value = True
+        stop_list = True
         # looping through gives you each action
         for action in os.listdir(directory):
            # I just want to look at the ones with 1 after.
@@ -250,7 +254,7 @@ class JHMDBLoad(Dataset):
                 continue
 
             # value only becomes False if I break it inside
-            if not value:
+            if not stop_list:
                 break
 
             action_split = os.path.join(directory, action)
@@ -271,7 +275,7 @@ class JHMDBLoad(Dataset):
                     # if only testing, then just take the minimum number of actions
                     if not self.real_job and (len(train) > 20 or len(test) > 1 or (len(actions) > 1)):
                         print("length of actions", len(actions))
-                        value = False
+                        stop_list = False
                         break
 
                     if value == 1 and self.train_set:
@@ -301,22 +305,67 @@ class JHMDBLoad(Dataset):
         tensor = transform(image)
         return tensor
 
-    def video_to_tensors(self, action, video, path='/home/linxin67/scratch/JHMDB/Rename_Images/'):
+    def video_to_tensors(self, action, video, use_videos, path='/home/linxin67/scratch/JHMDB/Rename_Images/'):
         '''
         Returns a tensor with the following:
         (n_frames, num_channels (3), 224, 224)
         '''
-        directory_path = os.path.join(path, action, video)
-        image_tensors = []
+        video_path = os.path.join(path, action, video)
 
-        for filename in os.listdir(directory_path):
-            file_path = os.path.join(directory_path, filename)
-            if os.path.isfile(file_path) and filename.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
-                image_tensor = self.image_to_tensor(file_path)
-                image_tensors.append(image_tensor)
+        # goes through the each image.
+        if not use_videos:
+            image_tensors = []
 
-        # Concatenates a sequence of tensors along a new dimension.
-        batch_tensor = torch.stack(image_tensors)
+            for filename in os.listdir(video_path):
+                file_path = os.path.join(video_path, filename)
+                if os.path.isfile(file_path) and filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    image_tensor = self.image_to_tensor(file_path)
+                    image_tensors.append(image_tensor)
+
+            # Concatenates a sequence of tensors along a new dimension.
+            batch_tensor = torch.stack(image_tensors)
+            
+        else:
+            # Check if the video file exists
+            if not os.path.isfile(video_path):
+                print(f"The video file {video_path} does not exist.")
+            
+            # Initialize a list to store the frames
+            frames = []
+
+            # Open the video file
+            cap = cv2.VideoCapture(video_path)
+
+            # Check if the video was opened successfully
+            if not cap.isOpened():
+                print(f"Error opening video file {video_path}")
+
+            # Read frames until the end of the video
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                # Convert frame from BGR to RGB format
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                # Convert frame to tensor and add it to the list
+                frame_tensor = torch.tensor(frame, dtype=torch.float32)
+                frames.append(frame_tensor)
+
+            # Release the video capture object
+            cap.release()
+
+            # Stack all frames into a single tensor
+            batch_tensor = torch.stack(frames)
+
+            # Transpose the tensor to have the shape (frames, channels, height, width)
+            batch_tensor = video_tensor.permute(0, 3, 1, 2)
+
+            # apply the transformation to the whole video (batched) input must be (B, C, H, W)
+            transform = transforms.Compose([transforms.Resize(
+                (self.config['image_tensor_height'], self.config['image_tensor_width']))])
+            
+            batch_tensor = transform(batch_tensor)
+
         return batch_tensor
 
 
@@ -335,7 +384,7 @@ if __name__ == '__main__':
     checkpoint_name = config['checkpoint_name']
 
     train = JHMDBLoad(config, train_set=True, real_job=real_job,
-                          jump=jump, normalize=(True, False))
+                      jump=jump, normalize=(True, False))
     print(train.arr)
     train_loader = DataLoader(train, batch_size=16,
                               shuffle=True, num_workers=2, pin_memory=False)

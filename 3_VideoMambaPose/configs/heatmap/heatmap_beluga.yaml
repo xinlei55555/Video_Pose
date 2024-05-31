@@ -22,7 +22,8 @@ output_dimensions: 2 # x, y
 # training
 epoch_number: 300
 # batch_size: 16
-batch_size: 8
+# batch_size: 8
+batch_size: 1 # just to see how scalable it is
 learning_rate: 0.001
 start_epoch: 1
 
@@ -47,9 +48,11 @@ previous_checkpoint: ''
 # data
 dataset_name: 'JHMDB'
 data_path: /home/linxin67/scratch/JHMDB
-num_frames: 16
+# use avi videos
+use_videos: True
 # actions to skip
 skip: ['wave']
+num_frames: 16
 # RGB
 channels: 3
 image_height: 240

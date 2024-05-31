@@ -29,6 +29,7 @@ class Deconv(nn.Module):
         super().__init__()
         self.config = config
 
+        # h is the number of patches in the height, while w is the number of patches in the width
         self.d, self.h, self.w = d, h, w
         self.out_channels = out_channels
 
@@ -53,15 +54,13 @@ class Deconv(nn.Module):
         # Select the last element in the 'd' dimension
         x = x[:, -1, :, :, :]  # x.shape now should be [batch, c, h, w]
 
-        # x has the following sizes: (12,192 channels, 8, 14, 14) --> The 192 channels were initiated from the patching
-        # hence, for 2d deconv, i pass in (12, 1, c, h, w)
         return x
 
     def define_conv_layers(self,
                            num_conv_layers=2,
                            # number of input channels
                            conv_channels=256,
-                           out_channels=17,
+                           out_channels=15,
                            num_conv_kernels=(1, 1, 1)):
         layers = []
         for i in range(num_conv_layers):

@@ -186,11 +186,11 @@ class PatchEmbed(nn.Module):
     # okay, notice that the embedding dimensions is 768 = 4*4*3*16, and 4 is the size of the (224/4), Although it shouldn't really be the batch size...
     # 768 = 3 channels * 256 = 3 * 16 * 16 (which are the patch sizes, in other word, in each patch, there are 16 pixels by 16 pixels, for three channels.)
     # hence, for me, it should be 3 * 4 * 4 (! by the way, it does each image indiviudally)
-    # def __init__(self, img_size=224, patch_size=16, kernel_size=1, in_chans=3, embed_dim=768):
+    def __init__(self, img_size, patch_size, kernel_size=1, in_chans=3, embed_dim=768):
     # ! change the patch_size to be 4, by default
-    def __init__(self, img_size=224, patch_size=4, kernel_size=1, in_chans=3, embed_dim=48): #768):
+    # def __init__(self, img_size=(224, 224), patch_size=4, kernel_size=1, in_chans=3, embed_dim=48): #768):
         super().__init__()
-        img_size = to_2tuple(img_size)
+        # img_size = to_2tuple(img_size)
         patch_size = to_2tuple(patch_size)
         num_patches = (img_size[1] // patch_size[1]) * (img_size[0] // patch_size[0])
         self.img_size = img_size
@@ -200,6 +200,8 @@ class PatchEmbed(nn.Module):
 
         # so they are using conv3d, because you have 3 channels, 16 by 16! (so three diemsni
         # the convolution is the size of the patch, and they are doing the convolution within each patch, because stride is also patch size
+        # since kernel_size=1, it's like applying 2d convolutions.
+        # embed_dim = 192, means that the output of the projection is 192 channels
         self.proj = nn.Conv3d(
             in_chans, embed_dim, 
             kernel_size=(kernel_size, patch_size[0], patch_size[1]),
@@ -215,7 +217,7 @@ class PatchEmbed(nn.Module):
 class VisionMamba(nn.Module):
     def __init__(
             self, 
-            img_size=224, 
+            img_size=(224, 224), 
             patch_size=4, # changing the patch size from 16 to be 4 
             depth=24, 
             embed_dim=192, 
@@ -463,7 +465,7 @@ def videomamba_tiny(pretrained=False, **kwargs):
         residual_in_fp32=True, 
         fused_add_norm=True,
         # num_frames=16,
-        **kwargs
+        **kwargs # this will include the arguments that I passed into videomamba_tiny
     )
     model.default_cfg = _cfg()
     if pretrained:
@@ -473,43 +475,43 @@ def videomamba_tiny(pretrained=False, **kwargs):
     return model
 
 
-@register_model
-def videomamba_small(pretrained=False, **kwargs):
-    model = VisionMamba(
-        patch_size=4, 
-        embed_dim=384, # number of channels
-        depth=24, # number of mamba blocks in a row
-        rms_norm=True, 
-        residual_in_fp32=True, 
-        fused_add_norm=True, 
-        **kwargs
-    )
-    model.default_cfg = _cfg()
-    if pretrained:
-        print('load pretrained weights')
-        state_dict = torch.load(_MODELS["videomamba_s16_in1k"], map_location='cpu')
-        load_state_dict(model, state_dict, center=True)
-    return model
-
-
-@register_model
-def videomamba_middle(pretrained=False, **kwargs):
-    model = VisionMamba(
-        patch_size=4, 
-        embed_dim=576, 
-        depth=32, 
-        rms_norm=True, 
-        residual_in_fp32=True, 
-        fused_add_norm=True, 
-        **kwargs
-    )
-    model.default_cfg = _cfg()
-    if pretrained:
-        print('load pretrained weights')
-        state_dict = torch.load(_MODELS["videomamba_m16_in1k"], map_location='cpu')
-        load_state_dict(model, state_dict, center=True)
-    return model
-
+# @register_model
+# def videomamba_small(pretrained=False, **kwargs):
+    # model = VisionMamba(
+        # patch_size=4, 
+        # embed_dim=384, # number of channels
+        # depth=24, # number of mamba blocks in a row
+        # rms_norm=True, 
+        # residual_in_fp32=True, 
+        # fused_add_norm=True, 
+        # **kwargs
+    # )
+    # model.default_cfg = _cfg()
+    # if pretrained:
+        # print('load pretrained weights')
+        # state_dict = torch.load(_MODELS["videomamba_s16_in1k"], map_location='cpu')
+        # load_state_dict(model, state_dict, center=True)
+    # return model
+# 
+# 
+# @register_model
+# def videomamba_middle(pretrained=False, **kwargs):
+    # model = VisionMamba(
+        # patch_size=4, 
+        # embed_dim=576, 
+        # depth=32, 
+        # rms_norm=True, 
+        # residual_in_fp32=True, 
+        # fused_add_norm=True, 
+        # **kwargs
+    # )
+    # model.default_cfg = _cfg()
+    # if pretrained:
+        # print('load pretrained weights')
+        # state_dict = torch.load(_MODELS["videomamba_m16_in1k"], map_location='cpu')
+        # load_state_dict(model, state_dict, center=True)
+    # return model
+# 
 
 if __name__ == '__main__':
     import time

@@ -47,6 +47,8 @@ previous_checkpoint: ''
 # data
 dataset_name: 'JHMDB'
 data_path: /home/linxin67/scratch/JHMDB
+# use avi videos
+use_videos: True
 # actions to skip
 skip: ['wave']
 num_frames: 16

@@ -5,6 +5,7 @@ import torch.multiprocessing as mp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import Dataset, DataLoader, DistributedSampler
 import wandb
+import argparse
 
 from HeatMapLoss import PoseEstimationLoss
 from HeatVideoMamba import HeatMapVideoMambaPose
@@ -172,7 +173,7 @@ def main(rank, world_size, config):
     test_set = JHMDBLoad(config, train_set=False, real_job=real_job,
                          jump=jump, normalize=(normalize, default))
 
-    if torch.cuda.device_count() == 1 or not config['parallelize']:
+    if torch.cuda.devicetesting_heatmap_beluga_count() == 1 or not config['parallelize']:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # configuration
@@ -194,6 +195,7 @@ def main(rank, world_size, config):
 
     elif torch.cuda.device_count() == 0:
         print("ERROR! No GPU detected...")
+        return
 
     else:
         # When parallel, set = 0 and pin_memory = False
@@ -236,8 +238,15 @@ def main(rank, world_size, config):
 
 
 if __name__ == '__main__':
+    # argparse to get the file path of the config file
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str, default='heatmap_beluga.yaml',
+                        help='Name of the configuration file')
+    args = parser.parse_args()
+    config_file = args.config
+
     # import configurations:
-    config = open_config()
+    config = open_config(config_file)
 
     if torch.cuda.device_count() <= 1 or not config['parallelize']:
         main(1, 1, config)
