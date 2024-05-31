@@ -18,12 +18,16 @@ sys.path.append('/mnt/DATA/Personnel/Other learning/Programming/Professional_Opp
 from HeatVideoMamba import HeatMapVideoMambaPose
 from DataFormat import denormalize_default, det_denormalize_values
 
-def load_model(filepath):
+def load_model(filepath, parallel = False):
     # Create the model
     model = HeatMapVideoMambaPose()
 
     # load the dictionary from checkpoint, and load the weights into the model.
     checkpoint = torch.load(filepath, map_location=torch.device('cpu'))
+
+    # TODO fix this, in case
+    if paralell:
+        checkpoint = adapt_model_parallel(checkpoint)
 
     # loading this requires me to check from the initial save
     # strict = False makes it so that even though some layer are missing, it will work (although idk why some layesr are missing)
@@ -33,6 +37,18 @@ def load_model(filepath):
     model.eval()
 
     return model
+
+# loading model that was trained with DDP
+def adapt_model_parallel(checkpoint):
+    # in case we load a DDP model checkpoint to a non-DDP model
+    model_dict = checkpoint
+    pattern = re.compile('module.')
+    for k,v in state_dict.items():
+        if re.search("module", k):
+            model_dict[re.sub(pattern, '', k)] = v
+        else:
+            model_dict = state_dict
+    return model_dict
 
 
 def inference(model, input_tensor):
@@ -228,7 +244,7 @@ def main():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Load the model from the .pt file
-    model = load_model(model_path)
+    model = load_model(model_path, parallel)
     model = model.to(device)
 
     print(model)

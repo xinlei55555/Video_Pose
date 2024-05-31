@@ -1,40 +1,29 @@
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
+import torch.distributed as dist
+import torch.multiprocessing as mp
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.utils.data import Dataset, DataLoader, DistributedSampler
+import wandb
 
 from HeatMapLoss import PoseEstimationLoss
 from HeatVideoMamba import HeatMapVideoMambaPose
 from DataFormat import JHMDBLoad
+from import_config import open_config
 
 import os
-
-# wandb stuff
-import wandb
-wandb.init(
-    project="1heatmap_video_mamba",
-
-    config={
-        "learning_rate": 0.001,
-        "architecture": "12 Video BiMamba blocks + 3 layers 2D Deconvolutions + 1 layers Convolution + Joint Regressor (Linear + Relu + Linear)",
-        "dataset": "JHMDB, no cropping.",
-        "epochs": 300,
-    }
-)
 
 
 def load_checkpoint(filepath, model):
     checkpoint = torch.load(filepath)
     model.load_state_dict(checkpoint)  # this depends on how I saved the model
-    # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-    # epoch = checkpoint['epoch']
-    # loss = checkpoint['loss']
     return model
 
 
-def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, device, follow_up=(False, 1, None)):
-    checkpoints_dir = 'Custom_Tanh_normalized_checkpoints'
-    os.chdir("/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap")
-    os.makedirs(checkpoints_dir, exist_ok=True)
+def training_loop(config, n_epochs, optimizer, model, loss_fn, train_set, test_set, device, rank, world_size,
+                  checkpoint_directory, checkpoint_name, follow_up=(False, 1, None)):
+    os.chdir(checkpoint_directory)
+    os.makedirs(checkpoint_name, exist_ok=True)
     best_val_loss = float('inf')
 
     start_epoch = 1
@@ -46,6 +35,11 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
 
     for epoch in range(start_epoch, n_epochs + start_epoch):
         print(f'Epoch {epoch} started ======>')
+
+        # telling the data loader which epoch we are at
+        if torch.cuda.device_count() > 1 and config['parallelize']:
+            train_set.sampler.set_epoch(epoch) 
+
         model.train()  # so that the model keeps updating its weights.
         train_loss = 0.0
         # print('train batch for epoch # ', epoch)
@@ -56,11 +50,8 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
             print(f'The length of the train_set is {len(train_set)}')
             print(f'The length of the test_set is {len(test_set)}')
 
+        print('train batch for epoch # ', epoch, '==============>')
         for i, data in enumerate(train_set):
-
-            # update device based on GPU usage.
-            # device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
             train_inputs, train_labels = data
 
             # should load individual batches to GPU
@@ -100,11 +91,8 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
         model.eval()  # so that the model does not change the values of the parameters
         test_loss = 0.0
         with torch.no_grad():  # reduce memory while torch is using evaluation mode
-            # print('test batch for epoch # ', epoch)
+            print('test batch for epoch # ', epoch, '======================>')
             for i, data in enumerate(test_set):
-                # update device based on GPU usage, I think this is important to avoid parallelization error
-                # device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
                 test_inputs, test_labels = data
                 test_inputs, test_labels = test_inputs.to(
                     device), test_labels.to(device)
@@ -128,87 +116,133 @@ def training_loop(n_epochs, optimizer, model, loss_fn, train_set, test_set, devi
         show_loss_train, show_loss_test = train_loss / \
             len(train_set), test_loss / len(test_set)
 
-        wandb.log({"Pointwise training loss": show_loss_train})
-        wandb.log({"Pointwise testing loss": show_loss_train})
+        if rank == 0:
+            wandb.log({"Pointwise training loss": show_loss_train})
+            wandb.log({"Pointwise testing loss": show_loss_train})
 
-        print(f"Epoch {epoch}, Pointwise Training loss {float(show_loss_train)},"
-              f" Pointwise Validation loss {float(show_loss_test)}")
-        print(
-            f"Full training loss: {float(train_loss)}, Full test loss: {float(test_loss)}")
+            print(f"Epoch {epoch}, Pointwise Training loss {float(show_loss_train)},"
+                  f" Pointwise Validation loss {float(show_loss_test)}")
+            print(
+                f"Full training loss: {float(train_loss)}, Full test loss: {float(test_loss)}")
 
-        # I use the full loss when comparing, to avoid having too small numbers.
-        if test_loss < best_val_loss:
-            best_val_loss = test_loss
+            # I use the full loss when comparing, to avoid having too small numbers.
+            if test_loss < best_val_loss:
+                best_val_loss = test_loss
 
-            # Save the model checkpoint, since this is classification, there isn't really an accuracy...
-            # ! delete the previous ones, because takes lots of space
-            # os.rmdir(checkpoints_dir)
-            # os.makedirs(checkpoints_dir, exist_ok=True)
+                # save model locally
+                checkpoint_path = os.path.join(
+                    checkpoints_dir, f'heatmap_{best_val_loss:.4f}.pt')
+                torch.save(model.state_dict(), checkpoint_path)
+                print(f'Best model saved at {checkpoint_path}')
+                print("Model parameters are of the following size",
+                      len(list(model.parameters())))
 
-            # save model locally
-            checkpoint_path = os.path.join(
-                checkpoints_dir, f'heatmap_{best_val_loss:.4f}.pt')
-            torch.save(model.state_dict(), checkpoint_path)
-            # torch.save({
-            #     'model_state_dict': model.state_dict(),
-            #     'optimizer_state_dict': optimizer.state_dict(),
-            #     'epoch': epoch,
-            #     'loss': loss.item(),
-            # }, checkpoint_path)
-            print(f'Best model saved at {checkpoint_path}')
-            print("Model parameters are of the following size",
-                  len(list(model.parameters())))
-    wandb.finish()
+    if rank == 0:
+        wandb.finish()
 
 
-def main():
-    # currently, only taking the first GPU, but later will use DDP will need to change.
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+def setup(rank, world_size):
+    os.environ['MASTER_ADDR'] = 'localhost'
+    os.environ['MASTER_PORT'] = '12355'
+    dist.init_process_group("nccl", rank=rank, world_size=world_size)
 
-    # Initialize the model and loss function
-    model = HeatMapVideoMambaPose().to(device)
 
-    # making sure to employ parallelization!!!
-    if torch.cuda.device_count() > 1:
-        model = nn.DataParallel(model)
+def main(rank, world_size, config):
+    wandb.init(
+        project=config['model_name'],
+        config={
+            "dataset": config['dataset_name'],
+            "epochs": config['epoch_number'],
+        }
+    )
+    num_epochs = config['epoch_number']
+    batch_size = config['batch_size']
+    normalize = config['normalized']
+    default = config['default']  # custom normalization.
+    follow_up = (config['follow_up'], config['previous_training_epoch'],
+                 config['previous_checkpoint'])
+    jump = config['jump']
+    real_job = config['real_job']
+    checkpoint_dir = config['checkpoint_directory']
+    checkpoint_name = config['checkpoint_name']
 
-    # move the data to the GPU
-    model = model.to(device)
-
-    print(model)
-
-    loss_fn = PoseEstimationLoss()
-    num_epochs = 300
-    batch_size = 16
-    num_workers = 1
-    # num_frames = x64x # i'll actually be using 16
-    # height = 224
-    # width = 224
-    # channels = 3
-    normalize = True
-    default = False  # custom normalization.
-    follow_up = (False, 50, '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_22069.0820.pt')
-    jump = 1
-    real_job = True
-    # ! loading the data, will need to set real_job to False when training
-    train_set = JHMDBLoad(train_set=True, real_job=real_job,
+    # loading the data initially:
+    train_set = JHMDBLoad(config, train_set=True, real_job=real_job,
                           jump=jump, normalize=(normalize, default))
-    test_set = JHMDBLbetteroad(train_set=False, real_job=real_job,
+    test_set = JHMDBLoad(config, train_set=False, real_job=real_job,
                          jump=jump, normalize=(normalize, default))
 
-    train_loader = DataLoader(train_set, batch_size=batch_size,
-                              shuffle=True, num_workers=num_workers, pin_memory=True)
-    test_loader = DataLoader(test_set, batch_size=batch_size,
-                             shuffle=False, num_workers=num_workers, pin_memory=True)
+    if torch.cuda.device_count() == 1 or not config['parallelize']:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        # configuration
+        pin_memory = True  # if only 1 GPU
+        num_cpu_cores = os.cpu_count()
+        num_workers = config['num_cpus'] * (num_cpu_cores) - 1
+        print(f'num_workers is: {num_workers}, for {num_cpu_cores} cores')
+
+        # data loader
+        train_loader = DataLoader(train_set, batch_size=batch_size,
+                                  shuffle=True, num_workers=num_workers, pin_memory=pin_memory)
+        test_loader = DataLoader(test_set, batch_size=batch_size,
+                                 shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
+
+        # Initialize the model
+        model = HeatMapVideoMambaPose(config).to(device)
+        model = model.to(device)  # to unique GPU
+        print('Model loaded successfully as follows: ', model)
+
+    elif torch.cuda.device_count() == 0:
+        print("ERROR! No GPU detected...")
+
+    else:
+        # When parallel, set = 0 and pin_memory = False
+        num_workers = 0
+        pin_memory = False
+
+        # Initialize process group
+        setup(rank=rank, world_size=world_size)
+
+        # Fixing data loader for parallelization
+        train_sampler = DistributedSampler(
+            train_set, num_replicas=world_size, rank=rank, shuffle=True, drop_last=False,)
+       
+        train_loader = DataLoader(
+            train_set, batch_size=batch_size, sampler=train_sampler, shuffle=True, num_workers=num_workers, pin_memory=pin_memory, drop_last=False,)
+      
+        # use normal test loader for the test set
+        test_loader = DataLoader(test_set, batch_size=batch_size,
+                                 shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
+
+        # loading the model
+        # sending the model to the correct rank
+        model = HeatMapVideoMambaPose(config).to(rank)
+        model = DDP(model, device_ids=[
+                    rank], output_device=rank, find_unused_parameters=True)
+
+    # loss
+    loss_fn = PoseEstimationLoss()
 
     # optimizer
     optimizer = torch.optim.Adam(model.parameters())
 
     # Training loop
     print(f"The model has started training, with the following characteristics:")
-    training_loop(num_epochs, optimizer, model, loss_fn,
-                  train_loader, test_loader, device, follow_up)
+    training_loop(config, num_epochs, optimizer, model, loss_fn,
+                  train_loader, test_loader, device, rank, world_size, checkpoint_dir, checkpoint_name, follow_up)
+
+    # Cleanup
+    dist.destroy_process_group()
 
 
 if __name__ == '__main__':
-    main()
+    # import configurations:
+    config = open_config()
+
+    if torch.cuda.device_count() <= 1 or not config['parallelize']:
+        main(1, 1, config)
+
+    else:
+        # world size determines the number of GPUs running together.
+        world_size = torch.cuda.device_count()
+        mp.spawn(main, args=(world_size, config), nprocs=world_size, join=True)

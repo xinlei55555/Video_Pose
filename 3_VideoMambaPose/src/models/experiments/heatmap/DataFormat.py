@@ -16,17 +16,17 @@ from einops import rearrange
 import matplotlib
 from matplotlib import pyplot as plt
 
+from import_config import open_config
+
 # Defined as global functions, to be able to use them without initializing JHMDBLoad (notably during inference)
-
-
-def normalize(x, h=240.0, w=320.0):
+def normalize_fn(x, h=240.0, w=320.0):
     # x has num_frames, joint_numbers, (x, y)
     x[:, :, 0] = (x[:, :, 0] / (w / 2.0)) - 1.0  # bewteen -1 and 1
     x[:, :, 1] = (x[:, :, 1] / (h / 2.0)) - 1.0
     return x
 
 
-def denormalize(x, h=240.0, w=320.0):
+def denormalize_fn(x, h=240.0, w=320.0):
     # actually, you should do denormalization AFTER the loss funciton. so when doing inference.
     x[:, :, 0] = x[:, :, 0] * ((w / 2.0) + 1.0)  # bewteen -1 and 1
     x[:, :, 1] = x[:, :, 1] * ((h / 2.0) + 1.0)
@@ -57,6 +57,7 @@ def det_denormalize_values(x_norm, x_init, scale):
     h = abs(h)
     return w, h
 
+
 class JHMDBLoad(Dataset):
     '''
     train_annotations: training set annotations
@@ -70,23 +71,23 @@ class JHMDBLoad(Dataset):
 
     # use 16, because transformers can already do 8
     # also we cannot just load all the frames directly into memory, because not enough GPU, but here less than 64GB should be okay
-    def __init__(self, train_set=True, frames_per_vid=16, joints=True, unpickle=True, real_job=True, jump=1, normalize=(True, True)):
+    def __init__(self, config, train_set, real_job=True, jump=1, normalize=(True, True)):
+        self.config = config
+        self.skip = config['skip']
         self.normalized, self.default = normalize
-        self.frames_per_vid = frames_per_vid
+        self.frames_per_vid = self.config['num_frames']
         self.train_set = train_set
 
         # determines whether to take the whole set of data, or just part of it
         self.real_job = real_job
 
-        if unpickle:
-            self.annotations = self.unpickle_JHMDB()
-            self.nframes = self.annotations['nframes']
+        self.annotations = self.unpickle_JHMDB()
+        self.nframes = self.annotations['nframes']
 
-        if joints:
-            if self.train_set:
-                self.actions, self.train, _ = self.get_names_train_test_split()
-            else:
-                self.actions, _, self.test = self.get_names_train_test_split()
+        if self.train_set:
+            self.actions, self.train, _ = self.get_names_train_test_split()
+        else:
+            self.actions, _, self.test = self.get_names_train_test_split()
 
         # I will remove all 'wave' actions, because the data seems corrupted
         self.arr = []
@@ -98,7 +99,7 @@ class JHMDBLoad(Dataset):
                 action_name, file_name))
                 for action_name, file_name, n_frames in self.train if action_name != 'wave']
             # arr where arr[idx] = idx in the self.frames_with_joints
-            self.jump = jump  # this is the number of frames to skip between datapoints
+            self.jump = jump
             for k in range(len(self.frames_with_joints)):
                 video, joints = self.frames_with_joints[k]
 
@@ -107,7 +108,6 @@ class JHMDBLoad(Dataset):
                     print('Joints: ', len(list(joints)))
 
                 else:
-                    # going through each frame in the video
                     for i in range(self.frames_per_vid, len(list(video)), self.jump):
                         # 3-tuple: (index in self.train_frames_with_joints, index in the video, joint values)
                         self.arr.append([k, i, joints])
@@ -118,7 +118,7 @@ class JHMDBLoad(Dataset):
                 action_name, file_name))
                 for action_name, file_name, n_frames in self.test if action_name != 'wave']
 
-            self.jump = jump  # this is the partition/the number of frames skipped between each video
+            self.jump = jump
             for k in range(len(self.frames_with_joints)):
                 video, joints = self.frames_with_joints[k]
 
@@ -134,13 +134,9 @@ class JHMDBLoad(Dataset):
                         # 3-tuple: (index in self.train_frames_with_joints, index in the video, joint values)
                         self.arr.append([k, i, joints])
 
-    # some default torch methods:
     def __len__(self):
-        # if self.train_set:
-        #     return len(self.train_arr)
         return len(list(self.arr))
 
-    # should return the image/video at that index, as well as the label for the video. (Should I make a sliding window, or a striding window and return the value of the first frame)
     def __getitem__(self, index):
         '''
         Each file will have nframe-self.n_frames_in_vid datapoints. Each video will be 8 frames long.
@@ -154,19 +150,20 @@ class JHMDBLoad(Dataset):
         Answer: I will load everything, and parse from there.
         '''
         video_num, frame_num, joint_values = self.arr[index][0], self.arr[index][1], self.arr[index][2]
-        # slicing with pytorch tensors.
 
-        #!!!! TODOOOO I THink there is an index error hereeee
+        # slicing with pytorch tensors.
         video = self.frames_with_joints[video_num][0][frame_num +
                                                       1-self.frames_per_vid:frame_num+1]
-        # video = torch.tensor() # I think it was already a toch tensor
+
         # need to rearrange so that channel number is in front.
         video = rearrange(video, 'd c h w -> c d h w')
-        # print('The shape of the video is', video.shape)
-        # torch.Size([16, 3, 224, 224]) -> torch.Size([3, 16, 224, 224])
 
         # show this for debug:
-        # print(f'index: {index}, video_num: {video_num}, frame_num: {frame_num}, len(joint_values), {len(list(joint_values))}')
+        if self.config['full_debug']:
+            print('The shape of the video is', video.shape)
+            print(
+                f'index: {index}, video_num: {video_num}, frame_num: {frame_num}, len(joint_values), {len(list(joint_values))}')
+
         return [video, joint_values[frame_num]]
 
     # this folder is useless
@@ -182,9 +179,11 @@ class JHMDBLoad(Dataset):
                 print("UnicodeDecodeError:", e)
         return train
 
-    # first a function that given an action and a video returns the joints for each frame
     def read_joints_full_video(self, action, video, path="/home/linxin67/scratch/JHMDB/"):
-        '''Returns a dictionary
+        '''
+        Given an action and a video returns the joints for each frame
+
+        Returns a dictionary
         dict_keys(['__header__', '__version__', '__globals__', 'pos_img', 'pos_world', 'scale', 'viewpoint'])
 
         Each file is the following dimension:
@@ -208,25 +207,26 @@ class JHMDBLoad(Dataset):
         # pos_world was already normalized with respect to the image. (unlike pos_img)
         if self.normalized and self.default:
             torch_joint = torch.tensor(joint_dct['pos_world'])
+            torch_joint = rearrange(torch_joint, 'd n f->f n d')
         # then use custom normalization
         elif self.normalized and not self.default:
             torch_joint = torch.tensor(joint_dct['pos_img'])
-            torch_joint = normalize(torch_joint)
+            torch_joint = rearrange(torch_joint, 'd n f->f n d')
+            torch_joint = normalize_fn(torch_joint)
         # then no normalization
         else:
             torch_joint = torch.tensor(joint_dct['pos_img'])
-
-        # rearrange for training and normalization.
-        torch_joint = rearrange(torch_joint, 'd n f->f n d')
+            # rearrange for training and normalization.
+            torch_joint = rearrange(torch_joint, 'd n f->f n d')
+        
+        if self.config['full_debug']:
+            print(f'normalized: {self.normalized}, default: {self.default}')
+            print('example joint values', torch_joint[0][0])
 
         return torch_joint
 
     def get_num_frames(self, action, video):
-        # os.chdir(path+'annotations')
-        # if self.train_set and action+'/'+video in self.nframes_train:
         return self.nframes[action+'/'+video]
-        # else:
-        #     return self.nframes_test[action+'/'+video]
 
     def get_names_train_test_split(self, path="/home/linxin67/scratch/JHMDB/"):
         '''
@@ -254,7 +254,12 @@ class JHMDBLoad(Dataset):
                 break
 
             action_split = os.path.join(directory, action)
+
+            # skipping all actions that are in the blacklist.
+            if action[:-16] in self.skip:
+                continue
             actions.append(action[:-16])  # remove the _test_split<int>.txt
+
             # checking if it is a file
             if os.path.isfile(action_split):
                 df = pd.read_csv(action_split, sep=' ', header=None)
@@ -264,7 +269,7 @@ class JHMDBLoad(Dataset):
                     value = int(row[1])
 
                     # if only testing, then just take the minimum number of actions
-                    if not self.real_job and (len(train) > 20 or len(test) > 1 or len(actions) > 1):
+                    if not self.real_job and (len(train) > 20 or len(test) > 1 or (len(actions) > 1)):
                         print("length of actions", len(actions))
                         value = False
                         break
@@ -279,6 +284,7 @@ class JHMDBLoad(Dataset):
                     elif value not in [1, 2]:
                         print(type(value), value)
                         print("unknownIndexError")
+
         print("The length of actions, train and test are",
               len(actions), ", ", len(train), ", ", len(test))
         return actions, train, test
@@ -288,7 +294,8 @@ class JHMDBLoad(Dataset):
         image = Image.open(image_path).convert('RGB')
         transform = transforms.Compose([
             # notice that all the images are 320x240. Hence, resizing all to 224 224 is generalized, and should be equally skewed
-            transforms.Resize((224, 224)),
+            transforms.Resize(
+                (self.config['image_tensor_height'], self.config['image_tensor_width'])),
             transforms.ToTensor()
         ])
         tensor = transform(image)
@@ -312,53 +319,26 @@ class JHMDBLoad(Dataset):
         batch_tensor = torch.stack(image_tensors)
         return batch_tensor
 
-    #! this function has not been tested, but since I am not yet in production, I will test it tomorrow.
-    def draw_joint_on_image(self, action, video, frame_number=1, path='/home/linxin67/scratch/JHMDB/'):
-        video = self.video_to_tensors(action, video)
-        frame = video[frame_number]
-
-        # print(frame.shape) # torch.Size([3, 224, 224])
-
-        # transform back, note that if the input is a torch tensor, then no need to use compose
-        transform = transforms.Compose([
-            # need to first transform the torch tensor to pil image.
-            transforms.ToPILImage(),
-            # should be height, width
-            # notice that all the images are 320x240. Hence, resizing all to 224 224 is generalized, and should be equally skewed
-            transforms.Resize((240, 320)),
-            transforms.ToTensor()
-        ])
-
-        frame = transform(frame)
-
-        # so need to rearrange to h, w, c or else plt won't work
-        frame = frame.permute(1, 2, 0)
-        plt.imshow(frame)
-        plt.show()
-
-        # adding the joints
-        draw = ImageDraw.Draw(frame_pil)
-
-        joints = self.rearranged_joints(action, video, path)
-        joint = joints[frame_number]  # num_joints, [x,y]
-
-        rearrange(joint, 'n x -> x n')
-        x_coords, y_coords = joint[0], joint[1]
-
-        plt.figure()
-        plt.scatter(x_coords, y_coords, c='red', marker='o')
-        plt.xlim(0, 320)
-        plt.ylim(240, 0)  # Invert y-axis for correct orientation
-        plt.xlabel('X Coordinates')
-        plt.ylabel('Y Coordinates')
-        plt.title('Joint Coordinates')
-        plt.grid(True)
-        plt.show()
-
 
 if __name__ == '__main__':
-    train = JHMDBLoad(train_set=True, frames_per_vid=16,
-                      joints=True, unpickle=True, real_job=False)
+    config = open_config()
+    num_epochs = config['epoch_number']
+    batch_size = config['batch_size']
+    num_workers = config['num_cpus'] - 1
+    normalize = config['normalized']
+    default = config['default']  # custom normalization.
+    follow_up = (config['follow_up'], config['previous_training_epoch'],
+                 config['previous_checkpoint'])
+    jump = config['jump']
+    real_job = config['real_job']
+    checkpoint_dir = config['checkpoint_directory']
+    checkpoint_name = config['checkpoint_name']
+
+    train = JHMDBLoad(config, train_set=True, real_job=real_job,
+                          jump=jump, normalize=(True, False))
+    print(train.arr)
+    train_loader = DataLoader(train, batch_size=16,
+                              shuffle=True, num_workers=2, pin_memory=False)
     # in real context, would definitely need to move the training set in the GPU
     # print(train.arr)
     # print("len(train), ", len(train))

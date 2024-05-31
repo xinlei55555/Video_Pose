@@ -37,19 +37,20 @@ class JointOutput(nn.Module):
     https://github.com/ViTAE-Transformer/ViTPose/blob/d5216452796c90c6bc29f5c5ec0bdba94366768a/mmpose/models/heads/deeppose_regression_head.py#L13
     """
 
-    # remember that after the 2d deconvolution, I have removed the d layer!!!!                 
-    def __init__(self, input_channels=15, joint_number=15, d=1, h=56, w=56, normalize=True):
+    # remember that after the 2d deconvolution, I have removed the d layer!!!!
+    def __init__(self, config, input_channels, joint_number, d=1, h=56, w=56, normalize=True):
         super().__init__()
         # For example, in PyTorch, this method is used to define the layers of the network, such as convolutional layers, linear layers, activation functions, etc.
         # hence need to have the regressor in the initializer if it wants to be saved properly
         # * I need to verify the output layer size
+        self.config = config
         self.joint_number = joint_number
         self.input_channels = input_channels
         self.c, self.d, self.h, self.w = input_channels, d, h, w
-        self.b = 16 # although could change later.
+        self.b = self.config['batch_size']
         self.normalize = normalize
-        self.regressor = self.regressors()
-        # self.flatten = self.input_flatten()
+        self.regressor = self.regressors(
+            dim_hidden=self.config['hidden_channels'], dim_out=self.config['output_dimensions'])
 
     # update the shapes that are passed in
     def get_shape(self, x):
@@ -71,16 +72,15 @@ class JointOutput(nn.Module):
             return rearrange(x, 'b c h w -> (b c) (h w)')
 
     def regressors(self, dim_hidden=512, dim_out=2):
-        # self.get_shape(x)
-
         # Assuming the input tensor x has shape (batch_size, input_size)
         input_size = self.d * self.h * self.w
 
         layers = [nn.Linear(input_size, dim_hidden),  # use power of 2
                   nn.ReLU(),
-                  nn.Linear(dim_hidden, dim_out)]#, # I will return 3, which are the values for x, y, z
+                  nn.Linear(dim_hidden, dim_out)]  # , # I will return 3, which are the values for x, y, z
         if self.normalize:
-            layers.append(nn.Tanh()) # restrict values at the end to be between -1 and 1
+            # restrict values at the end to be between -1 and 1
+            layers.append(nn.Tanh())
         return nn.Sequential(*layers)
 
     def forward(self, x):
