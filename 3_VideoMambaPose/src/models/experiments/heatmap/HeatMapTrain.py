@@ -173,7 +173,7 @@ def main(rank, world_size, config):
     test_set = JHMDBLoad(config, train_set=False, real_job=real_job,
                          jump=jump, normalize=(normalize, default))
 
-    if torch.cuda.device_count() == 1 or not config['parallelize']:
+    if torch.cuda.devicetesting_heatmap_beluga_count() == 1 or not config['parallelize']:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # configuration
@@ -195,6 +195,7 @@ def main(rank, world_size, config):
 
     elif torch.cuda.device_count() == 0:
         print("ERROR! No GPU detected...")
+        return
 
     else:
         # When parallel, set = 0 and pin_memory = False
@@ -247,10 +248,10 @@ if __name__ == '__main__':
     # import configurations:
     config = open_config(config_file)
 
-    # if torch.cuda.device_count() <= 1 or not config['parallelize']:
-    #     main(1, 1, config)
+    if torch.cuda.device_count() <= 1 or not config['parallelize']:
+        main(1, 1, config)
 
-    # else:
-    #     # world size determines the number of GPUs running together.
-    #     world_size = torch.cuda.device_count()
-    #     mp.spawn(main, args=(world_size, config), nprocs=world_size, join=True)
+    else:
+        # world size determines the number of GPUs running together.
+        world_size = torch.cuda.device_count()
+        mp.spawn(main, args=(world_size, config), nprocs=world_size, join=True)
