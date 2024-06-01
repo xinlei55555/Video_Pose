@@ -48,8 +48,8 @@ def training_loop(config, n_epochs, optimizer, model, loss_fn, train_set, test_s
         if epoch == start_epoch:
             # Prints GPU memory summary
             print('Memory before (in MB)', torch.cuda.memory_allocated()/1e6)
-            print(f'The length of the train_set is {len(train_set)}')
-            print(f'The length of the test_set is {len(test_set)}')
+            print(f'The number of batches in the train_set is {len(train_set)}')
+            print(f'The number of batches in the test_set is {len(test_set)}')
 
         print('train batch for epoch # ', epoch, '==============>')
         for i, data in enumerate(train_set):
@@ -132,7 +132,7 @@ def training_loop(config, n_epochs, optimizer, model, loss_fn, train_set, test_s
 
                 # save model locally
                 checkpoint_path = os.path.join(
-                    checkpoints_dir, f'heatmap_{best_val_loss:.4f}.pt')
+                    checkpoint_directory, checkpoint_name, f'heatmap_{best_val_loss:.4f}.pt')
                 torch.save(model.state_dict(), checkpoint_path)
                 print(f'Best model saved at {checkpoint_path}')
                 print("Model parameters are of the following size",
