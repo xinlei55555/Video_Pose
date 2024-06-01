@@ -46,6 +46,9 @@ class Deconv(nn.Module):
         H is the height and 
         W the width of the image
         """
+        if self.config['full_debug']:
+            print('quick debug', self.d, self.h, self.w)
+        
         # I want to combine batch and depth, for the 2d
         x = rearrange(x, 'b (d h w) c -> b d c h w',
                       d=self.d, h=self.h, w=self.w)

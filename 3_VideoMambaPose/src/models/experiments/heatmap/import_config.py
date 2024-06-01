@@ -1,4 +1,5 @@
 import yaml
+import os
 
 
 def open_config(file_name, folder_path='/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/configs/heatmap'):
