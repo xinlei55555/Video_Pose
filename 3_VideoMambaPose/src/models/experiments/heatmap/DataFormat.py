@@ -299,21 +299,21 @@ class JHMDBLoad(Dataset):
         transform = transforms.Compose([
             # notice that all the images are 320x240. Hence, resizing all to 224 224 is generalized, and should be equally skewed
             transforms.Resize(
-                (self.config['image_tensor_height'], self.config['image_tensor_width'])),
+                (self.config['image_tensor_height'], self.config['image_tensor_width']), antialias=True),
             transforms.ToTensor()
         ])
         tensor = transform(image)
         return tensor
 
-    def video_to_tensors(self, action, video, use_videos, path='/home/linxin67/scratch/JHMDB/Rename_Images/'):
+    def video_to_tensors(self, action, video, use_videos, path='/home/linxin67/scratch/JHMDB/'):
         '''
         Returns a tensor with the following:
         (n_frames, num_channels (3), 224, 224)
         '''
-        video_path = os.path.join(path, action, video)
 
         # goes through the each image.
         if not use_videos:
+            video_path = os.path.join(path, 'Rename_Images', action, video)
             image_tensors = []
 
             for filename in os.listdir(video_path):
@@ -327,6 +327,9 @@ class JHMDBLoad(Dataset):
             
         else:
             # Check if the video file exists
+            video = video + '.avi' # adding the .avi extension.
+            video_path = os.path.join(path, 'ReCompress_Videos', action, video)
+
             if not os.path.isfile(video_path):
                 print(f"The video file {video_path} does not exist.")
             
@@ -358,11 +361,11 @@ class JHMDBLoad(Dataset):
             batch_tensor = torch.stack(frames)
 
             # Transpose the tensor to have the shape (frames, channels, height, width)
-            batch_tensor = video_tensor.permute(0, 3, 1, 2)
+            batch_tensor = batch_tensor.permute(0, 3, 1, 2)
 
             # apply the transformation to the whole video (batched) input must be (B, C, H, W)
             transform = transforms.Compose([transforms.Resize(
-                (self.config['image_tensor_height'], self.config['image_tensor_width']))])
+                (self.config['image_tensor_height'], self.config['image_tensor_width']), antialias=True)])
             
             batch_tensor = transform(batch_tensor)
 

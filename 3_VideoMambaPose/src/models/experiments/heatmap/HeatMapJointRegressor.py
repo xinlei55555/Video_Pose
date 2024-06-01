@@ -38,7 +38,7 @@ class JointOutput(nn.Module):
     """
 
     # remember that after the 2d deconvolution, I have removed the d layer!!!!
-    def __init__(self, config, input_channels, joint_number, d=1, h=56, w=56, normalize=True):
+    def __init__(self, config, input_channels, joint_number, d, h, w, normalize=True):
         super().__init__()
         # For example, in PyTorch, this method is used to define the layers of the network, such as convolutional layers, linear layers, activation functions, etc.
         # hence need to have the regressor in the initializer if it wants to be saved properly

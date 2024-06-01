@@ -39,7 +39,7 @@ def training_loop(config, n_epochs, optimizer, model, loss_fn, train_set, test_s
 
         # telling the data loader which epoch we are at
         if torch.cuda.device_count() > 1 and config['parallelize']:
-            train_set.sampler.set_epoch(epoch) 
+            train_set.sampler.set_epoch(epoch)
 
         model.train()  # so that the model keeps updating its weights.
         train_loss = 0.0
@@ -117,7 +117,7 @@ def training_loop(config, n_epochs, optimizer, model, loss_fn, train_set, test_s
         show_loss_train, show_loss_test = train_loss / \
             len(train_set), test_loss / len(test_set)
 
-        if rank == 0:
+        if rank == 0 :
             wandb.log({"Pointwise training loss": show_loss_train})
             wandb.log({"Pointwise testing loss": show_loss_train})
 
@@ -173,7 +173,7 @@ def main(rank, world_size, config):
     test_set = JHMDBLoad(config, train_set=False, real_job=real_job,
                          jump=jump, normalize=(normalize, default))
 
-    if torch.cuda.devicetesting_heatmap_beluga_count() == 1 or not config['parallelize']:
+    if torch.cuda.device_count() == 1 or not config['parallelize']:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # configuration
@@ -193,6 +193,18 @@ def main(rank, world_size, config):
         model = model.to(device)  # to unique GPU
         print('Model loaded successfully as follows: ', model)
 
+          # loss
+        loss_fn = PoseEstimationLoss()
+
+        # optimizer
+        optimizer = torch.optim.Adam(model.parameters())
+
+        # Training loop
+        print(f"The model has started training, with the following characteristics:")
+
+        training_loop(config, num_epochs, optimizer, model, loss_fn,
+                    train_loader, test_loader, device, rank, world_size, checkpoint_dir, checkpoint_name, follow_up)
+
     elif torch.cuda.device_count() == 0:
         print("ERROR! No GPU detected...")
         return
@@ -208,10 +220,10 @@ def main(rank, world_size, config):
         # Fixing data loader for parallelization
         train_sampler = DistributedSampler(
             train_set, num_replicas=world_size, rank=rank, shuffle=True, drop_last=False,)
-       
+
         train_loader = DataLoader(
             train_set, batch_size=batch_size, sampler=train_sampler, shuffle=True, num_workers=num_workers, pin_memory=pin_memory, drop_last=False,)
-      
+
         # use normal test loader for the test set
         test_loader = DataLoader(test_set, batch_size=batch_size,
                                  shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
@@ -222,19 +234,19 @@ def main(rank, world_size, config):
         model = DDP(model, device_ids=[
                     rank], output_device=rank, find_unused_parameters=True)
 
-    # loss
-    loss_fn = PoseEstimationLoss()
+        # loss
+        loss_fn = PoseEstimationLoss()
 
-    # optimizer
-    optimizer = torch.optim.Adam(model.parameters())
+        # optimizer
+        optimizer = torch.optim.Adam(model.parameters())
 
-    # Training loop
-    print(f"The model has started training, with the following characteristics:")
-    training_loop(config, num_epochs, optimizer, model, loss_fn,
-                  train_loader, test_loader, device, rank, world_size, checkpoint_dir, checkpoint_name, follow_up)
+        # Training loop
+        print(f"The model has started training, with the following characteristics:")
+        training_loop(config, num_epochs, optimizer, model, loss_fn,
+                    train_loader, test_loader, device, rank, world_size, checkpoint_dir, checkpoint_name, follow_up)
 
-    # Cleanup
-    dist.destroy_process_group()
+        # Cleanup
+        dist.destroy_process_group()
 
 
 if __name__ == '__main__':
@@ -248,8 +260,9 @@ if __name__ == '__main__':
     # import configurations:
     config = open_config(config_file)
 
+    # since not parallel, I set the rank = 0, and the world size = 1 (by default)
     if torch.cuda.device_count() <= 1 or not config['parallelize']:
-        main(1, 1, config)
+        main(0, 1, config)
 
     else:
         # world size determines the number of GPUs running together.

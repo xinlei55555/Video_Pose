@@ -66,6 +66,7 @@ jump: 1 # number of frames to skip between the different datapoints
 joint_number: 15
 
 # if False, uses subset of the data to run
+# real_job: True
 real_job: True
 
 # normalization
