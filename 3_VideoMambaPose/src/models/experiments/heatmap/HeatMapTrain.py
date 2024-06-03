@@ -119,7 +119,9 @@ def training_loop(config, n_epochs, optimizer, model, loss_fn, train_set, test_s
 
         if rank == 0 :
             wandb.log({"Pointwise training loss": show_loss_train})
-            wandb.log({"Pointwise testing loss": show_loss_train})
+            wandb.log({"Pointwise testing loss": show_loss_test})
+            wandb.log({"Training loss": train_loss})
+            wandb.log({"Testing loss": test_loss})
 
             print(f"Epoch {epoch}, Pointwise Training loss {float(show_loss_train)},"
                   f" Pointwise Validation loss {float(show_loss_test)}")

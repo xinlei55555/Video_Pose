@@ -42,7 +42,7 @@ class JointOutput(nn.Module):
         super().__init__()
         # For example, in PyTorch, this method is used to define the layers of the network, such as convolutional layers, linear layers, activation functions, etc.
         # hence need to have the regressor in the initializer if it wants to be saved properly
-        # * I need to verify the output layer size
+        # * I need to verify the output layer sie
         self.config = config
         self.joint_number = joint_number
         self.input_channels = input_channels
