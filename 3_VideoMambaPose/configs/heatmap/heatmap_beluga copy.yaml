@@ -4,8 +4,7 @@ model_name: VideoMambaPose
 full_debug: False
 
 # architecture mamba
-embed_channels: 192 # number of channels before and after the tiny mamba layers.
-# note: the embed channels within mamba is 768.
+embed_channels: 192 # number of channels after the tiny mamba layers.
 num_mamba_blocks: 12
 
 # deconv
@@ -20,14 +19,15 @@ joint_regressor: True
 hidden_channels: 512
 output_dimensions: 2 # x, y
 dropout: False
-dropout_percent: 0.25 # if previous dropout is true
+dropout_percent: 0.25 # if dropout is True
 
 # training
-epoch_number: 1 
+epoch_number: 300
 # batch_size: 16
 # batch_size: 8
-batch_size: 1 # just to see how scalable it is
-learning_rate: 0.001
+batch_size: 16 # just to see how scalable it is
+# learning_rate: 0.001
+learning_rate: 0.01
 start_epoch: 1
 
 # device settings
@@ -38,7 +38,8 @@ parallelize: False
 
 # checkpoints
 checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap
-checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
+# checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
+checkpoint_name: 'New_LR_Custom_Tanh_normalized_checkpoints'
 # checkpoint_name: 'testing_false_dataset'
 
 # Follow up on the training of another previous run?
@@ -60,15 +61,14 @@ num_frames: 16
 channels: 3
 image_height: 240
 image_width: 320
-image_tensor_height: 192 # changed to match VitPose
+image_tensor_height: 192 
 image_tensor_width: 256
-patch_number: 192 # total number of patches, each of size 16 pixels by 16 pixels
-patch_size: 16 # each patch is 16x16
+patch_number: 192 # number of patches, each of size 4 pixels by 4 pixels
+patch_size: 16 # each patch is 4x4
 jump: 1 # number of frames to skip between the different datapoints
 joint_number: 15
 
 # if False, uses subset of the data to run
-# real_job: True
 real_job: True
 
 # normalization

@@ -51,6 +51,8 @@ class JointOutput(nn.Module):
         self.normalize = normalize
         self.regressor = self.regressors(
             dim_hidden=self.config['hidden_channels'], dim_out=self.config['output_dimensions'])
+        self.dropout = self.config['dropout']
+        self.dropout_layer = nn.Dropout(self.config['dropout_percent'])
 
     # update the shapes that are passed in
     def get_shape(self, x):
@@ -75,9 +77,13 @@ class JointOutput(nn.Module):
         # Assuming the input tensor x has shape (batch_size, input_size)
         input_size = self.d * self.h * self.w
 
-        layers = [nn.Linear(input_size, dim_hidden),  # use power of 2
-                  nn.ReLU(),
-                  nn.Linear(dim_hidden, dim_out)]  # , # I will return 3, which are the values for x, y, z
+        layers = [nn.Linear(input_size, dim_hidden)],  # use power of 2
+
+        if self.dropout:
+            layers.append(self.dropout_layer)
+
+        layers.extend([nn.ReLU(), nn.Linear(dim_hidden, dim_out)]) # I will return 3, which are the values for x, y, z
+        
         if self.normalize:
             # restrict values at the end to be between -1 and 1
             layers.append(nn.Tanh())

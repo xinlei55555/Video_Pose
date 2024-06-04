@@ -18,6 +18,8 @@ joint_regressor: True
   # joint regressor
 hidden_channels: 512
 output_dimensions: 2 # x, y
+dropout: True
+dropout_percent: 0.25
 
 # training
 epoch_number: 300
@@ -25,7 +27,8 @@ epoch_number: 300
 # batch_size: 8
 batch_size: 16 # just to see how scalable it is
 # learning_rate: 0.001
-learning_rate: 0.01
+# learning_rate: 0.01
+learning_rate: 0.1
 start_epoch: 1
 
 # device settings
@@ -37,7 +40,7 @@ parallelize: False
 # checkpoints
 checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
-checkpoint_name: 'New_LR_Custom_Tanh_normalized_checkpoints'
+checkpoint_name: 'dropout'
 # checkpoint_name: 'testing_false_dataset'
 
 # Follow up on the training of another previous run?
