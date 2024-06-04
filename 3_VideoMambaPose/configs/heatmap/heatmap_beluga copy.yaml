@@ -37,7 +37,7 @@ num_gpus: 1
 parallelize: False
 
 # checkpoints
-checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap
+checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoint
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
 checkpoint_name: 'New_LR_Custom_Tanh_normalized_checkpoints'
 # checkpoint_name: 'testing_false_dataset'

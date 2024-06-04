@@ -35,7 +35,7 @@ num_gpus: 2
 parallelize: True
 
 # checkpoints
-checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap
+checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoint
 checkpoint_name: 'DPP_optimized_model'
 # checkpoint_name: 'testing_false_dataset'
 

@@ -44,15 +44,18 @@ class JointOutput(nn.Module):
         # hence need to have the regressor in the initializer if it wants to be saved properly
         # * I need to verify the output layer sie
         self.config = config
+
         self.joint_number = joint_number
         self.input_channels = input_channels
         self.c, self.d, self.h, self.w = input_channels, d, h, w
         self.b = self.config['batch_size']
+
         self.normalize = normalize
-        self.regressor = self.regressors(
-            dim_hidden=self.config['hidden_channels'], dim_out=self.config['output_dimensions'])
         self.dropout = self.config['dropout']
         self.dropout_layer = nn.Dropout(self.config['dropout_percent'])
+
+        self.regressor = self.regressors(
+            dim_hidden=self.config['hidden_channels'], dim_out=self.config['output_dimensions'])
 
     # update the shapes that are passed in
     def get_shape(self, x):
@@ -77,7 +80,7 @@ class JointOutput(nn.Module):
         # Assuming the input tensor x has shape (batch_size, input_size)
         input_size = self.d * self.h * self.w
 
-        layers = [nn.Linear(input_size, dim_hidden)],  # use power of 2
+        layers = [nn.Linear(input_size, dim_hidden)]  # use power of 2
 
         if self.dropout:
             layers.append(self.dropout_layer)

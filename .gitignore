@@ -21,3 +21,5 @@ checkpoint_fixed_joint_regressor/
 *.mp4
 test_visualization/
 *.pt
+checkpoint/
+wandb_old/
