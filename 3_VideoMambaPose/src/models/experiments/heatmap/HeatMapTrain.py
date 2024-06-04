@@ -150,9 +150,10 @@ def setup(rank, world_size):
     dist.init_process_group("nccl", rank=rank, world_size=world_size)
 
 
-def main(rank, world_size, config):
+def main(rank, world_size, config, config_file_name):
     wandb.init(
         project=config['model_name'],
+        entity=config_file_name, # this will be the new name
         config={
             "dataset": config['dataset_name'],
             "epochs": config['epoch_number'],
@@ -264,9 +265,9 @@ if __name__ == '__main__':
 
     # since not parallel, I set the rank = 0, and the world size = 1 (by default)
     if torch.cuda.device_count() <= 1 or not config['parallelize']:
-        main(0, 1, config)
+        main(0, 1, config, config_file)
 
     else:
         # world size determines the number of GPUs running together.
         world_size = torch.cuda.device_count()
-        mp.spawn(main, args=(world_size, config), nprocs=world_size, join=True)
+        mp.spawn(main, args=(world_size, config, config_file), nprocs=world_size, join=True)
