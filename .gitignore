@@ -13,7 +13,7 @@ __pycache__/
 .vscode/
 wandb/
 *.out
-*.sh
+# *.sh
 checkpoints/
 checkpoint_fixed_joint_regressor/
 *.png
