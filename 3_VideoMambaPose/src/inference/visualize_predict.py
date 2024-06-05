@@ -13,8 +13,10 @@ from torchvision import transforms
 
 from import_config import open_config
 
-config = open_config(file_name='heatmap_beluga_idapt_local.yaml',
-                     folder_path='/home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/configs/heatmap')
+# config = open_config(file_name='heatmap_beluga_idapt_local.yaml',
+#  folder_path='/home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/configs/heatmap')
+config = open_config(file_name='heatmap_beluga.yaml',
+                     folder_path='/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/configs/heatmap')
 
 # these are hard coded just for ht ecase
 sys.path.append(
@@ -24,9 +26,9 @@ sys.path.append('/mnt/DATA/Personnel/Other learning/Programming/Professional_Opp
 
 sys.path.append(config['project_dir'])
 
+# do not hit ctrl shift -i, or it will put this at the top
 from HeatVideoMamba import HeatMapVideoMambaPose
-from DataFormat import denormalize_default, det_denormalize_values, denormalize_fn
-
+from DataFormat import denormalize_default, det_denormalize_values, denormalize_fn, normalize_fn
 
 def load_model(filepath, parallel=False):
     # Create the model
@@ -66,6 +68,7 @@ def adapt_model_parallel(checkpoint):
 def inference(model, input_tensor):
     # Disable gradient computation for inference
     with torch.no_grad():
+        model.eval()
         output = model(input_tensor)
 
     return output
@@ -74,13 +77,15 @@ def inference(model, input_tensor):
 def get_input_and_label(joint_path, video_path, normalized=True, default=False, path='/home/linxin67/scratch/JHMDB'):
     # for the sake of testing, I will juhhst hard copy some files and the respective joint outputs
     # I'll also make sure they were in the test files
-    joints = scipy.io.loadmat(os.path.join(joint_path,'joint_positions.mat'))
+    joints = scipy.io.loadmat(os.path.join(joint_path, 'joint_positions.mat'))
     if normalized and default:
         joints = torch.tensor(joints['pos_world'])
+        print('The joints taken are the normalized ones')
     else:
         joints = torch.tensor(joints['pos_img'])
-    joints = rearrange(joints, 'd n f->f n d')
+        print('The joints taken are not normalized')
 
+    joints = rearrange(joints, 'd n f->f n d')
     video = video_to_tensors(config, video_path)
 
     return joints, video
@@ -89,10 +94,12 @@ def get_input_and_label(joint_path, video_path, normalized=True, default=False, 
 def image_to_tensor(config, image_path):
     '''Returns a torch tensor for a given image associated with the path'''
     image = Image.open(image_path).convert('RGB')
+
     transform = transforms.Compose([
         # notice that all the images are 320x240. Hence, resizing all to 224 224 is generalized, and should be equally skewed
-        transforms.Resize((config['image_tensor_height'], config['image_tensor_width'])),
-        transforms.ToTensor()
+        transforms.ToTensor(),
+        transforms.Resize(
+            (config['image_tensor_height'], config['image_tensor_width']))
     ])
     tensor = transform(image)
     return tensor
@@ -155,7 +162,6 @@ def visualize(joints, frames, file_name, width, height, normalized=True):
     # Create a video writer to save the output
     for frame_idx in range(num_frames):
         # Get the joints for the current frame
-
         joints_per_frame = joints[frame_idx]
 
         # Create a blank 320x240 image (white background)
@@ -164,9 +170,9 @@ def visualize(joints, frames, file_name, width, height, normalized=True):
         # apply transformation to undo the resize
         transform = transforms.Compose([
             # notice that all the images are 320x240. Hence, resizing all to 224 224 is generalized, and should be equally skewed
-            transforms.ToPILImage(),
+            # transforms.ToPILImage(),
             transforms.Resize((height, width)),  # mayb they had the wrong size
-            transforms.ToTensor()
+            # transforms.ToTensor()
         ])
         image = transform(image)
         image = rearrange(image, 'c w d->w d c')
@@ -179,7 +185,7 @@ def visualize(joints, frames, file_name, width, height, normalized=True):
         joints_per_frame = joints_per_frame.numpy()
 
         # Plotting the joints onto the image
-        plt.figure(figsize=(8, 6))
+        plt.figure()
         plt.imshow(image)
         # testing for if its the normalization that made the values very
         # plt.scatter(joints_per_frame[:, 0]*320, joints_per_frame[:, 1]*240, c='red', s=10, label='Joints')
@@ -204,18 +210,7 @@ def visualize(joints, frames, file_name, width, height, normalized=True):
         plt.savefig(f'{file_name}/frame_{frame_idx}.png')
         plt.close()
 
-#         # Read the saved image
-#         frame_image = cv2.imread(f'{file_name}/frame_{frame_idx}.png')
-
-#         # Ensure the size is correct
-#         frame_image = cv2.resize(frame_image, (width, height))
-# #
-#         # Write the frame to the video
-#         video_writer.write(frame_image)
-
-    # Release the video writer
-    # video_writer.release()
-    print(f"Video saved as results/{file_name}")
+    print(f"Video saved as {file_name}")
 
 
 def main(config):
@@ -229,28 +224,31 @@ def main(config):
     action_path = 'test_visualization/20_good_form_pullups_pullup_f_nm_np1_ri_goo_2'
     joint_path = 'test_visualization/Copy-of-20_good_form_pullups_pullup_f_nm_np1_ri_goo_2'
     normalized = config['normalized']
+    default = config['default']
+
+    print(f'The joints are normalized: {normalized}.\n \
+          The joints are normalized with the default: {default}')
 
     # load the whole joint file and the video
     joints, frames = get_input_and_label(
-        joint_path, action_path, normalized, model_path)
+        joint_path, action_path, normalized, default, model_path)
 
     # width and height
-    if config['default']:
-        width, height = det_denormalize_values(normalized_joints, joints)
-    else:
-        width, height = config['image_width'], config['image_height']
+    # if default and normalized:
+    #     width, height = det_denormalize_values(normalized_joints, joints)
+    # else:
+    width, height = config['image_width'], config['image_height']
 
-    # denormalization
-    if normalized:
-        if config['default']:
-            # this path is not ready, as I have not tested the scale values.
-            print('Denormalization might not work due to absence of scale')
-            joints = denormalize_default(joints, heigth, width)
+    # # denormalization
+    # if normalized and config['default']:
+    #     # this path is not ready, as I have not tested the scale values.
+    #     print('Denormalization might not work due to absence of scale')
+    #     joints = denormalize_default(joints, heigth, width)
 
-        else:
-            joints = denormalize_fn(joints, height, width)
+    #     # actually, no, if not default, since this is ground truth, I just took the pos_world
+    #     # joints = denormalize_fn(joints, height, width)
 
-    print(joints)
+    print(joints[0])
 
     # ground truth
     visualize(joints, frames, 'normalized_pull_ups',
@@ -279,10 +277,21 @@ def main(config):
 
         outputs[frame-15] = output
 
-    # outputs = torch.as_tensor(outputs)
+    # outputs = torch.as_tensor(outputs)``
 
     # prints the last output
     print('output', output)
+
+    # here, we should denormalize the outputs
+    if normalized:
+        if config['default']:
+            # this path is not ready, as I have not tested the scale values.
+            print('Denormalization might not work due to absence of scale')
+            outputs = denormalize_default(joints, heigth, width)
+
+        # actually, no, if not default, since this is ground truth, I just took the pos_world
+        else:
+            outputs = denormalize_fn(outputs, height, width)
 
     # visualize
     visualize(outputs, frames, 'predicted', width,

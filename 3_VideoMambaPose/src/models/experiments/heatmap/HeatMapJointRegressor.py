@@ -52,6 +52,8 @@ class JointOutput(nn.Module):
 
         self.normalize = normalize
         self.dropout = self.config['dropout']
+
+        # need to be defined in the __init__ so that it ignores in evaluation
         self.dropout_layer = nn.Dropout(self.config['dropout_percent'])
 
         self.regressor = self.regressors(
