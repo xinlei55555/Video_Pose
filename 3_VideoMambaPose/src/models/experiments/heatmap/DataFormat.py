@@ -317,13 +317,14 @@ class JHMDBLoad(Dataset):
 
             filenames = []
             for filename in os.listdir(video_path):
-                if os.path.isfile(file_path) and filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+                if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
                     filenames.append(filename)
             filenames.sort()
             for filename in filenames:
                 file_path = os.path.join(video_path, filename)
-                image_tensor = self.image_to_tensor(file_path)
-                image_tensors.append(image_tensor)
+                if os.path.isfile(file_path):
+                    image_tensor = self.image_to_tensor(file_path)
+                    image_tensors.append(image_tensor)
 
             # Concatenates a sequence of tensors along a new dimension.
             batch_tensor = torch.stack(image_tensors)
