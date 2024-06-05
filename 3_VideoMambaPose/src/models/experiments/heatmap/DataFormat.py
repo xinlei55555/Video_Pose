@@ -310,15 +310,20 @@ class JHMDBLoad(Dataset):
         '''
 
         # goes through the each image.
+        # !!!! do not use IMAGES BECAUSE OS.LISTDIR DOES NOT GO THROUGH THEM IN THE RIGHT ORDER!
         if not use_videos:
             video_path = os.path.join(path, 'Rename_Images', action, video)
             image_tensors = []
 
+            filenames = []
             for filename in os.listdir(video_path):
-                file_path = os.path.join(video_path, filename)
                 if os.path.isfile(file_path) and filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-                    image_tensor = self.image_to_tensor(file_path)
-                    image_tensors.append(image_tensor)
+                    filenames.append(filename)
+            filenames.sort()
+            for filename in filenames:
+                file_path = os.path.join(video_path, filename)
+                image_tensor = self.image_to_tensor(file_path)
+                image_tensors.append(image_tensor)
 
             # Concatenates a sequence of tensors along a new dimension.
             batch_tensor = torch.stack(image_tensors)

@@ -113,12 +113,18 @@ def video_to_tensors(config, video_path='/home/linxin67/scratch/JHMDB/Rename_Ima
     # directory_path = os.path.join(path, action, video)
     video_path = video_path
     image_tensors = []
-
-    for filename in os.listdir(video_path):
-        file_path = os.path.join(video_path, filename)
+    
+    filenames = []
+    for filename in os.listdir(video_path): # is that in the correct order?
+            # NO IT S NOT THE CORRECT ORDER BRO SDLKJSFLKJDKLFJSLKJF WHAT
+            # That's why using videos is better !!
         if os.path.isfile(file_path) and filename.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
-            image_tensor = image_to_tensor(config, file_path)
-            image_tensors.append(image_tensor)
+            filenames.append(filename)
+    filenames.sort()
+    for filename in filenames:
+        file_path = os.path.join(video_path, filename)
+        image_tensor = image_to_tensor(config, file_path)
+        image_tensors.append(image_tensor)
 
     # Concatenates a sequence of tensors along a new dimension.
     batch_tensor = torch.stack(image_tensors)
@@ -253,6 +259,9 @@ def main(config):
     # ground truth
     visualize(joints, frames, 'normalized_pull_ups',
               width, height, normalized=normalized)
+
+    return 
+    # i'll try to fix just the normal visualize predict
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
