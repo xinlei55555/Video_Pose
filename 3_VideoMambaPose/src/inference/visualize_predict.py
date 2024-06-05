@@ -13,10 +13,10 @@ from torchvision import transforms
 
 from import_config import open_config
 
-# config = open_config(file_name='heatmap_beluga_idapt_local.yaml',
-#  folder_path='/home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/configs/heatmap')
-config = open_config(file_name='heatmap_beluga.yaml',
-                     folder_path='/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/configs/heatmap')
+config = open_config(file_name='heatmap_beluga_idapt_local.yaml',
+ folder_path='/home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/configs/heatmap')
+# config = open_config(file_name='heatmap_beluga.yaml',
+                    #  folder_path='/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/configs/heatmap')
 
 # these are hard coded just for ht ecase
 sys.path.append(
@@ -123,7 +123,7 @@ def video_to_tensors(config, video_path='/home/linxin67/scratch/JHMDB/Rename_Ima
     for filename in filenames:
         file_path = os.path.join(video_path, filename)
         if os.path.isfile(file_path):
-            image_tensor = image_to_tensor(file_path)
+            image_tensor = image_to_tensor(config, file_path)
             image_tensors.append(image_tensor)
     
     # Concatenates a sequence of tensors along a new dimension.
@@ -151,6 +151,8 @@ def visualize(joints, frames, file_name, width, height, normalized=True):
     num_frames = min(
         len(list(joints)), len(list(frames)))  # Number of frames in the video
 
+    num_frames_per_video = len(list(frames)) - len(list(joints))
+
     print('The passed width and height are ', width, height)
 
     # generate a new folder name
@@ -171,7 +173,8 @@ def visualize(joints, frames, file_name, width, height, normalized=True):
         joints_per_frame = joints[frame_idx]
 
         # Create a blank 320x240 image (white background)
-        image = frames[frame_idx]
+        # note that for the visualization, the frame number are going to be different
+        image = frames[frame_idx + num_frames_per_video]
 
         # apply transformation to undo the resize
         transform = transforms.Compose([
@@ -260,7 +263,6 @@ def main(config):
     visualize(joints, frames, 'normalized_pull_ups',
               width, height, normalized=normalized)
 
-    return 
     # i'll try to fix just the normal visualize predict
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
