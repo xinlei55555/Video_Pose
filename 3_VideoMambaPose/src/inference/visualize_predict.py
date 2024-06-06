@@ -11,22 +11,34 @@ from einops import rearrange
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 
-# change the system directory
+from import_config import open_config
+
+config = open_config(file_name='heatmap_beluga_idapt_local.yaml',
+ folder_path='/home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/configs/heatmap')
+# config = open_config(file_name='heatmap_beluga.yaml',
+                    #  folder_path='/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/configs/heatmap')
+
+# these are hard coded just for ht ecase
 sys.path.append(
     '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap')
 sys.path.append('/mnt/DATA/Personnel/Other learning/Programming/Professional_Opportunities/KITE - Video Pose ViT/KITE - Video Pose Landmark Detection/3_VideoMambaPose/src/models/experiments/heatmap')
-from HeatVideoMamba import HeatMapVideoMambaPose
-from DataFormat import denormalize_default, det_denormalize_values
+# change the system directory
 
-def load_model(filepath, parallel = False):
+sys.path.append(config['project_dir'])
+
+# do not hit ctrl shift -i, or it will put this at the top
+from HeatVideoMamba import HeatMapVideoMambaPose
+from DataFormat import denormalize_default, det_denormalize_values, denormalize_fn, normalize_fn
+
+def load_model(filepath, parallel=False):
     # Create the model
-    model = HeatMapVideoMambaPose()
+    model = HeatMapVideoMambaPose(config)
 
     # load the dictionary from checkpoint, and load the weights into the model.
     checkpoint = torch.load(filepath, map_location=torch.device('cpu'))
 
     # TODO fix this, in case
-    if paralell:
+    if parallel:
         checkpoint = adapt_model_parallel(checkpoint)
 
     # loading this requires me to check from the initial save
@@ -39,11 +51,13 @@ def load_model(filepath, parallel = False):
     return model
 
 # loading model that was trained with DDP
+
+
 def adapt_model_parallel(checkpoint):
     # in case we load a DDP model checkpoint to a non-DDP model
     model_dict = checkpoint
     pattern = re.compile('module.')
-    for k,v in state_dict.items():
+    for k, v in state_dict.items():
         if re.search("module", k):
             model_dict[re.sub(pattern, '', k)] = v
         else:
@@ -54,41 +68,44 @@ def adapt_model_parallel(checkpoint):
 def inference(model, input_tensor):
     # Disable gradient computation for inference
     with torch.no_grad():
+        model.eval()
         output = model(input_tensor)
 
     return output
 
-# i'll finish the code on my local machine
 
-
-def get_input_and_label(joint_path, video_path, normalized=True, path='/home/linxin67/scratch/JHMDB'):
-    # for the sake of testing, I will just hard copy some files and the respective joint outputs
+def get_input_and_label(joint_path, video_path, normalized=True, default=False, path='/home/linxin67/scratch/JHMDB'):
+    # for the sake of testing, I will juhhst hard copy some files and the respective joint outputs
     # I'll also make sure they were in the test files
-    joints = scipy.io.loadmat(joint_path+'/joint_positions.mat')
-    if normalized:
+    joints = scipy.io.loadmat(os.path.join(joint_path, 'joint_positions.mat'))
+    if normalized and default:
         joints = torch.tensor(joints['pos_world'])
+        print('The joints taken are the normalized ones')
     else:
         joints = torch.tensor(joints['pos_img'])
-    joints = rearrange(joints, 'd n f->f n d')
+        print('The joints taken are not normalized')
 
-    video = video_to_tensors(video_path)
+    joints = rearrange(joints, 'd n f->f n d')
+    video = video_to_tensors(config, video_path)
 
     return joints, video
 
 
-def image_to_tensor(image_path):
+def image_to_tensor(config, image_path):
     '''Returns a torch tensor for a given image associated with the path'''
     image = Image.open(image_path).convert('RGB')
+
     transform = transforms.Compose([
         # notice that all the images are 320x240. Hence, resizing all to 224 224 is generalized, and should be equally skewed
-        transforms.Resize((224, 224)),
-        transforms.ToTensor()
+        transforms.ToTensor(),
+        transforms.Resize(
+            (config['image_tensor_height'], config['image_tensor_width']))
     ])
     tensor = transform(image)
     return tensor
 
 
-def video_to_tensors(video_path='/home/linxin67/scratch/JHMDB/Rename_Images/'):
+def video_to_tensors(config, video_path='/home/linxin67/scratch/JHMDB/Rename_Images/'):
     '''
     Returns a tensor with the following:
     (n_frames, num_channels (3), 224, 224)
@@ -97,12 +114,18 @@ def video_to_tensors(video_path='/home/linxin67/scratch/JHMDB/Rename_Images/'):
     video_path = video_path
     image_tensors = []
 
-    for filename in os.listdir(video_path   ):
+    # file names
+    filenames = []
+    for filename in os.listdir(video_path):
+        if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+            filenames.append(filename)
+    filenames.sort()
+    for filename in filenames:
         file_path = os.path.join(video_path, filename)
-        if os.path.isfile(file_path) and filename.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
-            image_tensor = image_to_tensor(file_path)
+        if os.path.isfile(file_path):
+            image_tensor = image_to_tensor(config, file_path)
             image_tensors.append(image_tensor)
-
+    
     # Concatenates a sequence of tensors along a new dimension.
     batch_tensor = torch.stack(image_tensors)
     return batch_tensor
@@ -124,45 +147,41 @@ def visualize(joints, frames, file_name, width, height, normalized=True):
     13: left wrist
     14: right ankle
     15: left ankle'''
-    # change to correct directory:    
-    num_frames = min(len(list(joints)), len(list(frames)))  # Number of frames in the video
+    # change to correct directory:
+    num_frames = min(
+        len(list(joints)), len(list(frames)))  # Number of frames in the video
 
-    
-    print('The determined width and height are ', width, height)
+    num_frames_per_video = len(list(frames)) - len(list(joints))
 
-    
-    
-    # denormalize the joints.
-    if normalized:
-        joints = denormalize_default(joints, height, width)
-    
+    print('The passed width and height are ', width, height)
+
     # generate a new folder name
     idx = 1
-    while os.path.exists(file_name):
+    while os.path.exists(os.path.join('results', file_name)):
         if idx == 1:
             file_name = str(idx) + file_name
         else:
             file_name = str(idx) + file_name[1:]
         idx += 1
+    file_name = os.path.join('results', file_name)
     os.mkdir(file_name)
 
+    # NOTE: even though in the dataloader, I am using a more efficient way, I won't because anyways here, the overhead copying isn't that much
     # Create a video writer to save the output
-    # video_writer = cv2.VideoWriter(
-        # f'{file_name}{width}x{height}/{file_name}.mp4', cv2.VideoWriter_fourcc(*'mp4v'), num_frames, (width, height))
     for frame_idx in range(num_frames):
         # Get the joints for the current frame
-
         joints_per_frame = joints[frame_idx]
 
         # Create a blank 320x240 image (white background)
-        image = frames[frame_idx]
+        # note that for the visualization, the frame number are going to be different
+        image = frames[frame_idx + num_frames_per_video]
 
         # apply transformation to undo the resize
         transform = transforms.Compose([
             # notice that all the images are 320x240. Hence, resizing all to 224 224 is generalized, and should be equally skewed
-            transforms.ToPILImage(),
-            transforms.Resize((height, width)), # mayb they had the wrong size
-            transforms.ToTensor()
+            # transforms.ToPILImage(),
+            transforms.Resize((height, width)),  # mayb they had the wrong size
+            # transforms.ToTensor()
         ])
         image = transform(image)
         image = rearrange(image, 'c w d->w d c')
@@ -175,12 +194,12 @@ def visualize(joints, frames, file_name, width, height, normalized=True):
         joints_per_frame = joints_per_frame.numpy()
 
         # Plotting the joints onto the image
-        plt.figure(figsize=(8, 6))
+        plt.figure()
         plt.imshow(image)
         # testing for if its the normalization that made the values very
         # plt.scatter(joints_per_frame[:, 0]*320, joints_per_frame[:, 1]*240, c='red', s=10, label='Joints')
-        plt.scatter(joints_per_frame[:, 0], joints_per_frame[:, 1], c='red', s=10, label='Joints')
-
+        plt.scatter(
+            joints_per_frame[:, 0], joints_per_frame[:, 1], c='red', s=10, label='Joints')
 
         # Annotate the joints with their indices
         for i, pos in enumerate(joints_per_frame):
@@ -188,7 +207,6 @@ def visualize(joints, frames, file_name, width, height, normalized=True):
             x, y = pos[0], pos[1]
             plt.text(x, y, str(i+1), color="blue",
                      fontsize=12, ha='right', va='bottom')
-            
 
         plt.title(f'Frame {frame_idx + 1}')
         plt.xlabel('X Coordinate')
@@ -198,80 +216,104 @@ def visualize(joints, frames, file_name, width, height, normalized=True):
         plt.legend()
 
         # Save the current plot to an image file
-        plt.savefig(f'results/{file_name}/frame_{frame_idx}.png')
+        plt.savefig(f'{file_name}/frame_{frame_idx}.png')
         plt.close()
 
-#         # Read the saved image
-#         frame_image = cv2.imread(f'{file_name}/frame_{frame_idx}.png')
-
-#         # Ensure the size is correct
-#         frame_image = cv2.resize(frame_image, (width, height))
-# # 
-#         # Write the frame to the video
-#         video_writer.write(frame_image)
-
-    # Release the video writer
-    # video_writer.release()
-    print(f"Video saved as results/{file_name}")
+    print(f"Video saved as {file_name}")
 
 
-def main():
-    # model_path = '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_22069.0820.pt'
-    # model_path = '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_27345.4473.pt'
-    # model_path='/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_8652135.9131.pt'
-    model_path='/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoint_fixed_joint_regressor/heatmap_18.2411.pt'
-    # model_path = '/mnt/DATA/Personnel/Other learning/Programming/Professional_Opportunities/KITE - Video Pose ViT/KITE - Video Pose Landmark Detection/3_VideoMambaPose/src/models/experiments/heatmap/checkpoints/heatmap_8639121.0703.pt'
+def main(config):
+    ground_truth = False
+    predicted = True
     # action_path = 'test_visualization/Pirates_5_wave_h_nm_np1_fr_med_8'
     # joint_path = 'test_visualization/Copy-of-Pirates_5_wave_h_nm_np1_fr_med_8'
-    action_path='test_visualization/20_good_form_pullups_pullup_f_nm_np1_ri_goo_2'
-    joint_path='test_visualization/Copy-of-20_good_form_pullups_pullup_f_nm_np1_ri_goo_2'
-    normalized = True
-    
+
+    # test_checkpoint = 'heatmap_55.9462.pt'
+    # test_checkpoint = 'heatmap_50.3723.pt'
+    test_checkpoint = 'heatmap_53.1010.pt'
+    # test_checkpoint = 'heatmap_52.2855.pt'
+    model_path = os.path.join(
+        config['checkpoint_directory'], config['checkpoint_name'], test_checkpoint)
+
+    action_path = 'test_visualization/20_good_form_pullups_pullup_f_nm_np1_ri_goo_2'
+    joint_path = 'test_visualization/Copy-of-20_good_form_pullups_pullup_f_nm_np1_ri_goo_2'
+    normalized = config['normalized']
+    default = config['default']
+
+    print(f'The joints are normalized: {normalized}.\n \
+        The joints are normalized with the default: {default}')
+
     # load the whole joint file and the video
-    normalized_joints, frames = get_input_and_label(joint_path, action_path, True, model_path)
-    not_joints, frames = get_input_and_label(joint_path, action_path, False, model_path)
-    width, height = det_denormalize_values(normalized_joints, not_joints)
-    if normalized:    
-        joints = normalized_joints
-    else:
-        joints = not_joints[1]
+    joints, frames = get_input_and_label(
+        joint_path, action_path, normalized, default, model_path)
 
-    print(joints)
+    # width and height
+    # if default and normalized:
+    #     width, height = det_denormalize_values(normalized_joints, joints)
+    # else:
+    width, height = config['image_width'], config['image_height']
 
-    # ground truth
-    visualize(joints, frames, 'normalized_pull_ups', width, height, normalized=normalized)
+    # # denormalizationl
+    # if normalized and config['default']:
+    #     # this path is not ready, as I have not tested the scale values.
+    #     print('Denormalization might not work due to absence of scale')
+    #     joints = denormalize_default(joints, heigth, width)
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    #     # actually, no, if not default, since this is ground truth, I just took the pos_world
+    #     # joints = denormalize_fn(joints, height, width)
 
-    # Load the model from the .pt file
-    model = load_model(model_path, parallel)
-    model = model.to(device)
+    print(joints[0])
 
-    print(model)
+    if ground_truth:
+        # ground truth
+        visualize(joints, frames, 'normalized_pull_ups',
+                width, height, normalized=normalized)
 
-    frames_per_vid = 16
-    outputs = torch.zeros(len(frames)-15, 15, 2) # all frames, except first 15 (because each video is 16 frames) with 15 joints, and x y
-    for frame in range(15, len(frames)):
-        input_frame = frames[frame-(frames_per_vid)+1:frame+1]
+    # i'll try to fix just the normal visualize predict
+    if predicted:
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-        input_frame = rearrange(input_frame, 'd c h w -> c d h w')
+        # Load the model from the .pt file
+        model = load_model(model_path, config['parallelize'])
+        model = model.to(device)
 
-        input_frame = input_frame.to(device)          
-        
-        # videos.append(input_frame) # need cuda GPU!
-        output = inference(model, input_frame)
+        print(model)
 
-        outputs[frame-15] = output
+        frames_per_vid = 16
+        # all frames, except first 15 (because each video is 16 frames) with 15 joints, and x y
+        outputs = torch.zeros(len(frames)-15, 15, 2)
+        for frame in range(15, len(frames)):
+            input_frame = frames[frame-(frames_per_vid)+1:frame+1]
 
-    # outputs = torch.as_tensor(outputs)
+            input_frame = rearrange(input_frame, 'd c h w -> c d h w')
 
-    # prints the last output
-    print('output', output)
+            input_frame = input_frame.to(device)
 
-    # visualize
-    visualize(outputs, frames, 'predicted', width, height, normalized = normalized)
+            # videos.append(input_frame) # need cuda GPU!
+            output = inference(model, input_frame)
 
+            outputs[frame-15] = output
+
+        # outputs = torch.as_tensor(outputs)``
+
+        # prints the last output
+        print('output', outputs[0] == outputs[1])
+
+        # here, we should denormalize the outputs
+        if normalized:
+            if config['default']:
+                # this path is not ready, as I have not tested the scale values.
+                print('Denormalization might not work due to absence of scale')
+                outputs = denormalize_default(joints, heigth, width)
+
+            # actually, no, if not default, since this is ground truth, I just took the pos_world
+            else:
+                outputs = denormalize_fn(outputs, height, width)
+
+        # visualize
+        visualize(outputs, frames, 'predicted', width,
+                height, normalized=normalized)
 
 
 if __name__ == "__main__":
-    main()
+    main(config)
