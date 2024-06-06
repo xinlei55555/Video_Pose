@@ -73,12 +73,12 @@ class JointOutput(nn.Module):
 
     def regressors(self, dim_hidden, dim_out):
         # Assuming the input tensor x has shape (batch_size, input_size)
-        input_size = self.d * self.h * self.w
+        input_size = self.dim * self.c
 
         layers = [nn.Linear(input_size, dim_hidden)]  # use power of 2
 
         # this applies dropout to all the layers except the last one.
-        for _ in range(self.config[num_hidden_layers]):
+        for _ in range(self.config['num_hidden_layers']):
             if self.dropout:
                 layers.append(self.dropout_layer)
             # I will return 3, which are the values for x, y, z
