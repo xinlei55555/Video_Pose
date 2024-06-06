@@ -20,8 +20,7 @@ num_mamba_blocks: 12
 # conv_channels: 256
 joint_regressor: True
   # joint regressor
-hidden_channels: 1024
-dim_hidden_out_middle: 512
+hidden_channels: 512
 output_dimensions: 2 # x, y
 dropout: False
 dropout_percent: 0.25 # if dropout is True

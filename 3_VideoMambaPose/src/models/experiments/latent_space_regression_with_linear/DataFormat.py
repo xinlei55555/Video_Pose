@@ -197,7 +197,7 @@ class JHMDBLoad(Dataset):
         '''
         os.chdir(path)
         mat = scipy.io.loadmat(
-            f'{path}joint_positions/{action}/{video}/joint_positions.mat')
+            f'{path}/joint_positions/{action}/{video}/joint_positions.mat')
         return mat
 
     def rearranged_joints(self, action, video, path):

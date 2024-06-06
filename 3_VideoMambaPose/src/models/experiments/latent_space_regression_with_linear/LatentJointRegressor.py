@@ -58,7 +58,7 @@ class JointOutput(nn.Module):
         self.dropout_layer = nn.Dropout(self.config['dropout_percent'])
 
         self.regressor = self.regressors(
-            dim_hidden=self.config['hidden_channels'], dim_out=self.joint_number * self.config['output_dimensions'], dim_hidden_out_middle=self.config['dim_hidden_out_middle'])
+            dim_hidden=self.config['hidden_channels'], dim_out=self.joint_number * self.config['output_dimensions'])
 
     # update the shapes that are passed in
     # def get_shape(self, x):
@@ -73,7 +73,7 @@ class JointOutput(nn.Module):
         # mamba has the following output batch, (num_frames x heigt x width), channel_number
         return rearrange(x, 'b d c -> b (d c)')  # rearrange
 
-    def regressors(self, dim_hidden, dim_out, dim_hidden_out_middle):
+    def regressors(self, dim_hidden, dim_out):
         # Assuming the input tensor x has shape (batch_size, input_size)
         input_size = self.dim * self.c
 
@@ -85,10 +85,10 @@ class JointOutput(nn.Module):
                 layers.append(self.dropout_layer)
             # I will return 3, which are the values for x, y, z
             # here, my number of output dimensinos would be 30, then reshape
-            layers.extend([nn.ReLU(), nn.Linear(dim_hidden, dim_hidden_out_middle)])
+            layers.extend([nn.ReLU(), nn.Linear(dim_hidden, dim_hidden)])
 
         # output layer
-        layers.extend([nn.ReLU(), nn.Linear(dim_hidden_out_middle, dim_out)])
+        layers.extend([nn.ReLU(), nn.Linear(dim_hidden, dim_out)])
         if self.normalize:
             # restrict values at the end to be between -1 and 1
             layers.append(nn.Tanh())
@@ -102,5 +102,5 @@ class JointOutput(nn.Module):
 
         # need to reshape the output
         output = rearrange(
-            output, 'b t -> b c o', b=self.joint_number, c=self.config['output_dimensions'])
+            output, 'b (c o)-> b c o', c=self.joint_number, o=self.config['output_dimensions'])
         return output
