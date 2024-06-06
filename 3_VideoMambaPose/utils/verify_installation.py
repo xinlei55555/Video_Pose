@@ -6,10 +6,10 @@ x = torch.zeros((batch, dim, seq)).to('cuda')
 weight = torch.zeros((dim, width)).to('cuda')
 bias = torch.zeros((dim, )).to('cuda')
 
-causal_conv1d_fn(x, weight, bias, None)
+print(causal_conv1d_fn(x, weight, bias, None))
 
 # -------------- cchecking if installation
-import torch
+# import torch
 
 from mamba_ssm import Mamba
 

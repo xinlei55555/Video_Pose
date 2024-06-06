@@ -223,10 +223,15 @@ def visualize(joints, frames, file_name, width, height, normalized=True):
 
 
 def main(config):
+    ground_truth = False
+    predicted = True
     # action_path = 'test_visualization/Pirates_5_wave_h_nm_np1_fr_med_8'
     # joint_path = 'test_visualization/Copy-of-Pirates_5_wave_h_nm_np1_fr_med_8'
 
-    test_checkpoint = 'heatmap_55.9462.pt'
+    # test_checkpoint = 'heatmap_55.9462.pt'
+    # test_checkpoint = 'heatmap_50.3723.pt'
+    test_checkpoint = 'heatmap_53.1010.pt'
+    # test_checkpoint = 'heatmap_52.2855.pt'
     model_path = os.path.join(
         config['checkpoint_directory'], config['checkpoint_name'], test_checkpoint)
 
@@ -236,7 +241,7 @@ def main(config):
     default = config['default']
 
     print(f'The joints are normalized: {normalized}.\n \
-          The joints are normalized with the default: {default}')
+        The joints are normalized with the default: {default}')
 
     # load the whole joint file and the video
     joints, frames = get_input_and_label(
@@ -259,54 +264,55 @@ def main(config):
 
     print(joints[0])
 
-    # ground truth
-    visualize(joints, frames, 'normalized_pull_ups',
-              width, height, normalized=normalized)
+    if ground_truth:
+        # ground truth
+        visualize(joints, frames, 'normalized_pull_ups',
+                width, height, normalized=normalized)
 
     # i'll try to fix just the normal visualize predict
+    if predicted:
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        # Load the model from the .pt file
+        model = load_model(model_path, config['parallelize'])
+        model = model.to(device)
 
-    # Load the model from the .pt file
-    model = load_model(model_path, config['parallelize'])
-    model = model.to(device)
+        print(model)
 
-    print(model)
+        frames_per_vid = 16
+        # all frames, except first 15 (because each video is 16 frames) with 15 joints, and x y
+        outputs = torch.zeros(len(frames)-15, 15, 2)
+        for frame in range(15, len(frames)):
+            input_frame = frames[frame-(frames_per_vid)+1:frame+1]
 
-    frames_per_vid = 16
-    # all frames, except first 15 (because each video is 16 frames) with 15 joints, and x y
-    outputs = torch.zeros(len(frames)-15, 15, 2)
-    for frame in range(15, len(frames)):
-        input_frame = frames[frame-(frames_per_vid)+1:frame+1]
+            input_frame = rearrange(input_frame, 'd c h w -> c d h w')
 
-        input_frame = rearrange(input_frame, 'd c h w -> c d h w')
+            input_frame = input_frame.to(device)
 
-        input_frame = input_frame.to(device)
+            # videos.append(input_frame) # need cuda GPU!
+            output = inference(model, input_frame)
 
-        # videos.append(input_frame) # need cuda GPU!
-        output = inference(model, input_frame)
+            outputs[frame-15] = output
 
-        outputs[frame-15] = output
+        # outputs = torch.as_tensor(outputs)``
 
-    # outputs = torch.as_tensor(outputs)``
+        # prints the last output
+        print('output', outputs[0] == outputs[1])
 
-    # prints the last output
-    print('output', output)
+        # here, we should denormalize the outputs
+        if normalized:
+            if config['default']:
+                # this path is not ready, as I have not tested the scale values.
+                print('Denormalization might not work due to absence of scale')
+                outputs = denormalize_default(joints, heigth, width)
 
-    # here, we should denormalize the outputs
-    if normalized:
-        if config['default']:
-            # this path is not ready, as I have not tested the scale values.
-            print('Denormalization might not work due to absence of scale')
-            outputs = denormalize_default(joints, heigth, width)
+            # actually, no, if not default, since this is ground truth, I just took the pos_world
+            else:
+                outputs = denormalize_fn(outputs, height, width)
 
-        # actually, no, if not default, since this is ground truth, I just took the pos_world
-        else:
-            outputs = denormalize_fn(outputs, height, width)
-
-    # visualize
-    visualize(outputs, frames, 'predicted', width,
-              height, normalized=normalized)
+        # visualize
+        visualize(outputs, frames, 'predicted', width,
+                height, normalized=normalized)
 
 
 if __name__ == "__main__":
