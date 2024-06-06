@@ -253,7 +253,7 @@ def main(config):
     # else:
     width, height = config['image_width'], config['image_height']
 
-    # # denormalization
+    # # denormalizationl
     # if normalized and config['default']:
     #     # this path is not ready, as I have not tested the scale values.
     #     print('Denormalization might not work due to absence of scale')
