@@ -47,7 +47,8 @@ class JointOutput(nn.Module):
         self.joint_number = joint_number
         self.input_channels = input_channels
         self.c, self.d, self.h, self.w = input_channels, d, h, w
-        self.dim = self.d * self.h * self.w # could change later.
+        self.dim = self.d * self.h * self.w  # could change later.
+        self.c = self.config['embed_channels']
         self.b = self.config['batch_size']
 
         self.normalize = normalize
@@ -57,22 +58,22 @@ class JointOutput(nn.Module):
         self.dropout_layer = nn.Dropout(self.config['dropout_percent'])
 
         self.regressor = self.regressors(
-            dim_hidden=self.config['hidden_channels'], dim_out=self.joint_number * self.config['output_dimensions'])
+            dim_hidden=self.config['hidden_channels'], dim_out=self.joint_number * self.config['output_dimensions'], dim_hidden_out_middle=self.config['dim_hidden_out_middle'])
 
     # update the shapes that are passed in
-    def get_shape(self, x):
-        self.b, self.dim, self.c = x.shape
+    # def get_shape(self, x):
+    #     self.b, self.dim, self.c = x.shape
         # note: dim is supposed to be height x width x depth
         # c is supposed to be 192
 
     def input_flatten(self, x):
         # first get the shape of the input
-        self.get_shape(x)
+        # self.get_shape(x)
 
         # mamba has the following output batch, (num_frames x heigt x width), channel_number
         return rearrange(x, 'b d c -> b (d c)')  # rearrange
 
-    def regressors(self, dim_hidden, dim_out):
+    def regressors(self, dim_hidden, dim_out, dim_hidden_out_middle):
         # Assuming the input tensor x has shape (batch_size, input_size)
         input_size = self.dim * self.c
 
@@ -83,8 +84,11 @@ class JointOutput(nn.Module):
             if self.dropout:
                 layers.append(self.dropout_layer)
             # I will return 3, which are the values for x, y, z
-            layers.extend([nn.ReLU(), nn.Linear(dim_hidden, dim_out)]) # here, my number of output dimensinos would be 30, then reshape
+            # here, my number of output dimensinos would be 30, then reshape
+            layers.extend([nn.ReLU(), nn.Linear(dim_hidden, dim_hidden_out_middle)])
 
+        # output layer
+        layers.extend([nn.ReLU(), nn.Linear(dim_hidden_out_middle, dim_out)])
         if self.normalize:
             # restrict values at the end to be between -1 and 1
             layers.append(nn.Tanh())
