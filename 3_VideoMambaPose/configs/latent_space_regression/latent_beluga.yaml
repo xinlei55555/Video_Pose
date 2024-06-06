@@ -11,19 +11,20 @@ full_debug: False
 embed_channels: 192 # number of channels after the tiny mamba layers.
 num_mamba_blocks: 12
 
-# deconv
-num_deconv: 2
-2d_deconv: True
-deconv_channels: 192
-  # using 2d or 3d deconvolutions
-num_conv: 2
-conv_channels: 256
+# # deconv
+# num_deconv: 2
+# 2d_deconv: True
+# deconv_channels: 192
+#   # using 2d or 3d deconvolutions
+# num_conv: 2
+# conv_channels: 256
 joint_regressor: True
   # joint regressor
 hidden_channels: 512
 output_dimensions: 2 # x, y
 dropout: False
 dropout_percent: 0.25 # if dropout is True
+num_hidden_layers: 3 # to replace the deconvolutions and the convolutions.
 
 # training
 epoch_number: 300
@@ -41,9 +42,9 @@ num_gpus: 1
 parallelize: False
 
 # checkpoints
-checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoint
+checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/latent_space_regression_with_linear/checkpoint
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
-checkpoint_name: 'New_LR_Custom_Tanh_normalized_checkpoints'
+checkpoint_name: 'default_model_linear'
 # checkpoint_name: 'testing_false_dataset'
 
 # Follow up on the training of another previous run?
