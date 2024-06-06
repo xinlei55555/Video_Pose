@@ -29,8 +29,12 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 class LatentVideoMambaPose(nn.Module):
-    def __init__(self):
+    def __init__(self, config):
         super().__init__()
+        self.config = config
+        self.img_height = self.config['image_tensor_height']
+        self.img_width = self.config['image_tensor_width']
+        
         # encoder
         self.mamba = hvm.videomamba_tiny()
 
