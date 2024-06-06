@@ -83,22 +83,22 @@ class JHMDBLoad(Dataset):
         # determines whether to take the whole set of data, or just part of it
         self.real_job = real_job
 
-        self.annotations = self.unpickle_JHMDB()
+        self.annotations = self.unpickle_JHMDB(self.config['annotations_path'])
         self.nframes = self.annotations['nframes']
 
         if self.train_set:
-            self.actions, self.train, _ = self.get_names_train_test_split()
+            self.actions, self.train, _ = self.get_names_train_test_split(self.config['data_path'])
         else:
-            self.actions, _, self.test = self.get_names_train_test_split()
+            self.actions, _, self.test = self.get_names_train_test_split(self.config['data_path'])
 
         # I will remove all 'wave' actions, because the data seems corrupted
         self.arr = []
         if self.train_set:
             # frames with joint values
             self.frames_with_joints = [(self.video_to_tensors(
-                action_name, file_name, self.use_videos),
+                action_name, file_name, self.use_videos, self.config['data_path']),
                 self.rearranged_joints(
-                action_name, file_name))
+                action_name, file_name, self.config['data_path']))
                 for action_name, file_name, n_frames in self.train if action_name != 'wave']
             # arr where arr[idx] = idx in the self.frames_with_joints
             self.jump = jump
@@ -115,9 +115,9 @@ class JHMDBLoad(Dataset):
                         self.arr.append([k, i, joints])
         else:
             self.frames_with_joints = [(self.video_to_tensors(
-                action_name, file_name, self.use_videos),
+                action_name, file_name, self.use_videos, self.config['data_path']),
                 self.rearranged_joints(
-                action_name, file_name))
+                action_name, file_name, self.config['data_path']))
                 for action_name, file_name, n_frames in self.test if action_name != 'wave']
 
             self.jump = jump
@@ -169,7 +169,7 @@ class JHMDBLoad(Dataset):
         return [video, joint_values[frame_num]]
 
     # this folder is useless
-    def unpickle_JHMDB(self, path="/home/linxin67/scratch/JHMDB_old/annotations"):
+    def unpickle_JHMDB(self, path):
         os.chdir(path)
 
         # Open the first pickled file
@@ -181,7 +181,7 @@ class JHMDBLoad(Dataset):
                 print("UnicodeDecodeError:", e)
         return train
 
-    def read_joints_full_video(self, action, video, path="/home/linxin67/scratch/JHMDB/"):
+    def read_joints_full_video(self, action, video, path):
         '''
         Given an action and a video returns the joints for each frame
 
@@ -200,7 +200,7 @@ class JHMDBLoad(Dataset):
             f'{path}joint_positions/{action}/{video}/joint_positions.mat')
         return mat
 
-    def rearranged_joints(self, action, video, path='/home/linxin67/scratch/JHMDB/'):
+    def rearranged_joints(self, action, video, path):
         '''
         Return a torch tensor with num frames, num joints, (x,y) joints.
         '''
@@ -230,7 +230,7 @@ class JHMDBLoad(Dataset):
     def get_num_frames(self, action, video):
         return self.nframes[os.path.join(action, video)]
 
-    def get_names_train_test_split(self, path="/home/linxin67/scratch/JHMDB/"):
+    def get_names_train_test_split(self, path):
         '''
         Returns three lists:
         1. First one with all the possible actions.
@@ -303,7 +303,7 @@ class JHMDBLoad(Dataset):
         tensor = transform(image)
         return tensor
 
-    def video_to_tensors(self, action, video, use_videos, path='/home/linxin67/scratch/JHMDB/'):
+    def video_to_tensors(self, action, video, use_videos, path):
         '''
         Returns a tensor with the following:
         (n_frames, num_channels (3), 224, 224)

@@ -59,7 +59,9 @@ previous_checkpoint: ''
 
 # data
 dataset_name: 'JHMDB'
-data_path: /home/linxin67/scratch/JHMDB
+# data_path: /home/linxin67/scratch/JHMDB
+data_path: /home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/data/JHMDB
+annotations_path: /home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/data/JHMDB_old/annotations
 # use avi videos
 use_videos: True
 # actions to skip
