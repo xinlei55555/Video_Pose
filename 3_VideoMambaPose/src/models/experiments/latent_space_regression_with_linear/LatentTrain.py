@@ -133,7 +133,8 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
             print(
                 f"Full training loss: {float(train_loss)}, Full test loss: {float(test_loss)}")
 
-            # if scheduler defined:
+            # if scheduler defined: 
+            
             if config['scheduler']:
                 lr = optimizer.param_groups[0]['lr']
                 print(f'The current learning rate is: {lr}')
