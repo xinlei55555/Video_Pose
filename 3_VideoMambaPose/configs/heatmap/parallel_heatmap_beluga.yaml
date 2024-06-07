@@ -30,6 +30,8 @@ epoch_number: 300
 batch_size: 16
 # batch_size: 8
 learning_rate: 0.001
+#scheduler:
+scheduler: True
 start_epoch: 1
 
 # device settings
@@ -53,6 +55,7 @@ previous_checkpoint: ''
 # data
 dataset_name: 'JHMDB'
 data_path: /home/linxin67/scratch/JHMDB
+annotations_path: /home/linxin67/scratch/JHMDB_old/annotations
 # use avi videos
 use_videos: True
 # actions to skip

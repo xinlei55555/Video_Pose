@@ -20,7 +20,7 @@ num_mamba_blocks: 12
 # conv_channels: 256
 joint_regressor: True
   # joint regressor
-hidden_channels: 512
+hidden_channels: 512 # since I am regressing from much more tokens
 output_dimensions: 2 # x, y
 dropout: False
 dropout_percent: 0.25 # if dropout is True
@@ -33,6 +33,8 @@ epoch_number: 300
 batch_size: 16 # just to see how scalable it is
 # learning_rate: 0.001
 learning_rate: 0.01
+#scheduler:
+scheduler: True
 start_epoch: 1
 
 # device settings
@@ -57,6 +59,7 @@ previous_checkpoint: ''
 # data
 dataset_name: 'JHMDB'
 data_path: /home/linxin67/scratch/JHMDB
+annotations_path: /home/linxin67/scratch/JHMDB_old/annotations
 # use avi videos
 use_videos: True
 # actions to skip

@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=Latent_LR_scheduler_Latent_space       # Job name
+#SBATCH --job-name=Latent_space       # Job name
 #SBATCH --account=def-btaati              # Replace with your account
 #SBATCH --time=03-00:00                   # Time limit (DD-HH:MM) ! change this when training.
 #SBATCH --cpus-per-task=1                 # Number of CPU cores per task ! change this when training.
@@ -16,5 +16,5 @@ module restore mamba_modules125
 source /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/mamba_env125/bin/activate
 export WANDB_MODE=offline
 wandb offline
-cd /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/latent_space_regression_with_linear
-python LatentTrain.py --config 'latent_beluga_lr_scheduler.yaml'                   # Command to run your Python script
+cd /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/Mamba_HMR_regressor
+python HMRTrain.py --config 'latent_HMR_beluga.yaml'                   # Command to run your Python script

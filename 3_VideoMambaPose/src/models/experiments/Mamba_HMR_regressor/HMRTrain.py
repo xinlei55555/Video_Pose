@@ -4,8 +4,6 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import Dataset, DataLoader, DistributedSampler
-import torch.optim as optim
-
 import wandb
 import argparse
 
@@ -23,7 +21,7 @@ def load_checkpoint(filepath, model):
     return model
 
 
-def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_set, test_set, device, rank, world_size,
+def training_loop(config, n_epochs, optimizer, model, loss_fn, train_set, test_set, device, rank, world_size,
                   checkpoint_directory, checkpoint_name, follow_up=(False, 1, None)):
     os.chdir(checkpoint_directory)
     os.makedirs(checkpoint_name, exist_ok=True)
@@ -114,10 +112,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
                           torch.cuda.memory_allocated()/1e6)
 
                 torch.cuda.empty_cache()  # Clear cache to save memory
-        # update scheduler
-        if config['scheduler']:
-            scheduler.step(test_loss)
-    
+
         # the shown loss should be for individual elements in the batch size
         show_loss_train, show_loss_test = train_loss / \
             len(train_set), test_loss / len(test_set)
@@ -132,12 +127,6 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
                   f" Pointwise Validation loss {float(show_loss_test)}")
             print(
                 f"Full training loss: {float(train_loss)}, Full test loss: {float(test_loss)}")
-
-            # if scheduler defined: 
-            
-            if config['scheduler']:
-                lr = optimizer.param_groups[0]['lr']
-                print(f'The current learning rate is: {lr}')
 
             # I use the full loss when comparing, to avoid having too small numbers.
             if test_loss < best_val_loss:
@@ -211,16 +200,12 @@ def main(rank, world_size, config, config_file_name):
         loss_fn = PoseEstimationLoss()
 
         # optimizer
-        optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'])
-        
-        # learning rate scheduler
-        # I will leave the rest of the parameters as the default
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, factor=0.5) # half the learning rate each time
+        optimizer = torch.optim.Adam(model.parameters())
 
         # Training loop
         print(f"The model has started training, with the following characteristics:")
 
-        training_loop(config, num_epochs, optimizer, scheduler, model, loss_fn,
+        training_loop(config, num_epochs, optimizer, model, loss_fn,
                     train_loader, test_loader, device, rank, world_size, checkpoint_dir, checkpoint_name, follow_up)
 
     elif torch.cuda.device_count() == 0:
@@ -256,15 +241,11 @@ def main(rank, world_size, config, config_file_name):
         loss_fn = PoseEstimationLoss()
 
         # optimizer
-        optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'])
-        
-        # learning rate scheduler
-        # I will leave the rest of the parameters as the default
-        scheduler = RLR(optimizer=optimizer, factor=0.5) # half the learning rate each time
+        optimizer = torch.optim.Adam(model.parameters())
 
         # Training loop
         print(f"The model has started training, with the following characteristics:")
-        training_loop(config, num_epochs, optimizer, scheduler, model, loss_fn,
+        training_loop(config, num_epochs, optimizer, model, loss_fn,
                     train_loader, test_loader, device, rank, world_size, checkpoint_dir, checkpoint_name, follow_up)
 
         # Cleanup
@@ -274,7 +255,7 @@ def main(rank, world_size, config, config_file_name):
 if __name__ == '__main__':
     # argparse to get the file path of the config file
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default='latent_beluga.yaml',
+    parser.add_argument('--config', type=str, default='latent_HMR_beluga.yaml',
                         help='Name of the configuration file')
     args = parser.parse_args()
     config_file = args.config
