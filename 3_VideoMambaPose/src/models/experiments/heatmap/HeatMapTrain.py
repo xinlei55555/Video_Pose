@@ -4,6 +4,8 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import Dataset, DataLoader, DistributedSampler
+import torch.optim as optim
+
 import wandb
 import argparse
 
@@ -21,8 +23,8 @@ def load_checkpoint(filepath, model):
     return model
 
 
-def training_loop(config, n_epochs, optimizer, model, loss_fn, train_set, test_set, device, rank, world_size,
-                  checkpoint_directory, checkpoint_name, follow_up=(False, 1, None)):
+def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_set, test_set, device, rank, world_size,
+                  checkpoint_directory, checkpoint_name,  follow_up=(False, 1, None)):
     os.chdir(checkpoint_directory)
     os.makedirs(checkpoint_name, exist_ok=True)
     best_val_loss = float('inf')
@@ -48,7 +50,8 @@ def training_loop(config, n_epochs, optimizer, model, loss_fn, train_set, test_s
         if epoch == start_epoch:
             # Prints GPU memory summary
             print('Memory before (in MB)', torch.cuda.memory_allocated()/1e6)
-            print(f'The number of batches in the train_set is {len(train_set)}')
+            print(
+                f'The number of batches in the train_set is {len(train_set)}')
             print(f'The number of batches in the test_set is {len(test_set)}')
 
         print('train batch for epoch # ', epoch, '==============>')
@@ -113,11 +116,15 @@ def training_loop(config, n_epochs, optimizer, model, loss_fn, train_set, test_s
 
                 torch.cuda.empty_cache()  # Clear cache to save memory
 
+        # update scheduler
+        if config['scheduler']:
+            scheduler.step(test_loss)
+
         # the shown loss should be for individual elements in the batch size
         show_loss_train, show_loss_test = train_loss / \
             len(train_set), test_loss / len(test_set)
 
-        if rank == 0 :
+        if rank == 0:
             wandb.log({"Pointwise training loss": show_loss_train})
             wandb.log({"Pointwise testing loss": show_loss_test})
             wandb.log({"Training loss": train_loss})
@@ -127,6 +134,11 @@ def training_loop(config, n_epochs, optimizer, model, loss_fn, train_set, test_s
                   f" Pointwise Validation loss {float(show_loss_test)}")
             print(
                 f"Full training loss: {float(train_loss)}, Full test loss: {float(test_loss)}")
+
+            # if scheduler defined:
+            if config['scheduler']:
+                lr = optimizer.param_groups[0]['lr']
+                print(f'The current learning rate is: {lr}')
 
             # I use the full loss when comparing, to avoid having too small numbers.
             if test_loss < best_val_loss:
@@ -153,7 +165,7 @@ def setup(rank, world_size):
 def main(rank, world_size, config, config_file_name):
     wandb.init(
         project=config['model_name'],
-        entity=config_file_name, # this will be the new name
+        entity=config_file_name,  # this will be the new name
         config={
             "dataset": config['dataset_name'],
             "epochs": config['epoch_number'],
@@ -196,17 +208,22 @@ def main(rank, world_size, config, config_file_name):
         model = model.to(device)  # to unique GPU
         print('Model loaded successfully as follows: ', model)
 
-          # loss
+        # loss
         loss_fn = PoseEstimationLoss()
 
         # optimizer
-        optimizer = torch.optim.Adam(model.parameters())
+        optimizer = torch.optim.Adam(
+            model.parameters(), lr=config['learning_rate'])
+        
+        # learning rate scheduler
+        # I will leave the rest of the parameters as the default
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, factor=0.5) # half the learning rate each time
 
         # Training loop
         print(f"The model has started training, with the following characteristics:")
 
-        training_loop(config, num_epochs, optimizer, model, loss_fn,
-                    train_loader, test_loader, device, rank, world_size, checkpoint_dir, checkpoint_name, follow_up)
+        training_loop(config, num_epochs, optimizer, scheduler, model, loss_fn,
+                      train_loader, test_loader, device, rank, world_size, checkpoint_dir, checkpoint_name, follow_up)
 
     elif torch.cuda.device_count() == 0:
         print("ERROR! No GPU detected...")
@@ -241,12 +258,17 @@ def main(rank, world_size, config, config_file_name):
         loss_fn = PoseEstimationLoss()
 
         # optimizer
-        optimizer = torch.optim.Adam(model.parameters())
+        optimizer = torch.optim.Adam(
+            model.parameters(), lr=config['learning_rate'])
+
+        # learning rate scheduler
+        # I will leave the rest of the parameters as the default
+        scheduler = RLR(optimizer=optimizer, factor=0.5) # half the learning rate each time
 
         # Training loop
         print(f"The model has started training, with the following characteristics:")
-        training_loop(config, num_epochs, optimizer, model, loss_fn,
-                    train_loader, test_loader, device, rank, world_size, checkpoint_dir, checkpoint_name, follow_up)
+        training_loop(config, num_epochs, optimizer, scheduler, model, loss_fn,
+                      train_loader, test_loader, device, rank, world_size, checkpoint_dir, checkpoint_name, follow_up)
 
         # Cleanup
         dist.destroy_process_group()
@@ -270,4 +292,5 @@ if __name__ == '__main__':
     else:
         # world size determines the number of GPUs running together.
         world_size = torch.cuda.device_count()
-        mp.spawn(main, args=(world_size, config, config_file), nprocs=world_size, join=True)
+        mp.spawn(main, args=(world_size, config, config_file),
+                 nprocs=world_size, join=True)
