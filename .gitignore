@@ -8,7 +8,18 @@ mamba_env2/
 mamba_env/
 2_6_PCT/
 2_7_VitPose
-VideoMamba
+VideoMamba/
 __pycache__/
 .vscode/
+wandb/
+*.out
+# *.sh
 checkpoints/
+checkpoint_fixed_joint_regressor/
+*.png
+*.jpg
+*.mp4
+test_visualization/
+*.pt
+checkpoint/
+wandb_old/
