@@ -11,3 +11,4 @@ mamba_env/
 VideoMamba
 __pycache__/
 .vscode/
+checkpoints/
