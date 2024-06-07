@@ -33,6 +33,8 @@ epoch_number: 300
 batch_size: 16 # just to see how scalable it is
 # learning_rate: 0.001
 learning_rate: 0.01
+#scheduler:
+scheduler: True
 start_epoch: 1
 
 # device settings
