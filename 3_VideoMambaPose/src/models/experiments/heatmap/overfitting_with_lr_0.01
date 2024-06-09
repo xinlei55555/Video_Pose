@@ -1,0 +1,1640 @@
+[2024-06-09 01:15:31,364] [INFO] [real_accelerator.py:191:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+Read successful, here are the characteristics of your model: 
+{'model_name': 'VideoMambaPose', 'project_dir': '/home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/latent_space_regression_with_linear', 'model_type': 'latent_space_linear_regression', 'full_debug': False, 'show_gradients': False, 'show_predictions': False, 'embed_channels': 192, 'num_mamba_blocks': 12, 'num_deconv': 2, '2d_deconv': True, 'deconv_channels': 192, 'num_conv': 2, 'conv_channels': 256, 'joint_regressor': True, 'hidden_channels': 512, 'output_dimensions': 2, 'dropout': False, 'dropout_percent': 0.25, 'num_hidden_layers': 3, 'epoch_number': 300, 'batch_size': 4, 'learning_rate': 0.01, 'scheduler': True, 'start_epoch': 1, 'num_cpus': 1, 'num_gpus': 1, 'parallelize': False, 'checkpoint_directory': '/home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoint', 'checkpoint_name': 'tanh_overfit_model', 'follow_up': False, 'previous_training_epoch': 1, 'previous_checkpoint': '', 'dataset_name': 'JHMDB', 'data_path': '/home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/data/JHMDB', 'annotations_path': '/home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/data/JHMDB_old/annotations', 'use_videos': False, 'skip': ['wave'], 'num_frames': 16, 'channels': 3, 'image_height': 240, 'image_width': 320, 'image_tensor_height': 192, 'image_tensor_width': 256, 'patch_number': 192, 'patch_size': 16, 'jump': 1, 'joint_number': 15, 'real_job': False, 'normalized': True, 'default': False, 'min_norm': -1}
+length of actions 1
+The length of actions, train and test are 1 ,  21 ,  0
+length of actions 1
+The length of actions, train and test are 1 ,  0 ,  2
+num_workers is: 7, for 8 cores
+Use checkpoint: False
+Checkpoint number: 0
+Model loaded successfully as follows:  HeatMapVideoMambaPose(
+  (mamba): VisionMamba(
+    (patch_embed): PatchEmbed(
+      (proj): Conv3d(3, 192, kernel_size=(1, 16, 16), stride=(1, 16, 16))
+    )
+    (pos_drop): Dropout(p=0.0, inplace=False)
+    (head_drop): Identity()
+    (head): Linear(in_features=192, out_features=1000, bias=True)
+    (drop_path): DropPath()
+    (layers): ModuleList(
+      (0-1): 2 x Block(
+        (mixer): Mamba(
+          (in_proj): Linear(in_features=192, out_features=768, bias=False)
+          (conv1d): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (act): SiLU()
+          (x_proj): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj): Linear(in_features=12, out_features=384, bias=True)
+          (conv1d_b): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (x_proj_b): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj_b): Linear(in_features=12, out_features=384, bias=True)
+          (out_proj): Linear(in_features=384, out_features=192, bias=False)
+        )
+        (norm): RMSNorm()
+        (drop_path): Identity()
+      )
+      (2-11): 10 x Block(
+        (mixer): Mamba(
+          (in_proj): Linear(in_features=192, out_features=768, bias=False)
+          (conv1d): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (act): SiLU()
+          (x_proj): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj): Linear(in_features=12, out_features=384, bias=True)
+          (conv1d_b): Conv1d(384, 384, kernel_size=(4,), stride=(1,), padding=(3,), groups=384)
+          (x_proj_b): Linear(in_features=384, out_features=44, bias=False)
+          (dt_proj_b): Linear(in_features=12, out_features=384, bias=True)
+          (out_proj): Linear(in_features=384, out_features=192, bias=False)
+        )
+        (norm): RMSNorm()
+        (drop_path): DropPath()
+      )
+    )
+    (norm_f): RMSNorm()
+  )
+  (deconv): Deconv(
+    (conv_layers): Sequential(
+      (0): Conv2d(256, 256, kernel_size=(1, 1), stride=(1, 1))
+      (1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (2): ReLU(inplace=True)
+      (3): Conv2d(256, 256, kernel_size=(1, 1), stride=(1, 1))
+      (4): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (5): ReLU(inplace=True)
+      (6): Conv2d(256, 15, kernel_size=(1, 1), stride=(1, 1))
+    )
+    (deconv_layers): Sequential(
+      (0): ConvTranspose2d(192, 256, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), bias=False)
+      (1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (2): ReLU(inplace=True)
+      (3): ConvTranspose2d(256, 256, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), bias=False)
+      (4): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (5): ReLU(inplace=True)
+    )
+  )
+  (joints): JointOutput(
+    (regressor): Sequential(
+      (0): Linear(in_features=3072, out_features=512, bias=True)
+      (1): ReLU()
+      (2): Linear(in_features=512, out_features=2, bias=True)
+      (3): Tanh()
+    )
+  )
+)
+The model has started training, with the following characteristics:
+Epoch 1 started ======>
+Memory before (in MB) 29.263872
+The number of batches in the train_set is 124
+The number of batches in the test_set is 12
+train batch for epoch #  1 ==============>
+The shape of the outputs is  torch.Size([4, 15, 2])
+The shape of the labels are  torch.Size([4, 15, 2])
+Memory after train_batch (in MB) 172.51328
+test batch for epoch #  1 ======================>
+Memory after test_batch (in MB) 190.864896
+Scheduler is currently registering the learning rate.
+Epoch 1, Pointwise Training loss 1.0169355580883641, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.10000920295715, Full test loss: 12.605995535850525
+The current learning rate is: 0.01
+Best model saved at /home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoint/tanh_overfit_model/heatmap_12.6060.pt
+Model parameters are of the following size 231
+Epoch 2 started ======>
+train batch for epoch #  2 ==============>
+test batch for epoch #  2 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 2, Pointwise Training loss 1.0204146211185763, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.53141301870346, Full test loss: 12.605995535850525
+The current learning rate is: 0.01
+Epoch 3 started ======>
+train batch for epoch #  3 ==============>
+test batch for epoch #  3 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 3, Pointwise Training loss 1.0194086985241981, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.40667861700058, Full test loss: 12.605995535850525
+The current learning rate is: 0.01
+Epoch 4 started ======>
+train batch for epoch #  4 ==============>
+test batch for epoch #  4 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 4, Pointwise Training loss 1.0197258961777533, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.44601112604141, Full test loss: 12.605995535850525
+The current learning rate is: 0.01
+Epoch 5 started ======>
+train batch for epoch #  5 ==============>
+test batch for epoch #  5 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 5, Pointwise Training loss 1.0191393734947327, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.37328231334686, Full test loss: 12.605995535850525
+The current learning rate is: 0.01
+Epoch 6 started ======>
+train batch for epoch #  6 ==============>
+test batch for epoch #  6 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 6, Pointwise Training loss 1.0191545856575812, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.37516862154007, Full test loss: 12.605995535850525
+The current learning rate is: 0.01
+Epoch 7 started ======>
+train batch for epoch #  7 ==============>
+test batch for epoch #  7 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 7, Pointwise Training loss 1.0199619233608246, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.47527849674225, Full test loss: 12.605995535850525
+The current learning rate is: 0.01
+Epoch 8 started ======>
+train batch for epoch #  8 ==============>
+test batch for epoch #  8 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 8, Pointwise Training loss 1.0190454428234408, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.36163491010666, Full test loss: 12.605995535850525
+The current learning rate is: 0.01
+Epoch 9 started ======>
+train batch for epoch #  9 ==============>
+test batch for epoch #  9 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 9, Pointwise Training loss 1.0193121856258762, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.39471101760864, Full test loss: 12.605995535850525
+The current learning rate is: 0.01
+Epoch 10 started ======>
+train batch for epoch #  10 ==============>
+test batch for epoch #  10 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 10, Pointwise Training loss 1.0198761070928266, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.4646372795105, Full test loss: 12.605995535850525
+The current learning rate is: 0.01
+Epoch 11 started ======>
+train batch for epoch #  11 ==============>
+test batch for epoch #  11 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 11, Pointwise Training loss 1.0192879125956567, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.39170116186142, Full test loss: 12.605995535850525
+The current learning rate is: 0.01
+Epoch 12 started ======>
+train batch for epoch #  12 ==============>
+test batch for epoch #  12 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 12, Pointwise Training loss 1.019214786829487, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.38263356685638, Full test loss: 12.605995535850525
+The current learning rate is: 0.005
+Epoch 13 started ======>
+train batch for epoch #  13 ==============>
+test batch for epoch #  13 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 13, Pointwise Training loss 1.0190918719576252, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.36739212274551, Full test loss: 12.605995535850525
+The current learning rate is: 0.005
+Epoch 14 started ======>
+train batch for epoch #  14 ==============>
+test batch for epoch #  14 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 14, Pointwise Training loss 1.0195000287025207, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.41800355911255, Full test loss: 12.605995535850525
+The current learning rate is: 0.005
+Epoch 15 started ======>
+train batch for epoch #  15 ==============>
+test batch for epoch #  15 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 15, Pointwise Training loss 1.0193141689223628, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.39495694637299, Full test loss: 12.605995535850525
+The current learning rate is: 0.005
+Epoch 16 started ======>
+train batch for epoch #  16 ==============>
+test batch for epoch #  16 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 16, Pointwise Training loss 1.01932641142799, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.39647501707077, Full test loss: 12.605995535850525
+The current learning rate is: 0.005
+Epoch 17 started ======>
+train batch for epoch #  17 ==============>
+test batch for epoch #  17 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 17, Pointwise Training loss 1.0196933457928319, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.44197487831116, Full test loss: 12.605995535850525
+The current learning rate is: 0.005
+Epoch 18 started ======>
+train batch for epoch #  18 ==============>
+test batch for epoch #  18 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 18, Pointwise Training loss 1.0191547971579336, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.37519484758377, Full test loss: 12.605995535850525
+The current learning rate is: 0.005
+Epoch 19 started ======>
+train batch for epoch #  19 ==============>
+test batch for epoch #  19 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 19, Pointwise Training loss 1.0193663311581458, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.40142506361008, Full test loss: 12.605995535850525
+The current learning rate is: 0.005
+Epoch 20 started ======>
+train batch for epoch #  20 ==============>
+test batch for epoch #  20 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 20, Pointwise Training loss 1.0194773299078788, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.41518890857697, Full test loss: 12.605995535850525
+The current learning rate is: 0.005
+Epoch 21 started ======>
+train batch for epoch #  21 ==============>
+test batch for epoch #  21 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 21, Pointwise Training loss 1.0195068745843825, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.41885244846344, Full test loss: 12.605995535850525
+The current learning rate is: 0.005
+Epoch 22 started ======>
+train batch for epoch #  22 ==============>
+test batch for epoch #  22 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 22, Pointwise Training loss 1.0199678641173147, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.47601515054703, Full test loss: 12.605995535850525
+The current learning rate is: 0.005
+Epoch 23 started ======>
+train batch for epoch #  23 ==============>
+test batch for epoch #  23 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 23, Pointwise Training loss 1.0192961567832577, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.39272344112396, Full test loss: 12.605995535850525
+The current learning rate is: 0.0025
+Epoch 24 started ======>
+train batch for epoch #  24 ==============>
+test batch for epoch #  24 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 24, Pointwise Training loss 1.0192172628256582, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.38294059038162, Full test loss: 12.605995535850525
+The current learning rate is: 0.0025
+Epoch 25 started ======>
+train batch for epoch #  25 ==============>
+test batch for epoch #  25 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 25, Pointwise Training loss 1.0200636968497307, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.48789840936661, Full test loss: 12.605995535850525
+The current learning rate is: 0.0025
+Epoch 26 started ======>
+train batch for epoch #  26 ==============>
+test batch for epoch #  26 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 26, Pointwise Training loss 1.0202543245207878, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.5115362405777, Full test loss: 12.605995535850525
+The current learning rate is: 0.0025
+Epoch 27 started ======>
+train batch for epoch #  27 ==============>
+test batch for epoch #  27 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 27, Pointwise Training loss 1.0191451960032987, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.37400430440903, Full test loss: 12.605995535850525
+The current learning rate is: 0.0025
+Epoch 28 started ======>
+train batch for epoch #  28 ==============>
+test batch for epoch #  28 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 28, Pointwise Training loss 1.0197501788216252, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.44902217388153, Full test loss: 12.605995535850525
+The current learning rate is: 0.0025
+Epoch 29 started ======>
+train batch for epoch #  29 ==============>
+test batch for epoch #  29 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 29, Pointwise Training loss 1.020428944499262, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.53318911790848, Full test loss: 12.605995535850525
+The current learning rate is: 0.0025
+Epoch 30 started ======>
+train batch for epoch #  30 ==============>
+test batch for epoch #  30 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 30, Pointwise Training loss 1.0193147116130399, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.39502424001694, Full test loss: 12.605995535850525
+The current learning rate is: 0.0025
+Epoch 31 started ======>
+train batch for epoch #  31 ==============>
+test batch for epoch #  31 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 31, Pointwise Training loss 1.0194098497590711, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.40682137012482, Full test loss: 12.605995535850525
+The current learning rate is: 0.0025
+Epoch 32 started ======>
+train batch for epoch #  32 ==============>
+test batch for epoch #  32 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 32, Pointwise Training loss 1.0192135394580903, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.38247889280319, Full test loss: 12.605995535850525
+The current learning rate is: 0.0025
+Epoch 33 started ======>
+train batch for epoch #  33 ==============>
+test batch for epoch #  33 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 33, Pointwise Training loss 1.0191769051936366, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.37793624401093, Full test loss: 12.605995535850525
+The current learning rate is: 0.0025
+Epoch 34 started ======>
+train batch for epoch #  34 ==============>
+test batch for epoch #  34 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 34, Pointwise Training loss 1.0194738771646255, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.41476076841354, Full test loss: 12.605995535850525
+The current learning rate is: 0.00125
+Epoch 35 started ======>
+train batch for epoch #  35 ==============>
+test batch for epoch #  35 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 35, Pointwise Training loss 1.0195750911389627, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.42731130123138, Full test loss: 12.605995535850525
+The current learning rate is: 0.00125
+Epoch 36 started ======>
+train batch for epoch #  36 ==============>
+test batch for epoch #  36 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 36, Pointwise Training loss 1.0197171189131276, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.44492274522781, Full test loss: 12.605995535850525
+The current learning rate is: 0.00125
+Epoch 37 started ======>
+train batch for epoch #  37 ==============>
+test batch for epoch #  37 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 37, Pointwise Training loss 1.0200706489624516, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.488760471344, Full test loss: 12.605995535850525
+The current learning rate is: 0.00125
+Epoch 38 started ======>
+train batch for epoch #  38 ==============>
+test batch for epoch #  38 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 38, Pointwise Training loss 1.019595263946441, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.42981272935867, Full test loss: 12.605995535850525
+The current learning rate is: 0.00125
+Epoch 39 started ======>
+train batch for epoch #  39 ==============>
+test batch for epoch #  39 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 39, Pointwise Training loss 1.019644781947136, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.43595296144485, Full test loss: 12.605995535850525
+The current learning rate is: 0.00125
+Epoch 40 started ======>
+train batch for epoch #  40 ==============>
+test batch for epoch #  40 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 40, Pointwise Training loss 1.0196624830845864, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.43814790248871, Full test loss: 12.605995535850525
+The current learning rate is: 0.00125
+Epoch 41 started ======>
+train batch for epoch #  41 ==============>
+test batch for epoch #  41 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 41, Pointwise Training loss 1.0194993547854885, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.41791999340057, Full test loss: 12.605995535850525
+The current learning rate is: 0.00125
+Epoch 42 started ======>
+train batch for epoch #  42 ==============>
+test batch for epoch #  42 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 42, Pointwise Training loss 1.0192487384042432, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.38684356212616, Full test loss: 12.605995535850525
+The current learning rate is: 0.00125
+Epoch 43 started ======>
+train batch for epoch #  43 ==============>
+test batch for epoch #  43 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 43, Pointwise Training loss 1.0194158486781582, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.40756523609161, Full test loss: 12.605995535850525
+The current learning rate is: 0.00125
+Epoch 44 started ======>
+train batch for epoch #  44 ==============>
+test batch for epoch #  44 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 44, Pointwise Training loss 1.020067659597243, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.48838979005814, Full test loss: 12.605995535850525
+The current learning rate is: 0.00125
+Epoch 45 started ======>
+train batch for epoch #  45 ==============>
+test batch for epoch #  45 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 45, Pointwise Training loss 1.0197959893172788, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.45470267534256, Full test loss: 12.605995535850525
+The current learning rate is: 0.000625
+Epoch 46 started ======>
+train batch for epoch #  46 ==============>
+test batch for epoch #  46 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 46, Pointwise Training loss 1.0202841710659765, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.51523721218109, Full test loss: 12.605995535850525
+The current learning rate is: 0.000625
+Epoch 47 started ======>
+train batch for epoch #  47 ==============>
+test batch for epoch #  47 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 47, Pointwise Training loss 1.0197805247960552, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.45278507471085, Full test loss: 12.605995535850525
+The current learning rate is: 0.000625
+Epoch 48 started ======>
+train batch for epoch #  48 ==============>
+test batch for epoch #  48 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 48, Pointwise Training loss 1.0197572501436356, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.44989901781082, Full test loss: 12.605995535850525
+The current learning rate is: 0.000625
+Epoch 49 started ======>
+train batch for epoch #  49 ==============>
+test batch for epoch #  49 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 49, Pointwise Training loss 1.0196067887929179, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.43124181032181, Full test loss: 12.605995535850525
+The current learning rate is: 0.000625
+Epoch 50 started ======>
+train batch for epoch #  50 ==============>
+test batch for epoch #  50 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 50, Pointwise Training loss 1.0195486757063097, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.4240357875824, Full test loss: 12.605995535850525
+The current learning rate is: 0.000625
+Epoch 51 started ======>
+train batch for epoch #  51 ==============>
+test batch for epoch #  51 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 51, Pointwise Training loss 1.0199665109957419, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.47584736347198, Full test loss: 12.605995535850525
+The current learning rate is: 0.000625
+Epoch 52 started ======>
+train batch for epoch #  52 ==============>
+test batch for epoch #  52 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 52, Pointwise Training loss 1.0195547207709281, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.42478537559509, Full test loss: 12.605995535850525
+The current learning rate is: 0.000625
+Epoch 53 started ======>
+train batch for epoch #  53 ==============>
+test batch for epoch #  53 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 53, Pointwise Training loss 1.0195676775709275, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.42639201879501, Full test loss: 12.605995535850525
+The current learning rate is: 0.000625
+Epoch 54 started ======>
+train batch for epoch #  54 ==============>
+test batch for epoch #  54 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 54, Pointwise Training loss 1.019367203116417, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.4015331864357, Full test loss: 12.605995535850525
+The current learning rate is: 0.000625
+Epoch 55 started ======>
+train batch for epoch #  55 ==============>
+test batch for epoch #  55 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 55, Pointwise Training loss 1.0198393113190127, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.46007460355759, Full test loss: 12.605995535850525
+The current learning rate is: 0.000625
+Epoch 56 started ======>
+train batch for epoch #  56 ==============>
+test batch for epoch #  56 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 56, Pointwise Training loss 1.0191591160912667, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.37573039531708, Full test loss: 12.605995535850525
+The current learning rate is: 0.0003125
+Epoch 57 started ======>
+train batch for epoch #  57 ==============>
+test batch for epoch #  57 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 57, Pointwise Training loss 1.019557665432653, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.42515051364899, Full test loss: 12.605995535850525
+The current learning rate is: 0.0003125
+Epoch 58 started ======>
+train batch for epoch #  58 ==============>
+test batch for epoch #  58 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 58, Pointwise Training loss 1.019454494599373, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.41235733032227, Full test loss: 12.605995535850525
+The current learning rate is: 0.0003125
+Epoch 59 started ======>
+train batch for epoch #  59 ==============>
+test batch for epoch #  59 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 59, Pointwise Training loss 1.019501289052348, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.41815984249115, Full test loss: 12.605995535850525
+The current learning rate is: 0.0003125
+Epoch 60 started ======>
+train batch for epoch #  60 ==============>
+test batch for epoch #  60 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 60, Pointwise Training loss 1.019428311336425, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.4091106057167, Full test loss: 12.605995535850525
+The current learning rate is: 0.0003125
+Epoch 61 started ======>
+train batch for epoch #  61 ==============>
+test batch for epoch #  61 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 61, Pointwise Training loss 1.0198633151669656, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.46305108070374, Full test loss: 12.605995535850525
+The current learning rate is: 0.0003125
+Epoch 62 started ======>
+train batch for epoch #  62 ==============>
+test batch for epoch #  62 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 62, Pointwise Training loss 1.0193694190632911, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.40180796384811, Full test loss: 12.605995535850525
+The current learning rate is: 0.0003125
+Epoch 63 started ======>
+train batch for epoch #  63 ==============>
+test batch for epoch #  63 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 63, Pointwise Training loss 1.0204814441742436, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.5396990776062, Full test loss: 12.605995535850525
+The current learning rate is: 0.0003125
+Epoch 64 started ======>
+train batch for epoch #  64 ==============>
+test batch for epoch #  64 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 64, Pointwise Training loss 1.0191083752339887, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.36943852901459, Full test loss: 12.605995535850525
+The current learning rate is: 0.0003125
+Epoch 65 started ======>
+train batch for epoch #  65 ==============>
+test batch for epoch #  65 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 65, Pointwise Training loss 1.0193218675351912, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.39591157436371, Full test loss: 12.605995535850525
+The current learning rate is: 0.0003125
+Epoch 66 started ======>
+train batch for epoch #  66 ==============>
+test batch for epoch #  66 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 66, Pointwise Training loss 1.019592422631479, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.4294604063034, Full test loss: 12.605995535850525
+The current learning rate is: 0.0003125
+Epoch 67 started ======>
+train batch for epoch #  67 ==============>
+test batch for epoch #  67 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 67, Pointwise Training loss 1.0201689115455073, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.50094503164291, Full test loss: 12.605995535850525
+The current learning rate is: 0.00015625
+Epoch 68 started ======>
+train batch for epoch #  68 ==============>
+test batch for epoch #  68 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 68, Pointwise Training loss 1.0200651696612757, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.4880810379982, Full test loss: 12.605995535850525
+The current learning rate is: 0.00015625
+Epoch 69 started ======>
+train batch for epoch #  69 ==============>
+test batch for epoch #  69 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 69, Pointwise Training loss 1.0195428128204038, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.42330878973007, Full test loss: 12.605995535850525
+The current learning rate is: 0.00015625
+Epoch 70 started ======>
+train batch for epoch #  70 ==============>
+test batch for epoch #  70 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 70, Pointwise Training loss 1.0200084808372682, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.48105162382126, Full test loss: 12.605995535850525
+The current learning rate is: 0.00015625
+Epoch 71 started ======>
+train batch for epoch #  71 ==============>
+test batch for epoch #  71 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 71, Pointwise Training loss 1.0192954247036288, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.39263266324997, Full test loss: 12.605995535850525
+The current learning rate is: 0.00015625
+Epoch 72 started ======>
+train batch for epoch #  72 ==============>
+test batch for epoch #  72 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 72, Pointwise Training loss 1.0204812629568962, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.53967660665512, Full test loss: 12.605995535850525
+The current learning rate is: 0.00015625
+Epoch 73 started ======>
+train batch for epoch #  73 ==============>
+test batch for epoch #  73 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 73, Pointwise Training loss 1.0190799044024559, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.36590814590454, Full test loss: 12.605995535850525
+The current learning rate is: 0.00015625
+Epoch 74 started ======>
+train batch for epoch #  74 ==============>
+test batch for epoch #  74 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 74, Pointwise Training loss 1.019500110418566, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.41801369190216, Full test loss: 12.605995535850525
+The current learning rate is: 0.00015625
+Epoch 75 started ======>
+train batch for epoch #  75 ==============>
+test batch for epoch #  75 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 75, Pointwise Training loss 1.0199072884936486, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.46850377321243, Full test loss: 12.605995535850525
+The current learning rate is: 0.00015625
+Epoch 76 started ======>
+train batch for epoch #  76 ==============>
+test batch for epoch #  76 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 76, Pointwise Training loss 1.0192007350344812, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.38089114427567, Full test loss: 12.605995535850525
+The current learning rate is: 0.00015625
+Epoch 77 started ======>
+train batch for epoch #  77 ==============>
+test batch for epoch #  77 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 77, Pointwise Training loss 1.0195280010661771, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.42147213220596, Full test loss: 12.605995535850525
+The current learning rate is: 0.00015625
+Epoch 78 started ======>
+train batch for epoch #  78 ==============>
+test batch for epoch #  78 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 78, Pointwise Training loss 1.0190309045776245, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.35983216762543, Full test loss: 12.605995535850525
+The current learning rate is: 7.8125e-05
+Epoch 79 started ======>
+train batch for epoch #  79 ==============>
+test batch for epoch #  79 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 79, Pointwise Training loss 1.01911172847594, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.36985433101654, Full test loss: 12.605995535850525
+The current learning rate is: 7.8125e-05
+Epoch 80 started ======>
+train batch for epoch #  80 ==============>
+test batch for epoch #  80 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 80, Pointwise Training loss 1.019199628503092, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.38075393438339, Full test loss: 12.605995535850525
+The current learning rate is: 7.8125e-05
+Epoch 81 started ======>
+train batch for epoch #  81 ==============>
+test batch for epoch #  81 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 81, Pointwise Training loss 1.019312911456631, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.39480102062225, Full test loss: 12.605995535850525
+The current learning rate is: 7.8125e-05
+Epoch 82 started ======>
+train batch for epoch #  82 ==============>
+test batch for epoch #  82 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 82, Pointwise Training loss 1.019183771744851, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.37878769636154, Full test loss: 12.605995535850525
+The current learning rate is: 7.8125e-05
+Epoch 83 started ======>
+train batch for epoch #  83 ==============>
+test batch for epoch #  83 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 83, Pointwise Training loss 1.0197343244667976, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.4470562338829, Full test loss: 12.605995535850525
+The current learning rate is: 7.8125e-05
+Epoch 84 started ======>
+train batch for epoch #  84 ==============>
+test batch for epoch #  84 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 84, Pointwise Training loss 1.0196022501876276, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.43067902326584, Full test loss: 12.605995535850525
+The current learning rate is: 7.8125e-05
+Epoch 85 started ======>
+train batch for epoch #  85 ==============>
+test batch for epoch #  85 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 85, Pointwise Training loss 1.0199846346532144, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.4780946969986, Full test loss: 12.605995535850525
+The current learning rate is: 7.8125e-05
+Epoch 86 started ======>
+train batch for epoch #  86 ==============>
+test batch for epoch #  86 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 86, Pointwise Training loss 1.0198420166007933, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.46041005849838, Full test loss: 12.605995535850525
+The current learning rate is: 7.8125e-05
+Epoch 87 started ======>
+train batch for epoch #  87 ==============>
+test batch for epoch #  87 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 87, Pointwise Training loss 1.0196995129508357, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.44273960590363, Full test loss: 12.605995535850525
+The current learning rate is: 7.8125e-05
+Epoch 88 started ======>
+train batch for epoch #  88 ==============>
+test batch for epoch #  88 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 88, Pointwise Training loss 1.0190951492517226, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.36779850721359, Full test loss: 12.605995535850525
+The current learning rate is: 7.8125e-05
+Epoch 89 started ======>
+train batch for epoch #  89 ==============>
+test batch for epoch #  89 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 89, Pointwise Training loss 1.0197800878555543, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.45273089408875, Full test loss: 12.605995535850525
+The current learning rate is: 3.90625e-05
+Epoch 90 started ======>
+train batch for epoch #  90 ==============>
+test batch for epoch #  90 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 90, Pointwise Training loss 1.019236540121417, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.3853309750557, Full test loss: 12.605995535850525
+The current learning rate is: 3.90625e-05
+Epoch 91 started ======>
+train batch for epoch #  91 ==============>
+test batch for epoch #  91 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 91, Pointwise Training loss 1.0194598758412945, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.41302460432053, Full test loss: 12.605995535850525
+The current learning rate is: 3.90625e-05
+Epoch 92 started ======>
+train batch for epoch #  92 ==============>
+test batch for epoch #  92 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 92, Pointwise Training loss 1.020135397872617, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.49678933620453, Full test loss: 12.605995535850525
+The current learning rate is: 3.90625e-05
+Epoch 93 started ======>
+train batch for epoch #  93 ==============>
+test batch for epoch #  93 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 93, Pointwise Training loss 1.01980526312705, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.45585262775421, Full test loss: 12.605995535850525
+The current learning rate is: 3.90625e-05
+Epoch 94 started ======>
+train batch for epoch #  94 ==============>
+test batch for epoch #  94 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 94, Pointwise Training loss 1.019692588237024, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.44188094139099, Full test loss: 12.605995535850525
+The current learning rate is: 3.90625e-05
+Epoch 95 started ======>
+train batch for epoch #  95 ==============>
+test batch for epoch #  95 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 95, Pointwise Training loss 1.0195848249620008, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.42851829528809, Full test loss: 12.605995535850525
+The current learning rate is: 3.90625e-05
+Epoch 96 started ======>
+train batch for epoch #  96 ==============>
+test batch for epoch #  96 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 96, Pointwise Training loss 1.0194295639953306, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.40926593542099, Full test loss: 12.605995535850525
+The current learning rate is: 3.90625e-05
+Epoch 97 started ======>
+train batch for epoch #  97 ==============>
+test batch for epoch #  97 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 97, Pointwise Training loss 1.0191182186526637, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.3706591129303, Full test loss: 12.605995535850525
+The current learning rate is: 3.90625e-05
+Epoch 98 started ======>
+train batch for epoch #  98 ==============>
+test batch for epoch #  98 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 98, Pointwise Training loss 1.019306018948555, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.39394634962082, Full test loss: 12.605995535850525
+The current learning rate is: 3.90625e-05
+Epoch 99 started ======>
+train batch for epoch #  99 ==============>
+test batch for epoch #  99 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 99, Pointwise Training loss 1.0196896921242438, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.44152182340622, Full test loss: 12.605995535850525
+The current learning rate is: 3.90625e-05
+Epoch 100 started ======>
+train batch for epoch #  100 ==============>
+test batch for epoch #  100 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 100, Pointwise Training loss 1.0197395754437293, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.44770735502243, Full test loss: 12.605995535850525
+The current learning rate is: 1.953125e-05
+Epoch 101 started ======>
+train batch for epoch #  101 ==============>
+test batch for epoch #  101 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 101, Pointwise Training loss 1.0196267121261167, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.43371230363846, Full test loss: 12.605995535850525
+The current learning rate is: 1.953125e-05
+Epoch 102 started ======>
+train batch for epoch #  102 ==============>
+test batch for epoch #  102 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 102, Pointwise Training loss 1.019569922358759, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.42667037248611, Full test loss: 12.605995535850525
+The current learning rate is: 1.953125e-05
+Epoch 103 started ======>
+train batch for epoch #  103 ==============>
+test batch for epoch #  103 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 103, Pointwise Training loss 1.0196487783424315, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.43644851446152, Full test loss: 12.605995535850525
+The current learning rate is: 1.953125e-05
+Epoch 104 started ======>
+train batch for epoch #  104 ==============>
+test batch for epoch #  104 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 104, Pointwise Training loss 1.0190515744109307, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.36239522695541, Full test loss: 12.605995535850525
+The current learning rate is: 1.953125e-05
+Epoch 105 started ======>
+train batch for epoch #  105 ==============>
+test batch for epoch #  105 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 105, Pointwise Training loss 1.0195253005912226, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.42113727331161, Full test loss: 12.605995535850525
+The current learning rate is: 1.953125e-05
+Epoch 106 started ======>
+train batch for epoch #  106 ==============>
+test batch for epoch #  106 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 106, Pointwise Training loss 1.0199424643670358, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.47286558151245, Full test loss: 12.605995535850525
+The current learning rate is: 1.953125e-05
+Epoch 107 started ======>
+train batch for epoch #  107 ==============>
+test batch for epoch #  107 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 107, Pointwise Training loss 1.0200195115420125, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.48241943120956, Full test loss: 12.605995535850525
+The current learning rate is: 1.953125e-05
+Epoch 108 started ======>
+train batch for epoch #  108 ==============>
+test batch for epoch #  108 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 108, Pointwise Training loss 1.0204044426641157, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.53015089035034, Full test loss: 12.605995535850525
+The current learning rate is: 1.953125e-05
+Epoch 109 started ======>
+train batch for epoch #  109 ==============>
+test batch for epoch #  109 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 109, Pointwise Training loss 1.0190733036687296, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.36508965492249, Full test loss: 12.605995535850525
+The current learning rate is: 1.953125e-05
+Epoch 110 started ======>
+train batch for epoch #  110 ==============>
+test batch for epoch #  110 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 110, Pointwise Training loss 1.0194741006820434, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.41478848457336, Full test loss: 12.605995535850525
+The current learning rate is: 1.953125e-05
+Epoch 111 started ======>
+train batch for epoch #  111 ==============>
+test batch for epoch #  111 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 111, Pointwise Training loss 1.0199163647428635, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.46962922811508, Full test loss: 12.605995535850525
+The current learning rate is: 9.765625e-06
+Epoch 112 started ======>
+train batch for epoch #  112 ==============>
+test batch for epoch #  112 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 112, Pointwise Training loss 1.0192905371227572, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.3920266032219, Full test loss: 12.605995535850525
+The current learning rate is: 9.765625e-06
+Epoch 113 started ======>
+train batch for epoch #  113 ==============>
+test batch for epoch #  113 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 113, Pointwise Training loss 1.0196397833285793, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.43533313274384, Full test loss: 12.605995535850525
+The current learning rate is: 9.765625e-06
+Epoch 114 started ======>
+train batch for epoch #  114 ==============>
+test batch for epoch #  114 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 114, Pointwise Training loss 1.0196445262239826, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.43592125177383, Full test loss: 12.605995535850525
+The current learning rate is: 9.765625e-06
+Epoch 115 started ======>
+train batch for epoch #  115 ==============>
+test batch for epoch #  115 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 115, Pointwise Training loss 1.0195609114823803, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.42555302381516, Full test loss: 12.605995535850525
+The current learning rate is: 9.765625e-06
+Epoch 116 started ======>
+train batch for epoch #  116 ==============>
+test batch for epoch #  116 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 116, Pointwise Training loss 1.0192674643570376, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.38916558027267, Full test loss: 12.605995535850525
+The current learning rate is: 9.765625e-06
+Epoch 117 started ======>
+train batch for epoch #  117 ==============>
+test batch for epoch #  117 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 117, Pointwise Training loss 1.019531263939796, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.4218767285347, Full test loss: 12.605995535850525
+The current learning rate is: 9.765625e-06
+Epoch 118 started ======>
+train batch for epoch #  118 ==============>
+test batch for epoch #  118 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 118, Pointwise Training loss 1.019220866503254, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.3833874464035, Full test loss: 12.605995535850525
+The current learning rate is: 9.765625e-06
+Epoch 119 started ======>
+train batch for epoch #  119 ==============>
+test batch for epoch #  119 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 119, Pointwise Training loss 1.0192541638689656, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.38751631975174, Full test loss: 12.605995535850525
+The current learning rate is: 9.765625e-06
+Epoch 120 started ======>
+train batch for epoch #  120 ==============>
+test batch for epoch #  120 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 120, Pointwise Training loss 1.0195413659657202, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.4231293797493, Full test loss: 12.605995535850525
+The current learning rate is: 9.765625e-06
+Epoch 121 started ======>
+train batch for epoch #  121 ==============>
+test batch for epoch #  121 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 121, Pointwise Training loss 1.0191090856828997, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.36952662467957, Full test loss: 12.605995535850525
+The current learning rate is: 9.765625e-06
+Epoch 122 started ======>
+train batch for epoch #  122 ==============>
+test batch for epoch #  122 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 122, Pointwise Training loss 1.0195507599461464, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.42429423332214, Full test loss: 12.605995535850525
+The current learning rate is: 4.8828125e-06
+Epoch 123 started ======>
+train batch for epoch #  123 ==============>
+test batch for epoch #  123 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 123, Pointwise Training loss 1.0191498206507774, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.37457776069641, Full test loss: 12.605995535850525
+The current learning rate is: 4.8828125e-06
+Epoch 124 started ======>
+train batch for epoch #  124 ==============>
+test batch for epoch #  124 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 124, Pointwise Training loss 1.0200159727565703, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.48198062181473, Full test loss: 12.605995535850525
+The current learning rate is: 4.8828125e-06
+Epoch 125 started ======>
+train batch for epoch #  125 ==============>
+test batch for epoch #  125 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 125, Pointwise Training loss 1.020088912979249, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.49102520942688, Full test loss: 12.605995535850525
+The current learning rate is: 4.8828125e-06
+Epoch 126 started ======>
+train batch for epoch #  126 ==============>
+test batch for epoch #  126 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 126, Pointwise Training loss 1.0192182472636622, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.38306266069412, Full test loss: 12.605995535850525
+The current learning rate is: 4.8828125e-06
+Epoch 127 started ======>
+train batch for epoch #  127 ==============>
+test batch for epoch #  127 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 127, Pointwise Training loss 1.0193870721324798, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.40399694442749, Full test loss: 12.605995535850525
+The current learning rate is: 4.8828125e-06
+Epoch 128 started ======>
+train batch for epoch #  128 ==============>
+test batch for epoch #  128 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 128, Pointwise Training loss 1.0193939881940042, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.40485453605652, Full test loss: 12.605995535850525
+The current learning rate is: 4.8828125e-06
+Epoch 129 started ======>
+train batch for epoch #  129 ==============>
+test batch for epoch #  129 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 129, Pointwise Training loss 1.0194670995396953, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.41392034292221, Full test loss: 12.605995535850525
+The current learning rate is: 4.8828125e-06
+Epoch 130 started ======>
+train batch for epoch #  130 ==============>
+test batch for epoch #  130 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 130, Pointwise Training loss 1.0204503661201847, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.5358453989029, Full test loss: 12.605995535850525
+The current learning rate is: 4.8828125e-06
+Epoch 131 started ======>
+train batch for epoch #  131 ==============>
+test batch for epoch #  131 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 131, Pointwise Training loss 1.019912080418679, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.4690979719162, Full test loss: 12.605995535850525
+The current learning rate is: 4.8828125e-06
+Epoch 132 started ======>
+train batch for epoch #  132 ==============>
+test batch for epoch #  132 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 132, Pointwise Training loss 1.0201395413567942, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.49730312824249, Full test loss: 12.605995535850525
+The current learning rate is: 4.8828125e-06
+Epoch 133 started ======>
+train batch for epoch #  133 ==============>
+test batch for epoch #  133 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 133, Pointwise Training loss 1.0197356275973781, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.44721782207489, Full test loss: 12.605995535850525
+The current learning rate is: 2.44140625e-06
+Epoch 134 started ======>
+train batch for epoch #  134 ==============>
+test batch for epoch #  134 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 134, Pointwise Training loss 1.0202592145050726, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.512142598629, Full test loss: 12.605995535850525
+The current learning rate is: 2.44140625e-06
+Epoch 135 started ======>
+train batch for epoch #  135 ==============>
+test batch for epoch #  135 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 135, Pointwise Training loss 1.0190281151763854, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.3594862818718, Full test loss: 12.605995535850525
+The current learning rate is: 2.44140625e-06
+Epoch 136 started ======>
+train batch for epoch #  136 ==============>
+test batch for epoch #  136 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 136, Pointwise Training loss 1.0194419396500434, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.41080051660538, Full test loss: 12.605995535850525
+The current learning rate is: 2.44140625e-06
+Epoch 137 started ======>
+train batch for epoch #  137 ==============>
+test batch for epoch #  137 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 137, Pointwise Training loss 1.0196331061663166, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.43450516462326, Full test loss: 12.605995535850525
+The current learning rate is: 2.44140625e-06
+Epoch 138 started ======>
+train batch for epoch #  138 ==============>
+test batch for epoch #  138 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 138, Pointwise Training loss 1.019099622964859, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.36835324764252, Full test loss: 12.605995535850525
+The current learning rate is: 2.44140625e-06
+Epoch 139 started ======>
+train batch for epoch #  139 ==============>
+test batch for epoch #  139 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 139, Pointwise Training loss 1.019270205209332, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.38950544595718, Full test loss: 12.605995535850525
+The current learning rate is: 2.44140625e-06
+Epoch 140 started ======>
+train batch for epoch #  140 ==============>
+test batch for epoch #  140 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 140, Pointwise Training loss 1.0193052585086515, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.39385205507278, Full test loss: 12.605995535850525
+The current learning rate is: 2.44140625e-06
+Epoch 141 started ======>
+train batch for epoch #  141 ==============>
+test batch for epoch #  141 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 141, Pointwise Training loss 1.0194965403887533, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.41757100820541, Full test loss: 12.605995535850525
+The current learning rate is: 2.44140625e-06
+Epoch 142 started ======>
+train batch for epoch #  142 ==============>
+test batch for epoch #  142 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 142, Pointwise Training loss 1.0194632228343719, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.4134396314621, Full test loss: 12.605995535850525
+The current learning rate is: 2.44140625e-06
+Epoch 143 started ======>
+train batch for epoch #  143 ==============>
+test batch for epoch #  143 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 143, Pointwise Training loss 1.0197170775744222, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.44491761922836, Full test loss: 12.605995535850525
+The current learning rate is: 2.44140625e-06
+Epoch 144 started ======>
+train batch for epoch #  144 ==============>
+test batch for epoch #  144 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 144, Pointwise Training loss 1.0199654938713196, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.47572124004364, Full test loss: 12.605995535850525
+The current learning rate is: 1.220703125e-06
+Epoch 145 started ======>
+train batch for epoch #  145 ==============>
+test batch for epoch #  145 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 145, Pointwise Training loss 1.019576262081823, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.42745649814606, Full test loss: 12.605995535850525
+The current learning rate is: 1.220703125e-06
+Epoch 146 started ======>
+train batch for epoch #  146 ==============>
+test batch for epoch #  146 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 146, Pointwise Training loss 1.0193308793729352, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.39702904224396, Full test loss: 12.605995535850525
+The current learning rate is: 1.220703125e-06
+Epoch 147 started ======>
+train batch for epoch #  147 ==============>
+test batch for epoch #  147 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 147, Pointwise Training loss 1.0195470288876565, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.4238315820694, Full test loss: 12.605995535850525
+The current learning rate is: 1.220703125e-06
+Epoch 148 started ======>
+train batch for epoch #  148 ==============>
+test batch for epoch #  148 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 148, Pointwise Training loss 1.0194975440540621, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.4176954627037, Full test loss: 12.605995535850525
+The current learning rate is: 1.220703125e-06
+Epoch 149 started ======>
+train batch for epoch #  149 ==============>
+test batch for epoch #  149 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 149, Pointwise Training loss 1.0199081527609979, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.46861094236374, Full test loss: 12.605995535850525
+The current learning rate is: 1.220703125e-06
+Epoch 150 started ======>
+train batch for epoch #  150 ==============>
+test batch for epoch #  150 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 150, Pointwise Training loss 1.0196797222860399, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.44028556346893, Full test loss: 12.605995535850525
+The current learning rate is: 1.220703125e-06
+Epoch 151 started ======>
+train batch for epoch #  151 ==============>
+test batch for epoch #  151 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 151, Pointwise Training loss 1.0190531029816596, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.3625847697258, Full test loss: 12.605995535850525
+The current learning rate is: 1.220703125e-06
+Epoch 152 started ======>
+train batch for epoch #  152 ==============>
+test batch for epoch #  152 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 152, Pointwise Training loss 1.0196172623865065, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.43254053592682, Full test loss: 12.605995535850525
+The current learning rate is: 1.220703125e-06
+Epoch 153 started ======>
+train batch for epoch #  153 ==============>
+test batch for epoch #  153 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 153, Pointwise Training loss 1.0195138963960833, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.41972315311432, Full test loss: 12.605995535850525
+The current learning rate is: 1.220703125e-06
+Epoch 154 started ======>
+train batch for epoch #  154 ==============>
+test batch for epoch #  154 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 154, Pointwise Training loss 1.0195604279156654, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.42549306154251, Full test loss: 12.605995535850525
+The current learning rate is: 1.220703125e-06
+Epoch 155 started ======>
+train batch for epoch #  155 ==============>
+test batch for epoch #  155 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 155, Pointwise Training loss 1.0196394939576425, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.43529725074768, Full test loss: 12.605995535850525
+The current learning rate is: 6.103515625e-07
+Epoch 156 started ======>
+train batch for epoch #  156 ==============>
+test batch for epoch #  156 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 156, Pointwise Training loss 1.018976454773257, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.35308039188385, Full test loss: 12.605995535850525
+The current learning rate is: 6.103515625e-07
+Epoch 157 started ======>
+train batch for epoch #  157 ==============>
+test batch for epoch #  157 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 157, Pointwise Training loss 1.019479620360559, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.41547292470932, Full test loss: 12.605995535850525
+The current learning rate is: 6.103515625e-07
+Epoch 158 started ======>
+train batch for epoch #  158 ==============>
+test batch for epoch #  158 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 158, Pointwise Training loss 1.0190385714654, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.3607828617096, Full test loss: 12.605995535850525
+The current learning rate is: 6.103515625e-07
+Epoch 159 started ======>
+train batch for epoch #  159 ==============>
+test batch for epoch #  159 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 159, Pointwise Training loss 1.0192070694700364, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.38167661428452, Full test loss: 12.605995535850525
+The current learning rate is: 6.103515625e-07
+Epoch 160 started ======>
+train batch for epoch #  160 ==============>
+test batch for epoch #  160 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 160, Pointwise Training loss 1.0198534953017389, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.46183341741562, Full test loss: 12.605995535850525
+The current learning rate is: 6.103515625e-07
+Epoch 161 started ======>
+train batch for epoch #  161 ==============>
+test batch for epoch #  161 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 161, Pointwise Training loss 1.019006918995611, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.35685795545578, Full test loss: 12.605995535850525
+The current learning rate is: 6.103515625e-07
+Epoch 162 started ======>
+train batch for epoch #  162 ==============>
+test batch for epoch #  162 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 162, Pointwise Training loss 1.0191194775604433, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.37081521749496, Full test loss: 12.605995535850525
+The current learning rate is: 6.103515625e-07
+Epoch 163 started ======>
+train batch for epoch #  163 ==============>
+test batch for epoch #  163 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 163, Pointwise Training loss 1.0195847807391998, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.42851281166077, Full test loss: 12.605995535850525
+The current learning rate is: 6.103515625e-07
+Epoch 164 started ======>
+train batch for epoch #  164 ==============>
+test batch for epoch #  164 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 164, Pointwise Training loss 1.019714543415654, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.44460338354111, Full test loss: 12.605995535850525
+The current learning rate is: 6.103515625e-07
+Epoch 165 started ======>
+train batch for epoch #  165 ==============>
+test batch for epoch #  165 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 165, Pointwise Training loss 1.0194001524679122, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.40561890602112, Full test loss: 12.605995535850525
+The current learning rate is: 6.103515625e-07
+Epoch 166 started ======>
+train batch for epoch #  166 ==============>
+test batch for epoch #  166 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 166, Pointwise Training loss 1.0196297240834082, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.43408578634262, Full test loss: 12.605995535850525
+The current learning rate is: 3.0517578125e-07
+Epoch 167 started ======>
+train batch for epoch #  167 ==============>
+test batch for epoch #  167 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 167, Pointwise Training loss 1.0198994576931, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.4675327539444, Full test loss: 12.605995535850525
+The current learning rate is: 3.0517578125e-07
+Epoch 168 started ======>
+train batch for epoch #  168 ==============>
+test batch for epoch #  168 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 168, Pointwise Training loss 1.0198200734392289, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.45768910646439, Full test loss: 12.605995535850525
+The current learning rate is: 3.0517578125e-07
+Epoch 169 started ======>
+train batch for epoch #  169 ==============>
+test batch for epoch #  169 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 169, Pointwise Training loss 1.0190850707792467, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.36654877662659, Full test loss: 12.605995535850525
+The current learning rate is: 3.0517578125e-07
+Epoch 170 started ======>
+train batch for epoch #  170 ==============>
+test batch for epoch #  170 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 170, Pointwise Training loss 1.018997084709906, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.35563850402832, Full test loss: 12.605995535850525
+The current learning rate is: 3.0517578125e-07
+Epoch 171 started ======>
+train batch for epoch #  171 ==============>
+test batch for epoch #  171 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 171, Pointwise Training loss 1.0200798083697595, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.48989623785019, Full test loss: 12.605995535850525
+The current learning rate is: 3.0517578125e-07
+Epoch 172 started ======>
+train batch for epoch #  172 ==============>
+test batch for epoch #  172 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 172, Pointwise Training loss 1.0192084052870352, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.38184225559235, Full test loss: 12.605995535850525
+The current learning rate is: 3.0517578125e-07
+Epoch 173 started ======>
+train batch for epoch #  173 ==============>
+test batch for epoch #  173 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 173, Pointwise Training loss 1.019238043215967, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.38551735877991, Full test loss: 12.605995535850525
+The current learning rate is: 3.0517578125e-07
+Epoch 174 started ======>
+train batch for epoch #  174 ==============>
+test batch for epoch #  174 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 174, Pointwise Training loss 1.0197258577231438, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.44600635766983, Full test loss: 12.605995535850525
+The current learning rate is: 3.0517578125e-07
+Epoch 175 started ======>
+train batch for epoch #  175 ==============>
+test batch for epoch #  175 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 175, Pointwise Training loss 1.0191143770371713, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.37018275260925, Full test loss: 12.605995535850525
+The current learning rate is: 3.0517578125e-07
+Epoch 176 started ======>
+train batch for epoch #  176 ==============>
+test batch for epoch #  176 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 176, Pointwise Training loss 1.0195253770197592, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.42114675045013, Full test loss: 12.605995535850525
+The current learning rate is: 3.0517578125e-07
+Epoch 177 started ======>
+train batch for epoch #  177 ==============>
+test batch for epoch #  177 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 177, Pointwise Training loss 1.0193513367445237, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.39956575632095, Full test loss: 12.605995535850525
+The current learning rate is: 1.52587890625e-07
+Epoch 178 started ======>
+train batch for epoch #  178 ==============>
+test batch for epoch #  178 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 178, Pointwise Training loss 1.0194803505174574, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.41556346416473, Full test loss: 12.605995535850525
+The current learning rate is: 1.52587890625e-07
+Epoch 179 started ======>
+train batch for epoch #  179 ==============>
+test batch for epoch #  179 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 179, Pointwise Training loss 1.0198295568266222, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.45886504650116, Full test loss: 12.605995535850525
+The current learning rate is: 1.52587890625e-07
+Epoch 180 started ======>
+train batch for epoch #  180 ==============>
+test batch for epoch #  180 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 180, Pointwise Training loss 1.0190245158249331, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.35903996229172, Full test loss: 12.605995535850525
+The current learning rate is: 1.52587890625e-07
+Epoch 181 started ======>
+train batch for epoch #  181 ==============>
+test batch for epoch #  181 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 181, Pointwise Training loss 1.0193438409797606, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.39863628149033, Full test loss: 12.605995535850525
+The current learning rate is: 1.52587890625e-07
+Epoch 182 started ======>
+train batch for epoch #  182 ==============>
+test batch for epoch #  182 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 182, Pointwise Training loss 1.0196888442001035, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.44141668081284, Full test loss: 12.605995535850525
+The current learning rate is: 1.52587890625e-07
+Epoch 183 started ======>
+train batch for epoch #  183 ==============>
+test batch for epoch #  183 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 183, Pointwise Training loss 1.0192263857010873, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.38407182693481, Full test loss: 12.605995535850525
+The current learning rate is: 1.52587890625e-07
+Epoch 184 started ======>
+train batch for epoch #  184 ==============>
+test batch for epoch #  184 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 184, Pointwise Training loss 1.0193118155002594, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.39466512203217, Full test loss: 12.605995535850525
+The current learning rate is: 1.52587890625e-07
+Epoch 185 started ======>
+train batch for epoch #  185 ==============>
+test batch for epoch #  185 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 185, Pointwise Training loss 1.0192582467871327, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.38802260160446, Full test loss: 12.605995535850525
+The current learning rate is: 1.52587890625e-07
+Epoch 186 started ======>
+train batch for epoch #  186 ==============>
+test batch for epoch #  186 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 186, Pointwise Training loss 1.0189861919610732, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.35428780317307, Full test loss: 12.605995535850525
+The current learning rate is: 1.52587890625e-07
+Epoch 187 started ======>
+train batch for epoch #  187 ==============>
+test batch for epoch #  187 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 187, Pointwise Training loss 1.0192904107032283, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.39201092720032, Full test loss: 12.605995535850525
+The current learning rate is: 1.52587890625e-07
+Epoch 188 started ======>
+train batch for epoch #  188 ==============>
+test batch for epoch #  188 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 188, Pointwise Training loss 1.0193484281339953, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.39920508861542, Full test loss: 12.605995535850525
+The current learning rate is: 7.62939453125e-08
+Epoch 189 started ======>
+train batch for epoch #  189 ==============>
+test batch for epoch #  189 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 189, Pointwise Training loss 1.0197934195879967, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.45438402891159, Full test loss: 12.605995535850525
+The current learning rate is: 7.62939453125e-08
+Epoch 190 started ======>
+train batch for epoch #  190 ==============>
+test batch for epoch #  190 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 190, Pointwise Training loss 1.0196141047823815, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.43214899301529, Full test loss: 12.605995535850525
+The current learning rate is: 7.62939453125e-08
+Epoch 191 started ======>
+train batch for epoch #  191 ==============>
+test batch for epoch #  191 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 191, Pointwise Training loss 1.0194506972066817, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.41188645362854, Full test loss: 12.605995535850525
+The current learning rate is: 7.62939453125e-08
+Epoch 192 started ======>
+train batch for epoch #  192 ==============>
+test batch for epoch #  192 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 192, Pointwise Training loss 1.019104749925675, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.36898899078369, Full test loss: 12.605995535850525
+The current learning rate is: 7.62939453125e-08
+Epoch 193 started ======>
+train batch for epoch #  193 ==============>
+test batch for epoch #  193 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 193, Pointwise Training loss 1.0191842428138178, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.37884610891342, Full test loss: 12.605995535850525
+The current learning rate is: 7.62939453125e-08
+Epoch 194 started ======>
+train batch for epoch #  194 ==============>
+test batch for epoch #  194 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 194, Pointwise Training loss 1.0202119662877052, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.50628381967545, Full test loss: 12.605995535850525
+The current learning rate is: 7.62939453125e-08
+Epoch 195 started ======>
+train batch for epoch #  195 ==============>
+test batch for epoch #  195 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 195, Pointwise Training loss 1.0192578559921635, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.38797414302826, Full test loss: 12.605995535850525
+The current learning rate is: 7.62939453125e-08
+Epoch 196 started ======>
+train batch for epoch #  196 ==============>
+test batch for epoch #  196 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 196, Pointwise Training loss 1.0197573741597514, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.44991439580917, Full test loss: 12.605995535850525
+The current learning rate is: 7.62939453125e-08
+Epoch 197 started ======>
+train batch for epoch #  197 ==============>
+test batch for epoch #  197 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 197, Pointwise Training loss 1.0195183576114717, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.42027634382248, Full test loss: 12.605995535850525
+The current learning rate is: 7.62939453125e-08
+Epoch 198 started ======>
+train batch for epoch #  198 ==============>
+test batch for epoch #  198 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 198, Pointwise Training loss 1.0195775781908343, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.42761969566345, Full test loss: 12.605995535850525
+The current learning rate is: 7.62939453125e-08
+Epoch 199 started ======>
+train batch for epoch #  199 ==============>
+test batch for epoch #  199 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 199, Pointwise Training loss 1.0191325660674804, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.37243819236755, Full test loss: 12.605995535850525
+The current learning rate is: 3.814697265625e-08
+Epoch 200 started ======>
+train batch for epoch #  200 ==============>
+test batch for epoch #  200 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 200, Pointwise Training loss 1.0191316647875694, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.3723264336586, Full test loss: 12.605995535850525
+The current learning rate is: 3.814697265625e-08
+Epoch 201 started ======>
+train batch for epoch #  201 ==============>
+test batch for epoch #  201 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 201, Pointwise Training loss 1.019322028083186, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.39593148231506, Full test loss: 12.605995535850525
+The current learning rate is: 3.814697265625e-08
+Epoch 202 started ======>
+train batch for epoch #  202 ==============>
+test batch for epoch #  202 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 202, Pointwise Training loss 1.0191791567110247, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.37821543216705, Full test loss: 12.605995535850525
+The current learning rate is: 3.814697265625e-08
+Epoch 203 started ======>
+train batch for epoch #  203 ==============>
+test batch for epoch #  203 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 203, Pointwise Training loss 1.019104857117899, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.36900228261948, Full test loss: 12.605995535850525
+The current learning rate is: 3.814697265625e-08
+Epoch 204 started ======>
+train batch for epoch #  204 ==============>
+test batch for epoch #  204 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 204, Pointwise Training loss 1.0191564800277833, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.37540352344513, Full test loss: 12.605995535850525
+The current learning rate is: 3.814697265625e-08
+Epoch 205 started ======>
+train batch for epoch #  205 ==============>
+test batch for epoch #  205 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 205, Pointwise Training loss 1.019438972876918, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.41043263673782, Full test loss: 12.605995535850525
+The current learning rate is: 3.814697265625e-08
+Epoch 206 started ======>
+train batch for epoch #  206 ==============>
+test batch for epoch #  206 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 206, Pointwise Training loss 1.0195054652229432, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.41867768764496, Full test loss: 12.605995535850525
+The current learning rate is: 3.814697265625e-08
+Epoch 207 started ======>
+train batch for epoch #  207 ==============>
+test batch for epoch #  207 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 207, Pointwise Training loss 1.0199231851485469, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.4704749584198, Full test loss: 12.605995535850525
+The current learning rate is: 3.814697265625e-08
+Epoch 208 started ======>
+train batch for epoch #  208 ==============>
+test batch for epoch #  208 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 208, Pointwise Training loss 1.0203646142636575, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.52521216869354, Full test loss: 12.605995535850525
+The current learning rate is: 3.814697265625e-08
+Epoch 209 started ======>
+train batch for epoch #  209 ==============>
+test batch for epoch #  209 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 209, Pointwise Training loss 1.0193416125351382, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.39835995435715, Full test loss: 12.605995535850525
+The current learning rate is: 3.814697265625e-08
+Epoch 210 started ======>
+train batch for epoch #  210 ==============>
+test batch for epoch #  210 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 210, Pointwise Training loss 1.019385768040534, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.40383523702621, Full test loss: 12.605995535850525
+The current learning rate is: 1.9073486328125e-08
+Epoch 211 started ======>
+train batch for epoch #  211 ==============>
+test batch for epoch #  211 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 211, Pointwise Training loss 1.0193388875453704, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.39802205562592, Full test loss: 12.605995535850525
+The current learning rate is: 1.9073486328125e-08
+Epoch 212 started ======>
+train batch for epoch #  212 ==============>
+test batch for epoch #  212 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 212, Pointwise Training loss 1.019824701451486, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.45826297998428, Full test loss: 12.605995535850525
+The current learning rate is: 1.9073486328125e-08
+Epoch 213 started ======>
+train batch for epoch #  213 ==============>
+test batch for epoch #  213 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 213, Pointwise Training loss 1.019260577617153, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.38831162452698, Full test loss: 12.605995535850525
+The current learning rate is: 1.9073486328125e-08
+Epoch 214 started ======>
+train batch for epoch #  214 ==============>
+test batch for epoch #  214 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 214, Pointwise Training loss 1.018892966931866, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.34272789955139, Full test loss: 12.605995535850525
+The current learning rate is: 1.9073486328125e-08
+Epoch 215 started ======>
+train batch for epoch #  215 ==============>
+test batch for epoch #  215 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 215, Pointwise Training loss 1.019360795136421, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.4007385969162, Full test loss: 12.605995535850525
+The current learning rate is: 1.9073486328125e-08
+Epoch 216 started ======>
+train batch for epoch #  216 ==============>
+test batch for epoch #  216 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 216, Pointwise Training loss 1.0191173736126191, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.37055432796478, Full test loss: 12.605995535850525
+The current learning rate is: 1.9073486328125e-08
+Epoch 217 started ======>
+train batch for epoch #  217 ==============>
+test batch for epoch #  217 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 217, Pointwise Training loss 1.0197100990241574, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.44405227899551, Full test loss: 12.605995535850525
+The current learning rate is: 1.9073486328125e-08
+Epoch 218 started ======>
+train batch for epoch #  218 ==============>
+test batch for epoch #  218 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 218, Pointwise Training loss 1.02012333706502, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.49529379606247, Full test loss: 12.605995535850525
+The current learning rate is: 1.9073486328125e-08
+Epoch 219 started ======>
+train batch for epoch #  219 ==============>
+test batch for epoch #  219 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 219, Pointwise Training loss 1.0190863258415652, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.3667044043541, Full test loss: 12.605995535850525
+The current learning rate is: 1.9073486328125e-08
+Epoch 220 started ======>
+train batch for epoch #  220 ==============>
+test batch for epoch #  220 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 220, Pointwise Training loss 1.0190155568622774, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.3579290509224, Full test loss: 12.605995535850525
+The current learning rate is: 1.9073486328125e-08
+Epoch 221 started ======>
+train batch for epoch #  221 ==============>
+test batch for epoch #  221 ======================>
+Scheduler is currently registering the learning rate.
+Epoch 221, Pointwise Training loss 1.0190406215767707, Pointwise Validation loss 1.0504996279875438
+Full training loss: 126.36103707551956, Full test loss: 12.605995535850525
+The current learning rate is: 1.9073486328125e-08
+Epoch 222 started ======>
+train batch for epoch #  222 ==============>
