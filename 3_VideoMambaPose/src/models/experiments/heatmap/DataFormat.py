@@ -19,18 +19,33 @@ from matplotlib import pyplot as plt
 
 from import_config import open_config
 
-# Defined as global functions, to be able to use them without initializing JHMDBLoad (notably during inference)
-def normalize_fn(x, h=240.0, w=320.0):
-    # x has num_frames, joint_numbers, (x, y)
-    x[:, :, 0] = (x[:, :, 0] / (w / 2.0)) - 1.0  # bewteen -1 and 1
-    x[:, :, 1] = (x[:, :, 1] / (h / 2.0)) - 1.0
+
+def normalize_fn(x, config, h=240.0, w=320.0):
+    # between -1 and 1
+    if int(config['min_norm']) == -1:
+        # x has num_frames, joint_numbers, (x, y)
+        x[:, :, 0] = (x[:, :, 0] / (w / 2.0)) - 1.0  # bewteen -1 and 1
+        x[:, :, 1] = (x[:, :, 1] / (h / 2.0)) - 1.0
+    if int(config['min_norm']) == 0:
+        x[:, :, 0] = x[:, :, 0] / w  # bewteen -1 and 1
+        x[:, :, 1] = x[:, :, 1] / h
     return x
 
 
-def denormalize_fn(x, h=240.0, w=320.0):
+def denormalize_fn(x, config, h=240.0, w=320.0):
     # actually, you should do denormalization AFTER the loss funciton. so when doing inference.
-    x[:, :, 0] = (x[:, :, 0] + 1.0) * (w / 2.0)  # bewteen -1 and 1
-    x[:, :, 1] = (x[:, :, 1] + 1.0) * (h / 2.0)
+    print(config)
+    print(type(config))
+    print(type(config['min_norm']))
+    print(config['min_norm'])
+    if int(config['min_norm']) == -1:
+        # x has num_frames, joint_numbers, (x, y)
+        x[:, :, 0] = (x[:, :, 0] + 1.0) * (w / 2.0)  # bewteen -1 and 1
+        x[:, :, 1] = (x[:, :, 1] + 1.0) * (h / 2.0)
+    if int(config['min_norm']) == 0:
+        x[:, :, 0] = x[:, :, 0] * w  # bewteen -1 and 1
+        x[:, :, 1] = x[:, :, 1] * h
+
     return x
 
 
@@ -58,6 +73,29 @@ def det_denormalize_values(x_norm, x_init, scale):
     h = abs(h)
     return w, h
 
+def pad_image_with_box(config, image_tensor, bounding_box):
+    '''Given the bounding boxes and the images, will return the same image with centered, and cropped version of the image
+    '''
+    
+
+def inference_yolo_bounding_box(config, video_tensor):
+    '''Returns cropped image, with correct padding around the bounding box to the image size.'''
+    # step 1: detect the person, and display bounding boxes
+    model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
+    model.eval() 
+
+    results = model(video_tensor.unsqueeze(0))  # YOLOv5 expects a batch of images
+    
+    # Extract bounding boxes
+    number_frames = video_tensor.shape[0]  # getting the length of the first dimension
+        # (xmin, ymin, xmax, ymax) for each frame
+    bounding_boxes = torch.zeros((number_frames, 4))
+    for det in results.xyxy[0]:
+        xmin, ymin, xmax, ymax, conf, cls = det
+        if int(cls) == 0 and conf > 0.5:  # Class 0 is 'person' and threshold is 0.5
+            bounding_boxes[i] = torch.tensor([xmin.item(), ymin.item(), xmax.item(), ymax.item()])
+
+    return bounding_boxes
 
 class JHMDBLoad(Dataset):
     '''
@@ -87,9 +125,11 @@ class JHMDBLoad(Dataset):
         self.nframes = self.annotations['nframes']
 
         if self.train_set:
-            self.actions, self.train, _ = self.get_names_train_test_split(self.config['data_path'])
+            self.actions, self.train, _ = self.get_names_train_test_split(
+                self.config['data_path'])
         else:
-            self.actions, _, self.test = self.get_names_train_test_split(self.config['data_path'])
+            self.actions, _, self.test = self.get_names_train_test_split(
+                self.config['data_path'])
 
         # I will remove all 'wave' actions, because the data seems corrupted
         self.arr = []
@@ -200,6 +240,25 @@ class JHMDBLoad(Dataset):
             f'{path}/joint_positions/{action}/{video}/joint_positions.mat')
         return mat
 
+    def bounding_box(self, config, input_joints):
+        '''
+        Given a video containing joints, return the bounding box for each frame into a tensor
+        '''
+        number_frames = video_tensor.shape[0]  # getting the length of the first dimension
+        # (xmin, ymin, xmax, ymax) for each frame
+        bounding_boxes = torch.zeros((number_frames, 4))
+
+        for i in range(number_frames):
+            frame = video_tensor[i]
+            xmin = frame[:, 0].min().item()
+            xmax = frame[:, 0].max().item()
+            ymin = frame[:, 1].min().item()
+            ymax = frame[:, 1].max().item()
+
+            bounding_boxes[i] = torch.tensor([xmin, ymin, xmax, ymax])
+
+        return bounding_boxes
+
     def rearranged_joints(self, action, video, path):
         '''
         Return a torch tensor with num frames, num joints, (x,y) joints.
@@ -214,7 +273,7 @@ class JHMDBLoad(Dataset):
         elif self.normalized and not self.default:
             torch_joint = torch.tensor(joint_dct['pos_img'])
             torch_joint = rearrange(torch_joint, 'd n f->f n d')
-            torch_joint = normalize_fn(torch_joint)
+            torch_joint = normalize_fn(torch_joint, self.config)
         # then no normalization
         else:
             torch_joint = torch.tensor(joint_dct['pos_img'])
@@ -303,6 +362,25 @@ class JHMDBLoad(Dataset):
         tensor = transform(image)
         return tensor
 
+    def rgb_normalization(self, input_tensor):
+        '''Takes a torch tensor, and normalizes the RGB channels to have values between 0 and 1.
+        The mean values established in this are simply the usual imagenet values
+        For images, and videos, directly applies the normalization.'''
+        # Define mean and std tensors
+        # Example video tensor of shape (B, frames_num, C, H, W)
+        mean = torch.tensor([0.485, 0.456, 0.406],
+                            dtype=torch.float32).view(1, 3, 1, 1)
+        std = torch.tensor([0.229, 0.224, 0.225],
+                           dtype=torch.float32).view(1, 3, 1, 1)
+
+        rgb = torch.tensor([256.0, 256.0, 256.0],
+                           dtype=torch.float32).view(1, 3, 1, 1)
+
+        # Apply normalization using broadcasting
+        output_tensor = (input_tensor / rgb - mean) / std
+
+        return output_tensor
+
     def video_to_tensors(self, action, video, use_videos, path):
         '''
         Returns a tensor with the following:
@@ -328,15 +406,15 @@ class JHMDBLoad(Dataset):
 
             # Concatenates a sequence of tensors along a new dimension.
             batch_tensor = torch.stack(image_tensors)
-            
+
         else:
             # Check if the video file exists
-            video = video + '.avi' # adding the .avi extension.
+            video = video + '.avi'  # adding the .avi extension.
             video_path = os.path.join(path, 'ReCompress_Videos', action, video)
 
             if not os.path.isfile(video_path):
                 print(f"The video file {video_path} does not exist.")
-            
+
             # Initialize a list to store the frames
             frames = []
 
@@ -370,8 +448,16 @@ class JHMDBLoad(Dataset):
             # apply the transformation to the whole video (batched) input must be (B, C, H, W)
             transform = transforms.Compose([transforms.Resize(
                 (self.config['image_tensor_height'], self.config['image_tensor_width']), antialias=True)])
-            
+
             batch_tensor = transform(batch_tensor)
+
+        if self.config['full_debug']:
+            print(f'before rgb normalization {batch_tensor}')
+
+        batch_tensor = self.rgb_normalization(batch_tensor)
+
+        if self.config['full_debug']:
+            print(f'after rgb normalization {batch_tensor}')
 
         return batch_tensor
 

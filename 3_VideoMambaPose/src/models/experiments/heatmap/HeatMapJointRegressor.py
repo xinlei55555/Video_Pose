@@ -53,8 +53,9 @@ class JointOutput(nn.Module):
         self.normalize = normalize
         self.dropout = self.config['dropout']
 
+        if self.dropout:
         # need to be defined in the __init__ so that it ignores in evaluation
-        self.dropout_layer = nn.Dropout(self.config['dropout_percent'])
+            self.dropout_layer = nn.Dropout(self.config['dropout_percent'])
 
         self.regressor = self.regressors(
             dim_hidden=self.config['hidden_channels'], dim_out=self.config['output_dimensions'])
