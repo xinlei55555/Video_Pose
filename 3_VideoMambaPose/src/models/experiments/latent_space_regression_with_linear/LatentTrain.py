@@ -72,6 +72,18 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
             # Note: Need to pass float! (not double)
             loss_train = loss_fn(train_outputs.float(), train_labels.float())
 
+            
+            # checking for vanishing gradient.
+            if config['show_gradients'] and i == 1:
+                for name, param in model.named_parameters():
+                    print(f'Parameter: {name}')
+                    print(f'Values: {param.data}')
+                    if param.grad is not None:
+                        print(f'Gradients: {param.grad}')
+                    else:
+                        print('No gradient computed for this parameter')
+
+
             # optimizer changes the weight and biases to zero, before starting the training again.
             optimizer.zero_grad()
 
@@ -164,7 +176,7 @@ def setup(rank, world_size):
 def main(rank, world_size, config, config_file_name):
     wandb.init(
         project=config['model_name'],
-        entity=config_file_name, # this will be the new name
+        # entity=config_file_name, # this will be the new name
         config={
             "dataset": config['dataset_name'],
             "epochs": config['epoch_number'],
