@@ -20,6 +20,7 @@ from matplotlib import pyplot as plt
 
 from import_config import open_config
 
+from AffineTransform import preprocess_video_data
 
 def normalize_fn(x, config, h=240.0, w=320.0):
     # between -1 and 1
@@ -70,56 +71,56 @@ def det_denormalize_values(x_norm, x_init, scale):
     h = abs(h)
     return w, h
 
-def pad_for_inference():
-    pass # soroush is going to finalize thie 
 
-def pad_image_with_box(config, video_tensor, bounding_box, inference, ground_truth_joints = None):
-    '''Given the bounding boxes and the images, will return the same image with centered, 
-    and cropped version of the image, with white padding outside of the person's bounding box
-    If we are in inference, then the ground_truth_joints must also be updated. Else, then it is passed as nothing
-    '''
-    # remember that currently the video_tensor has 320 x 240. you want to pad until 256x192
-    frames_num, C, H, W = video_tensor.shape
-    cropped_frames = torch.zeros(frames_num)
-    padded_video = torch.zeros(frames_numm)
+# def pad_image_with_box(config, video_tensor, bounding_box, inference, ground_truth_joints = None):
+#     '''
+#     Note: this function was not used in the final product.
+#     Given the bounding boxes and the images, will return the same image with centered, 
+#     and cropped version of the image, with white padding outside of the person's bounding box
+#     If we are in inference, then the ground_truth_joints must also be updated. Else, then it is passed as nothing
+#     '''
+#     # remember that currently the video_tensor has 320 x 240. you want to pad until 256x192
+#     frames_num, C, H, W = video_tensor.shape
+#     cropped_frames = torch.zeros(frames_num)
+#     padded_video = torch.zeros(frames_numm)
 
-    target_width = config['image_tensor_width']
-    target_height = config['image_tensor_height']
+#     target_width = config['image_tensor_width']
+#     target_height = config['image_tensor_height']
 
-    if frames_num != boundinx_box.shape[0]:
-        print('Error, the cropped image and video length do not match!!!!')
+#     if frames_num != boundinx_box.shape[0]:
+#         print('Error, the cropped image and video length do not match!!!!')
 
-    for i in range(frames_num):
-        frame = video_tensor[i]
-        bbox = bounding_boxes[i]
+#     for i in range(frames_num):
+#         frame = video_tensor[i]
+#         bbox = bounding_boxes[i]
 
-        # Extract bounding box coordinates
-        xmin, ymin, xmax, ymax = bounding_box[i]
-        xmin, ymin, xmax, ymax = int(xmin), int(ymin), int(xmax), int(ymax)
+#         # Extract bounding box coordinates
+#         xmin, ymin, xmax, ymax = bounding_box[i]
+#         xmin, ymin, xmax, ymax = int(xmin), int(ymin), int(xmax), int(ymax)
 
-        cropped_height = ymax - ymin
-        cropped_width = xmax-xmin
+#         cropped_height = ymax - ymin
+#         cropped_width = xmax-xmin
 
-        # Crop the frame using the bounding box
-        cropped_frame = functional.crop(
-            frame, ymin, xmin, cropped_height, cropped_width)
+#         # Crop the frame using the bounding box
+#         cropped_frame = functional.crop(
+#             frame, ymin, xmin, cropped_height, cropped_width)
 
-        # In case I need it later
-        cropped_frames[i] = cropped_frame
+#         # In case I need it later
+#         cropped_frames[i] = cropped_frame
 
-        # Calculate the required padding
-        padding_left = (target_width - cropped_width) // 2
-        padding_right = target_width - cropped_width - padding_left
-        padding_top = (target_height - cropped_height) // 2
-        padding_bottom = target_height - cropped_height - padding_top
+#         # Calculate the required padding
+#         padding_left = (target_width - cropped_width) // 2
+#         padding_right = target_width - cropped_width - padding_left
+#         padding_top = (target_height - cropped_height) // 2
+#         padding_bottom = target_height - cropped_height - padding_top
 
-        # Apply padding
-        padded_image = F.pad(image,
-                             padding=(padding_left, padding_top,
-                                      padding_right, padding_bottom),
-                             fill=padding_color)
-        padded_video[i] = padded_image
-    return padded_video
+#         # Apply padding
+#         padded_image = F.pad(image,
+#                              padding=(padding_left, padding_top,
+#                                       padding_right, padding_bottom),
+#                              fill=padding_color)
+#         padded_video[i] = padded_image
+#     return padded_video
 
 
 def inference_yolo_bounding_box(config, video_tensor):
@@ -499,13 +500,13 @@ class JHMDBLoad(Dataset):
 
             batch_tensor = transform(batch_tensor)
 
-        if self.config['full_debug']:
-            print(f'before rgb normalization {batch_tensor}')
+        # if self.config['full_debug']:
+        #     print(f'before rgb normalization {batch_tensor}')
 
-        batch_tensor = self.rgb_normalization(batch_tensor)
+        # batch_tensor = self.rgb_normalization(batch_tensor)
 
-        if self.config['full_debug']:
-            print(f'after rgb normalization {batch_tensor}')
+        # if self.config['full_debug']:
+        #     print(f'after rgb normalization {batch_tensor}')
 
         return batch_tensor
 
