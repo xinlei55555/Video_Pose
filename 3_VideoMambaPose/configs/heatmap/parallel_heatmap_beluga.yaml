@@ -6,6 +6,8 @@ model_type: 'Heatmap_2d_deconv_linear_regression'
 
 # full_debug mode will enable a lot of information being printed
 full_debug: False
+show_gradients: True
+show_predictions: False
 
 # architecture mamba
 embed_channels: 192 # number of channels after the tiny mamba layers.
@@ -78,4 +80,5 @@ real_job: True
 # normalization
 normalized: True
 default: False # not the default normalization
+min_norm: 0
 

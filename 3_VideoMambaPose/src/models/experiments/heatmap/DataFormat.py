@@ -8,6 +8,7 @@ import cv2
 
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
+from torchvision.transforms import functional
 from PIL import Image
 
 import scipy
@@ -34,10 +35,6 @@ def normalize_fn(x, config, h=240.0, w=320.0):
 
 def denormalize_fn(x, config, h=240.0, w=320.0):
     # actually, you should do denormalization AFTER the loss funciton. so when doing inference.
-    print(config)
-    print(type(config))
-    print(type(config['min_norm']))
-    print(config['min_norm'])
     if int(config['min_norm']) == -1:
         # x has num_frames, joint_numbers, (x, y)
         x[:, :, 0] = (x[:, :, 0] + 1.0) * (w / 2.0)  # bewteen -1 and 1
@@ -73,29 +70,80 @@ def det_denormalize_values(x_norm, x_init, scale):
     h = abs(h)
     return w, h
 
-def pad_image_with_box(config, image_tensor, bounding_box):
-    '''Given the bounding boxes and the images, will return the same image with centered, and cropped version of the image
+def pad_for_inference():
+    pass # soroush is going to finalize thie 
+
+def pad_image_with_box(config, video_tensor, bounding_box, inference, ground_truth_joints = None):
+    '''Given the bounding boxes and the images, will return the same image with centered, 
+    and cropped version of the image, with white padding outside of the person's bounding box
+    If we are in inference, then the ground_truth_joints must also be updated. Else, then it is passed as nothing
     '''
-    
+    # remember that currently the video_tensor has 320 x 240. you want to pad until 256x192
+    frames_num, C, H, W = video_tensor.shape
+    cropped_frames = torch.zeros(frames_num)
+    padded_video = torch.zeros(frames_numm)
+
+    target_width = config['image_tensor_width']
+    target_height = config['image_tensor_height']
+
+    if frames_num != boundinx_box.shape[0]:
+        print('Error, the cropped image and video length do not match!!!!')
+
+    for i in range(frames_num):
+        frame = video_tensor[i]
+        bbox = bounding_boxes[i]
+
+        # Extract bounding box coordinates
+        xmin, ymin, xmax, ymax = bounding_box[i]
+        xmin, ymin, xmax, ymax = int(xmin), int(ymin), int(xmax), int(ymax)
+
+        cropped_height = ymax - ymin
+        cropped_width = xmax-xmin
+
+        # Crop the frame using the bounding box
+        cropped_frame = functional.crop(
+            frame, ymin, xmin, cropped_height, cropped_width)
+
+        # In case I need it later
+        cropped_frames[i] = cropped_frame
+
+        # Calculate the required padding
+        padding_left = (target_width - cropped_width) // 2
+        padding_right = target_width - cropped_width - padding_left
+        padding_top = (target_height - cropped_height) // 2
+        padding_bottom = target_height - cropped_height - padding_top
+
+        # Apply padding
+        padded_image = F.pad(image,
+                             padding=(padding_left, padding_top,
+                                      padding_right, padding_bottom),
+                             fill=padding_color)
+        padded_video[i] = padded_image
+    return padded_video
+
 
 def inference_yolo_bounding_box(config, video_tensor):
     '''Returns cropped image, with correct padding around the bounding box to the image size.'''
     # step 1: detect the person, and display bounding boxes
     model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
-    model.eval() 
+    model.eval()
 
-    results = model(video_tensor.unsqueeze(0))  # YOLOv5 expects a batch of images
-    
+    # YOLOv5 expects a batch of images
+    results = model(video_tensor.unsqueeze(0))
+
     # Extract bounding boxes
-    number_frames = video_tensor.shape[0]  # getting the length of the first dimension
-        # (xmin, ymin, xmax, ymax) for each frame
+    # getting the length of the first dimension
+    number_frames = video_tensor.shape[0]
+    # (xmin, ymin, xmax, ymax) for each frame
     bounding_boxes = torch.zeros((number_frames, 4))
     for det in results.xyxy[0]:
         xmin, ymin, xmax, ymax, conf, cls = det
         if int(cls) == 0 and conf > 0.5:  # Class 0 is 'person' and threshold is 0.5
-            bounding_boxes[i] = torch.tensor([xmin.item(), ymin.item(), xmax.item(), ymax.item()])
+            bounding_boxes[i] = torch.tensor(
+                [xmin.item(), ymin.item(), xmax.item(), ymax.item()])
 
     return bounding_boxes
+
 
 class JHMDBLoad(Dataset):
     '''
@@ -240,7 +288,7 @@ class JHMDBLoad(Dataset):
             f'{path}/joint_positions/{action}/{video}/joint_positions.mat')
         return mat
 
-    def bounding_box(self, config, input_joints):
+    def bounding_box(self, input_joints):
         '''
         Given a video containing joints, return the bounding box for each frame into a tensor
         '''

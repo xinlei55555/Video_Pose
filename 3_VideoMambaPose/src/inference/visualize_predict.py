@@ -13,7 +13,8 @@ from torchvision import transforms
 
 from import_config import open_config
 
-config = open_config(file_name='heatmap_beluga_idapt_local.yaml',
+# config = open_config(file_name='heatmap_beluga_idapt_local.yaml',
+config = open_config(file_name='overfit_heatmap_beluga_local.yaml',
  folder_path='/home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/configs/heatmap')
 # config = open_config(file_name='heatmap_beluga.yaml',
                     #  folder_path='/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/configs/heatmap')
@@ -22,6 +23,7 @@ config = open_config(file_name='heatmap_beluga_idapt_local.yaml',
 sys.path.append(
     '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap')
 sys.path.append('/mnt/DATA/Personnel/Other learning/Programming/Professional_Opportunities/KITE - Video Pose ViT/KITE - Video Pose Landmark Detection/3_VideoMambaPose/src/models/experiments/heatmap')
+sys.path.append('/home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap')
 # change the system directory
 
 sys.path.append(config['project_dir'])
@@ -223,14 +225,15 @@ def visualize(joints, frames, file_name, width, height, normalized=True):
 
 
 def main(config):
-    ground_truth = False
+    ground_truth = True
     predicted = True
     # action_path = 'test_visualization/Pirates_5_wave_h_nm_np1_fr_med_8'
     # joint_path = 'test_visualization/Copy-of-Pirates_5_wave_h_nm_np1_fr_med_8'
 
     # test_checkpoint = 'heatmap_55.9462.pt'
     # test_checkpoint = 'heatmap_50.3723.pt'
-    test_checkpoint = 'heatmap_53.1010.pt'
+    # test_checkpoint = 'heatmap_53.1010.pt'
+    test_checkpoint = 'heatmap_14.0769.pt'
     # test_checkpoint = 'heatmap_52.2855.pt'
     model_path = os.path.join(
         config['checkpoint_directory'], config['checkpoint_name'], test_checkpoint)
@@ -297,7 +300,8 @@ def main(config):
         # outputs = torch.as_tensor(outputs)``
 
         # prints the last output
-        print('output', outputs[0] == outputs[1])
+        print('Are the last two outputs the same?: ', outputs[0] == outputs[1]) # i got true, this means that the two previous frames are always the same resujilts..
+        print('output', output)
 
         # here, we should denormalize the outputs
         if normalized:
@@ -308,7 +312,7 @@ def main(config):
 
             # actually, no, if not default, since this is ground truth, I just took the pos_world
             else:
-                outputs = denormalize_fn(outputs, height, width)
+                outputs = denormalize_fn(outputs, config, height, width)
 
         # visualize
         visualize(outputs, frames, 'predicted', width,

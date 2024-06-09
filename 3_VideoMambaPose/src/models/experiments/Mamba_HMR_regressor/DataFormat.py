@@ -19,20 +19,29 @@ from matplotlib import pyplot as plt
 
 from import_config import open_config
 
-# Defined as global functions, to be able to use them without initializing JHMDBLoad (notably during inference)
-def normalize_fn(x, h=240.0, w=320.0):
-    # x has num_frames, joint_numbers, (x, y)
-    x[:, :, 0] = (x[:, :, 0] / (w / 2.0)) - 1.0  # bewteen -1 and 1
-    x[:, :, 1] = (x[:, :, 1] / (h / 2.0)) - 1.0
+def normalize_fn(x, config, h=240.0, w=320.0):
+    # between -1 and 1
+    if int(config['min_norm']) == -1:
+        # x has num_frames, joint_numbers, (x, y)
+        x[:, :, 0] = (x[:, :, 0] / (w / 2.0)) - 1.0  # bewteen -1 and 1
+        x[:, :, 1] = (x[:, :, 1] / (h / 2.0)) - 1.0
+    if int(config['min_norm']) == 0:
+        x[:, :, 0] = x[:, :, 0] / w  # bewteen -1 and 1
+        x[:, :, 1] = x[:, :, 1] / h
     return x
 
 
-def denormalize_fn(x, h=240.0, w=320.0):
+def denormalize_fn(x, config, h=240.0, w=320.0):
     # actually, you should do denormalization AFTER the loss funciton. so when doing inference.
-    x[:, :, 0] = (x[:, :, 0] + 1.0) * (w / 2.0)  # bewteen -1 and 1
-    x[:, :, 1] = (x[:, :, 1] + 1.0) * (h / 2.0)
+    if int(config['min_norm']) == -1:
+        # x has num_frames, joint_numbers, (x, y)
+        x[:, :, 0] = (x[:, :, 0] + 1.0) * (w / 2.0)  # bewteen -1 and 1
+        x[:, :, 1] = (x[:, :, 1] + 1.0) * (h / 2.0)
+    if int(config['min_norm']) == 0:
+        x[:, :, 0] = x[:, :, 0] * w  # bewteen -1 and 1
+        x[:, :, 1] = x[:, :, 1] * h
+    
     return x
-
 
 def denormalize_default(x, h=240.0, w=320.0, scale=1):
     # since the data was normalize with respect to the w, and h, then if I use my new width, h, would it change somethign?
@@ -303,6 +312,24 @@ class JHMDBLoad(Dataset):
         tensor = transform(image)
         return tensor
 
+    def rgb_normalization(self, input_tensor):
+        '''Takes a torch tensor, and normalizes the RGB channels to have values between 0 and 1.
+        The mean values established in this are simply the usual imagenet values
+        For images, and videos, directly applies the normalization.'''        
+        # Define mean and std tensors
+        # Example video tensor of shape (B, frames_num, C, H, W)
+        mean = torch.tensor([0.485, 0.456, 0.406],
+                            dtype=torch.float32).view(1, 3, 1, 1)
+        std = torch.tensor([0.229, 0.224, 0.225],
+                            dtype=torch.float32).view(1, 3, 1, 1)
+        
+        rgb = torch.tensor([256.0, 256.0, 256.0], dtype=torch.float32).view(1, 3, 1, 1)
+
+        # Apply normalization using broadcasting
+        output_tensor = (input_tensor / rgb - mean) / std 
+
+        return output_tensor
+
     def video_to_tensors(self, action, video, use_videos, path):
         '''
         Returns a tensor with the following:
@@ -372,6 +399,14 @@ class JHMDBLoad(Dataset):
                 (self.config['image_tensor_height'], self.config['image_tensor_width']), antialias=True)])
             
             batch_tensor = transform(batch_tensor)
+
+        if self.config['full_debug']:
+            print(f'before rgb normalization {batch_tensor}')
+
+        batch_tensor = self.rgb_normalization(batch_tensor)
+
+        if self.config['full_debug']:
+            print(f'after rgb normalization {batch_tensor}')
 
         return batch_tensor
 

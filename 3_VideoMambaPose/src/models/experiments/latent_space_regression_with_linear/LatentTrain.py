@@ -220,7 +220,7 @@ def main(rank, world_size, config, config_file_name):
         print('Model loaded successfully as follows: ', model)
 
           # loss
-        loss_fn = PoseEstimationLoss()
+        loss_fn = PoseEstimationLoss(config)
 
         # optimizer
         optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'])
@@ -265,7 +265,7 @@ def main(rank, world_size, config, config_file_name):
                     rank], output_device=rank, find_unused_parameters=True)
 
         # loss
-        loss_fn = PoseEstimationLoss()
+        loss_fn = PoseEstimationLoss(config)
 
         # optimizer
         optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'])

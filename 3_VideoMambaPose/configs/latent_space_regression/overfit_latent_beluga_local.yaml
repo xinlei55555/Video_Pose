@@ -5,7 +5,9 @@ project_dir: /home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/sr
 model_type: 'latent_space_linear_regression'
 
 # full_debug mode will enable a lot of information being printed
-full_debug: False
+full_debug: False 
+show_gradients: True
+show_predictions: False
 
 # architecture mamba
 embed_channels: 192 # number of channels after the tiny mamba layers.
@@ -30,11 +32,11 @@ num_hidden_layers: 3 # to replace the deconvolutions and the convolutions.
 epoch_number: 300
 # batch_size: 16
 # batch_size: 8
-batch_size: 16 # just to see how scalable it is
+batch_size: 4 # just to see how scalable it is
 # learning_rate: 0.001
-learning_rate: 0.01
+learning_rate: 0.1
 #scheduler:
-scheduler: True
+scheduler: False
 start_epoch: 1
 
 # device settings
@@ -47,7 +49,7 @@ parallelize: False
 # checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/latent_space_regression_with_linear/checkpoint
 checkpoint_directory: /home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/latent_space_regression_with_linear/checkpoint
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
-checkpoint_name: 'default_model_linear'
+checkpoint_name: 'tanh_overfit_model'
 # checkpoint_name: 'testing_false_dataset'
 
 # Follow up on the training of another previous run?
@@ -78,9 +80,10 @@ jump: 1 # number of frames to skip between the different datapoints
 joint_number: 15
 
 # if False, uses subset of the data to run
-real_job: True
+real_job: False
 
 # normalization
 normalized: True
 default: False # not the default normalization
+min_norm: -1
 

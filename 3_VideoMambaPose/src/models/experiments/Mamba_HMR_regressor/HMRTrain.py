@@ -153,7 +153,7 @@ def setup(rank, world_size):
 def main(rank, world_size, config, config_file_name):
     wandb.init(
         project=config['model_name'],
-        entity=config_file_name, # this will be the new name
+        # entity=config_file_name, # this will be the new name
         config={
             "dataset": config['dataset_name'],
             "epochs": config['epoch_number'],
@@ -197,7 +197,7 @@ def main(rank, world_size, config, config_file_name):
         print('Model loaded successfully as follows: ', model)
 
           # loss
-        loss_fn = PoseEstimationLoss()
+        loss_fn = PoseEstimationLoss(config)
 
         # optimizer
         optimizer = torch.optim.Adam(model.parameters())
@@ -238,7 +238,7 @@ def main(rank, world_size, config, config_file_name):
                     rank], output_device=rank, find_unused_parameters=True)
 
         # loss
-        loss_fn = PoseEstimationLoss()
+        loss_fn = PoseEstimationLoss(config)
 
         # optimizer
         optimizer = torch.optim.Adam(model.parameters())
