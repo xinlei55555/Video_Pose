@@ -63,6 +63,8 @@ data_path: /home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/data
 annotations_path: /home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/data/JHMDB_old/annotations
 # use avi videos
 use_videos: True
+preprocess_videos: True
+
 # actions to skip
 skip: ['wave']
 num_frames: 16

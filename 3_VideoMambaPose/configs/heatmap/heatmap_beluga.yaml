@@ -63,6 +63,8 @@ data_path: /home/linxin67/scratch/JHMDB
 annotations_path: /home/linxin67/scratch/JHMDB_old/annotations
 # use avi videos
 use_videos: True
+preprocess_videos: True
+
 # actions to skip
 skip: ['wave']
 num_frames: 16

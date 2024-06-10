@@ -62,6 +62,7 @@ dataset_name: 'JHMDB'
 data_path: /home/linxin67/scratch/JHMDB
 annotations_path: /home/linxin67/scratch/JHMDB_old/annotations
 # use avi videos
+preprocess_videos: True
 use_videos: True
 # actions to skip
 skip: ['wave']

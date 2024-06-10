@@ -173,9 +173,7 @@ class JHMDBLoad(Dataset):
         self.annotations = self.unpickle_JHMDB(self.config['annotations_path'])
         self.nframes = self.annotations['nframes']
 
-        
         self.actions, self.data = self.get_names_train_test_split(self.config['data_path'])
-        
 
         # I will remove all 'wave' actions, because the data seems corrupted
         self.arr = []
@@ -186,11 +184,21 @@ class JHMDBLoad(Dataset):
             action_name, file_name, self.config['data_path']))
             for action_name, file_name, n_frames in self.data if action_name != 'wave']
 
-        # apply all the transformations on each data in self.frames_with_joints
-        self.tensor_height, self.tensor_width = self.config['image_tensor_height'], self.config['image_tensor_width']
-        for video, joints in self.frames_with_joints:
-            bboxes = self.bounding_box(joints) 
-            preprocess_video_data(frames=video, bboxes=bboxes, joints=joints, out_res=(self.tensor_height, self.tensor_width))
+        # apply normalization, affine transform and bounding boxes on each data in self.frames_with_joints
+        if self.config['preprocess_videos']:
+            self.tensor_height, self.tensor_width = self.config['image_tensor_height'], self.config['image_tensor_width']
+            # self.new_frames_with_joints = frames_with_joints.shape
+            for i in range(len(self.frames_with_joints)):
+                video, joints = self.frames_with_joints[i]
+                video = rearrange(video, 'f c h w -> f h w c')
+                video = video.numpy()
+                joints = joints.numpy()
+                bboxes = self.bounding_box(joints).numpy()
+                video, joints = preprocess_video_data(frames=video, bboxes=bboxes, joints=joints, out_res=(self.tensor_height, self.tensor_width))
+                # somehow the output had width and height
+                video = rearrange(video, 'f c w h -> f c h w')
+                self.frames_with_joints[i] = (video, joints)
+
 
         # arr where arr[idx] = idx in the self.frames_with_joints
         self.jump = jump
@@ -238,7 +246,8 @@ class JHMDBLoad(Dataset):
         if self.config['full_debug']:
             print('The shape of the video is', video.shape)
             print(
-                f'index: {index}, video_num: {video_num}, frame_num: {frame_num}, len(joint_values), {len(list(joint_values))}')
+                f'index: {index}, video_num: {video_num}, frame_num: {frame_num}, num_of_joints, {joint_for_frame.shape[0]}')
+
 
         return [video, joint_for_frame]
 
@@ -290,12 +299,12 @@ class JHMDBLoad(Dataset):
         Returns
             torch.tensor containing the bounding box for each frame (x, y, w, h)
         '''
-        number_frames = video_tensor.shape[0]  # getting the length of the first dimension
+        number_frames = input_joints.shape[0]  # getting the length of the first dimension
         # (xmin, ymin, xmax, ymax) for each frame
         bounding_boxes = torch.zeros((number_frames, 4))
 
         for i in range(number_frames):
-            frame = video_tensor[i]
+            frame = input_joints[i]
             xmin = frame[:, 0].min().item()
             xmax = frame[:, 0].max().item()
             ymin = frame[:, 1].min().item()
@@ -388,6 +397,9 @@ class JHMDBLoad(Dataset):
                     # if only testing, then just take the minimum number of actions
                     if not self.real_job and (len(train) > 20 or len(test) > 1 or (len(actions) > 1)):
                         print("length of actions", len(actions))
+                        print('The following are the actions: ', actions)
+                        print('The following are the train files: ', train)
+                        print('The following are the test files: ', test)
                         stop_list = False
                         break
 
@@ -409,13 +421,14 @@ class JHMDBLoad(Dataset):
         else:
             return actions, test
 
+# use the preprocess file instead.
     def image_to_tensor(self, image_path):
         '''Returns a torch tensor for a given image associated with the path'''
         image = Image.open(image_path).convert('RGB')
         transform = transforms.Compose([
             # notice that all the images are 320x240. Hence, resizing all to 224 224 is generalized, and should be equally skewed
-            transforms.Resize(
-                (self.config['image_tensor_height'], self.config['image_tensor_width']), antialias=True),
+            # transforms.Resize(
+            #     (self.config['image_tensor_height'], self.config['image_tensor_width']), antialias=True),
             transforms.ToTensor()
         ])
         tensor = transform(image)
@@ -505,8 +518,8 @@ class JHMDBLoad(Dataset):
             batch_tensor = batch_tensor.permute(0, 3, 1, 2)
 
             # apply the transformation to the whole video (batched) input must be (B, C, H, W)
-            transform = transforms.Compose([transforms.Resize(
-                (self.config['image_tensor_height'], self.config['image_tensor_width']), antialias=True)])
+            # transform = transforms.Compose([transforms.Resize(
+            #     (self.config['image_tensor_height'], self.config['image_tensor_width']), antialias=True)])
 
             batch_tensor = transform(batch_tensor)
 
