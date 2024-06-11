@@ -86,10 +86,20 @@ class JHMDBLoad(Dataset):
                 print('Wrong length! Video: ', len(list(video)))
                 print('Joints: ', len(list(joints)))
 
-            else:
-                for i in range(self.frames_per_vid, len(list(video)), self.jump):
-                    # 3-tuple: (index in self.train_frames_with_joints, index in the video, joint values for that given index in the video)
-                    self.arr.append([k, i, joints[i]])
+                else:
+                    # start looping at frames per vid number
+                    # if you are using jump, then need to define start and endpoint
+                    for i in range(self.frames_per_vid, len(list(video)), self.jump):
+                        # 3-tuple: (index in self.train_frames_with_joints, index in the video, joint values)
+                        self.arr.append([k, i, joints])
+        
+        # if only taking a subset of the dataset, then print all the names of the actinos
+        if not real_job:
+            print(f'The following are the actions being trained {self.actions}.')
+            if train_set:
+                print(f'The following are the train used {self.train}')
+            if not train_set:
+                print(f'The following are the test used {self.test}')
 
 
     def __len__(self):
