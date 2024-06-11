@@ -24,3 +24,4 @@ test_visualization/
 checkpoint/
 wandb_old/
 old_local_outputs/
+old/
