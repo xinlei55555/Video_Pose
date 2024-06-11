@@ -8,6 +8,7 @@ import cv2
 
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
+from torchvision.transforms import functional
 from PIL import Image
 
 import scipy
@@ -19,57 +20,7 @@ from matplotlib import pyplot as plt
 
 from import_config import open_config
 
-# Defined as global functions, to be able to use them without initializing JHMDBLoad (notably during inference)
-
-
-def normalize_fn(x, config, h=240.0, w=320.0):
-    # between -1 and 1
-    if int(config['min_norm']) == -1:
-        # x has num_frames, joint_numbers, (x, y)
-        x[:, :, 0] = (x[:, :, 0] / (w / 2.0)) - 1.0  # bewteen -1 and 1
-        x[:, :, 1] = (x[:, :, 1] / (h / 2.0)) - 1.0
-    if int(config['min_norm']) == 0:
-        x[:, :, 0] = x[:, :, 0] / w  # bewteen -1 and 1
-        x[:, :, 1] = x[:, :, 1] / h
-    return x
-
-
-def denormalize_fn(x, config, h=240.0, w=320.0):
-    # actually, you should do denormalization AFTER the loss funciton. so when doing inference.
-    if int(config['min_norm']) == -1:
-        # x has num_frames, joint_numbers, (x, y)
-        x[:, :, 0] = (x[:, :, 0] + 1.0) * (w / 2.0)  # bewteen -1 and 1
-        x[:, :, 1] = (x[:, :, 1] + 1.0) * (h / 2.0)
-    if int(config['min_norm']) == 0:
-        x[:, :, 0] = x[:, :, 0] * w  # bewteen -1 and 1
-        x[:, :, 1] = x[:, :, 1] * h
-
-    return x
-
-
-def denormalize_default(x, h=240.0, w=320.0, scale=1):
-    # since the data was normalize with respect to the w, and h, then if I use my new width, h, would it change somethign?
-    '''
-    Default initial normalizer:
-    (4) pos_world is the normalization of pos_img with respect to the frame size and puppet scale,Â
-        the formula is as below
-
-        pos_world(1,:,:) = (pos_img(1,:,:)/W-0.5)*W/H    ./scale;
-        pos_world(2,:,:) = (pos_img(2,:,:)/H-0.5)       ./scale;
-    '''
-    x[:, :, 0] = (x[:, :, 0] * scale / (w/h) + 0.5) * w  # bewteen -0.5 and 0.5
-    x[:, :, 1] = (x[:, :, 1] * scale + 0.5) * h
-    return x
-
-
-def det_denormalize_values(x_norm, x_init, scale):
-    print(x_init.shape, x_norm.shape)
-    h = int(x_init[0][1][1].item() / (0.5 + x_norm[0][1][1].item()))
-    w = int(x_init[0][1][0].item() * 2 - 2 * x_norm[0][1][0].item() * h)
-    # to change later
-    w = abs(w)
-    h = abs(h)
-    return w, h
+from AffineTransform import preprocess_video_data
 
 
 class JHMDBLoad(Dataset):
@@ -99,58 +50,47 @@ class JHMDBLoad(Dataset):
         self.annotations = self.unpickle_JHMDB(self.config['annotations_path'])
         self.nframes = self.annotations['nframes']
 
-        if self.train_set:
-            self.actions, self.train, _ = self.get_names_train_test_split(
-                self.config['data_path'])
-        else:
-            self.actions, _, self.test = self.get_names_train_test_split(
-                self.config['data_path'])
+        self.actions, self.data = self.get_names_train_test_split(self.config['data_path'])
 
         # I will remove all 'wave' actions, because the data seems corrupted
         self.arr = []
-        if self.train_set:
-            # frames with joint values
-            self.frames_with_joints = [(self.video_to_tensors(
-                action_name, file_name, self.use_videos, self.config['data_path']),
-                self.rearranged_joints(
-                action_name, file_name, self.config['data_path']))
-                for action_name, file_name, n_frames in self.train if action_name != 'wave']
-            # arr where arr[idx] = idx in the self.frames_with_joints
-            self.jump = jump
-            for k in range(len(self.frames_with_joints)):
-                video, joints = self.frames_with_joints[k]
+        # frames with joint values
+        self.frames_with_joints = [(self.video_to_tensors(
+            action_name, file_name, self.use_videos, self.config['data_path']),
+            self.rearranged_joints(
+            action_name, file_name, self.config['data_path']))
+            for action_name, file_name, n_frames in self.data if action_name != 'wave']
 
-                if len(list(video)) != len(list(joints)):
-                    print('Wrong length! Video: ', len(list(video)))
-                    print('Joints: ', len(list(joints)))
+        # apply normalization, affine transform and bounding boxes on each data in self.frames_with_joints
+        if self.config['preprocess_videos']:
+            self.tensor_height, self.tensor_width = self.config['image_tensor_height'], self.config['image_tensor_width']
+            self.min_norm = int(self.config['min_norm'])
+            # self.new_frames_with_joints = frames_with_joints.shape
+            for i in range(len(self.frames_with_joints)):
+                video, joints = self.frames_with_joints[i]
+                video = rearrange(video, 'f c h w -> f h w c')
+                video = video.numpy()
+                joints = joints.numpy()
+                bboxes = self.bounding_box(joints).numpy()
+                video, joints = preprocess_video_data(frames=video, bboxes=bboxes, joints=joints, out_res=(self.tensor_width, self.tensor_height), min_norm=self.min_norm)
+        
+                self.frames_with_joints[i] = (video, joints)
 
-                else:
-                    for i in range(self.frames_per_vid, len(list(video)), self.jump):
-                        # 3-tuple: (index in self.train_frames_with_joints, index in the video, joint values)
-                        self.arr.append([k, i, joints])
-        else:
-            self.frames_with_joints = [(self.video_to_tensors(
-                action_name, file_name, self.use_videos, self.config['data_path']),
-                self.rearranged_joints(
-                action_name, file_name, self.config['data_path']))
-                for action_name, file_name, n_frames in self.test if action_name != 'wave']
+        # arr where arr[idx] = idx in the self.frames_with_joints
+        self.jump = jump
+        for k in range(len(self.frames_with_joints)):
+            video, joints = self.frames_with_joints[k]
 
-            self.jump = jump
-            for k in range(len(self.frames_with_joints)):
-                video, joints = self.frames_with_joints[k]
+            # and if such an occurence happens, then SKIP the file!!!!
+            if len(list(video)) != len(list(joints)):
+                print('Wrong length! Video: ', len(list(video)))
+                print('Joints: ', len(list(joints)))
 
-                # and if such an occurence happens, then SKIP the file!!!!
-                if len(list(video)) != len(list(joints)):
-                    print('Wrong length! Video: ', len(list(video)))
-                    print('Joints: ', len(list(joints)))
+            else:
+                for i in range(self.frames_per_vid, len(list(video)), self.jump):
+                    # 3-tuple: (index in self.train_frames_with_joints, index in the video, joint values for that given index in the video)
+                    self.arr.append([k, i, joints[i]])
 
-                else:
-                    # start looping at frames per vid number
-                    # if you are using jump, then need to define start and endpoint
-                    for i in range(self.frames_per_vid, len(list(video)), self.jump):
-                        # 3-tuple: (index in self.train_frames_with_joints, index in the video, joint values)
-                        self.arr.append([k, i, joints])
-        print(f'The total number of datapoints is {len(self.arr)}')
 
     def __len__(self):
         return len(list(self.arr))
@@ -167,8 +107,9 @@ class JHMDBLoad(Dataset):
         #
         Answer: I will load everything, and parse from there.
         '''
-        video_num, frame_num, joint_values = self.arr[index][0], self.arr[index][1], self.arr[index][2]
+        video_num, frame_num, joint_for_frame = self.arr[index][0], self.arr[index][1], self.arr[index][2]
 
+    
         # slicing with pytorch tensors.
         video = self.frames_with_joints[video_num][0][frame_num +
                                                       1-self.frames_per_vid:frame_num+1]
@@ -176,16 +117,21 @@ class JHMDBLoad(Dataset):
         # need to rearrange so that channel number is in front.
         video = rearrange(video, 'd c h w -> c d h w')
 
+
         # show this for debug:
         if self.config['full_debug']:
             print('The shape of the video is', video.shape)
             print(
-                f'index: {index}, video_num: {video_num}, frame_num: {frame_num}, len(joint_values), {len(list(joint_values))}')
+                f'index: {index}, video_num: {video_num}, frame_num: {frame_num}, num_of_joints, {joint_for_frame.shape[0]}')
 
-        return [video, joint_values[frame_num]]
+
+        return [video, joint_for_frame]
 
     # this folder is useless
     def unpickle_JHMDB(self, path):
+        '''
+        Returns the unpickled version of the annotations in the old path JHMBD_old
+        '''
         os.chdir(path)
 
         # Open the first pickled file
@@ -201,41 +147,74 @@ class JHMDBLoad(Dataset):
         '''
         Given an action and a video returns the joints for each frame
 
-        Returns a dictionary
-        dict_keys(['__header__', '__version__', '__globals__', 'pos_img', 'pos_world', 'scale', 'viewpoint'])
+        Args:
+            action, video and path are strings indicating the path of the joints.
 
-        Each file is the following dimension:
-        (2, 15 (num joints), n_frames)
+        Returns 
+            a dictionary dict_keys(['__header__', '__version__', '__globals__', 'pos_img', 'pos_world', 'scale', 'viewpoint'])
 
-        First, there are two dimension, which is x, y
-        Then, 
-        In pos image, each array has n number of values, where n is the number of frames in the video.
+            Each file is the following dimension:
+            (2, 15 (num joints), n_frames)
+
+            First, there are two dimension, which is x, y
+            Then, 
+            In pos image, each array has n number of values, where n is the number of frames in the video.
         '''
         os.chdir(path)
         mat = scipy.io.loadmat(
             f'{path}/joint_positions/{action}/{video}/joint_positions.mat')
         return mat
 
+    def bounding_box(self, input_joints):
+        '''
+        Given a video containing joints, return the bounding box for each frame into a tensor
+        
+        Args:
+            input_joints: A torch tensor containing the joint positions for each frame. (N, num_joints, 2)
+        
+        Returns
+            torch.tensor containing the bounding box for each frame (x, y, w, h)
+        '''
+        number_frames = input_joints.shape[0]  # getting the length of the first dimension
+        # (xmin, ymin, xmax, ymax) for each frame
+        bounding_boxes = torch.zeros(number_frames, 4)
+
+        for i in range(number_frames):
+            frame = input_joints[i]
+            xmin = frame[:, 0].min().item()
+            xmax = frame[:, 0].max().item()
+            ymin = frame[:, 1].min().item()
+            ymax = frame[:, 1].max().item()
+
+            bounding_boxes[i] = torch.tensor([xmin, ymin, xmax - xmin, ymax - ymin])
+
+        return bounding_boxes
+
     def rearranged_joints(self, action, video, path):
         '''
-        Return a torch tensor with num frames, num joints, (x,y) joints.
+        Args:
+            action, video and path are strings indicating the path of the joints.
+        
+        Return 
+            a torch tensor with num frames, num joints, (x,y) joints.
         '''
         joint_dct = self.read_joints_full_video(action, video, path)
 
-        # pos_world was already normalized with respect to the image. (unlike pos_img)
-        if self.normalized and self.default:
-            torch_joint = torch.tensor(joint_dct['pos_world'])
-            torch_joint = rearrange(torch_joint, 'd n f->f n d')
+        # we will most likely never use pos_world
+        # # pos_world was already normalized with respect to the image. (unlike pos_img)
+        # if self.normalized and self.default:
+        #     torch_joint = torch.tensor(joint_dct['pos_world'])
+        #     torch_joint = rearrange(torch_joint, 'd n f->f n d')
         # then use custom normalization
-        elif self.normalized and not self.default:
-            torch_joint = torch.tensor(joint_dct['pos_img'])
-            torch_joint = rearrange(torch_joint, 'd n f->f n d')
-            torch_joint = normalize_fn(torch_joint, self.config)
+        # elif self.normalized and not self.default:
+        torch_joint = torch.tensor(joint_dct['pos_img'])
+        torch_joint = rearrange(torch_joint, 'd n f->f n d')
+            # torch_joint = normalize_fn(torch_joint, self.config)
         # then no normalization
-        else:
-            torch_joint = torch.tensor(joint_dct['pos_img'])
-            # rearrange for training and normalization.
-            torch_joint = rearrange(torch_joint, 'd n f->f n d')
+        # else:
+            # torch_joint = torch.tensor(joint_dct['pos_img'])
+            # # rearrange for training and normalization.
+            # torch_joint = rearrange(torch_joint, 'd n f->f n d')
 
         if self.config['full_debug']:
             print(f'normalized: {self.normalized}, default: {self.default}')
@@ -244,14 +223,20 @@ class JHMDBLoad(Dataset):
         return torch_joint
 
     def get_num_frames(self, action, video):
+        '''
+        Returns the number of frames in a file
+        '''
         return self.nframes[os.path.join(action, video)]
 
     def get_names_train_test_split(self, path):
         '''
+        Args
+            Path is the path of the source JHMDB folder
+
         Returns three lists:
-        1. First one with all the possible actions.
-        2. The training set (with 3-tuple: (action_name, file_name, n_frames))
-        3. The test set (idem)
+            1. First one with all the possible actions.
+            2. The training set (with 3-tuple: (action_name, file_name, n_frames))
+            3. The test set (idem)
         '''
         directory = os.path.join(path, 'splits')
         os.chdir(directory)
@@ -289,6 +274,9 @@ class JHMDBLoad(Dataset):
                     # if only testing, then just take the minimum number of actions
                     if not self.real_job and (len(train) > 20 or len(test) > 1 or (len(actions) > 1)):
                         print("length of actions", len(actions))
+                        print('The following are the actions: ', actions)
+                        print('The following are the train files: ', train)
+                        print('The following are the test files: ', test)
                         stop_list = False
                         break
 
@@ -305,48 +293,52 @@ class JHMDBLoad(Dataset):
 
         print("The length of actions, train and test are",
               len(actions), ", ", len(train), ", ", len(test))
-        return actions, train, test
+        if self.train_set:
+            return actions, train
+        else:
+            return actions, test
 
+# use the preprocess file instead.
     def image_to_tensor(self, image_path):
         '''Returns a torch tensor for a given image associated with the path'''
         image = Image.open(image_path).convert('RGB')
         transform = transforms.Compose([
             # notice that all the images are 320x240. Hence, resizing all to 224 224 is generalized, and should be equally skewed
-            transforms.Resize(
-                (self.config['image_tensor_height'], self.config['image_tensor_width']), antialias=True),
+            # transforms.Resize(
+            #     (self.config['image_tensor_height'], self.config['image_tensor_width']), antialias=True),
             transforms.ToTensor()
         ])
         tensor = transform(image)
         return tensor
 
-    def rgb_normalization(self, input_tensor):
-        '''Takes a torch tensor, and normalizes the RGB channels to have values between 0 and 1.
-        The mean values established in this are simply the usual imagenet values
-        For images, and videos, directly applies the normalization.'''        
-        # Define mean and std tensors
-        # Example video tensor of shape (B, frames_num, C, H, W)
-        mean = torch.tensor([0.485, 0.456, 0.406],
-                            dtype=torch.float32).view(1, 3, 1, 1)
-        std = torch.tensor([0.229, 0.224, 0.225],
-                            dtype=torch.float32).view(1, 3, 1, 1)
-        
-        rgb = torch.tensor([256.0, 256.0, 256.0], dtype=torch.float32).view(1, 3, 1, 1)
+    # def rgb_normalization(self, input_tensor):
+    #     '''Takes a torch tensor, and normalizes the RGB channels to have values between 0 and 1.
+    #     The mean values established in this are simply the usual imagenet values
+    #     For images, and videos, directly applies the normalization.'''
+    #     # Define mean and std tensors
+    #     # Example video tensor of shape (B, frames_num, C, H, W)
+    #     mean = torch.tensor([0.485, 0.456, 0.406],
+    #                         dtype=torch.float32).view(1, 3, 1, 1)
+    #     std = torch.tensor([0.229, 0.224, 0.225],
+    #                        dtype=torch.float32).view(1, 3, 1, 1)
 
-        # Apply normalization using broadcasting
-        output_tensor = (input_tensor / rgb - mean) / std
+    #     rgb = torch.tensor([256.0, 256.0, 256.0],
+    #                        dtype=torch.float32).view(1, 3, 1, 1)
 
-        return output_tensor
+    #     # Apply normalization using broadcasting
+    #     output_tensor = (input_tensor / rgb - mean) / std
+
+    #     return output_tensor
 
     def video_to_tensors(self, action, video, use_videos, path):
         '''
         Returns a tensor with the following:
-        (n_frames, num_channels (3), tensor_image_heigth, tensor_image_width)
+        (n_frames, num_channels (3), 224, 224)
         '''
+
         # goes through the each image.
         # !!!! do not use IMAGES BECAUSE OS.LISTDIR DOES NOT GO THROUGH THEM IN THE RIGHT ORDER!
         if not use_videos:
-            if self.config['full_debug']:
-                print("We are not using videos!")
             video_path = os.path.join(path, 'Rename_Images', action, video)
             image_tensors = []
 
@@ -365,9 +357,6 @@ class JHMDBLoad(Dataset):
             batch_tensor = torch.stack(image_tensors)
 
         else:
-            if self.config['full_debug']:
-                print("We are using videos!")
-
             # Check if the video file exists
             video = video + '.avi'  # adding the .avi extension.
             video_path = os.path.join(path, 'ReCompress_Videos', action, video)
@@ -405,22 +394,21 @@ class JHMDBLoad(Dataset):
             # Transpose the tensor to have the shape (frames, channels, height, width)
             batch_tensor = batch_tensor.permute(0, 3, 1, 2)
 
-            # apply the transformation to the whole video (batched) input must be (frames_num, C, H, W)
-            transform = transforms.Compose([
-                transforms.Resize((self.config['image_tensor_height'], self.config['image_tensor_width']), antialias=True)])
+            # apply the transformation to the whole video (batched) input must be (B, C, H, W)
+            # transform = transforms.Compose([transforms.Resize(
+            #     (self.config['image_tensor_height'], self.config['image_tensor_width']), antialias=True)])
 
             batch_tensor = transform(batch_tensor)
 
-        # TODO okay, somehow, my RGB normalization does work
+        # I will apply such transformation in the __getitem__  function instead.
+        # if self.config['full_debug']:
+        #     print(f'before rgb normalization and affine transformation {batch_tensor}')
 
-        if self.config['full_debug']:
-            print(f'before rgb normalization {batch_tensor}')
+        # # batch_tensor = self.rgb_normalization(batch_tensor)
+        # batch_tensor = self.preprocess_video_data(batch_tensor, )
 
-        batch_tensor = self.rgb_normalization(batch_tensor)
-
-        if self.config['full_debug']:
-            print(f'after rgb normalization {batch_tensor}')
-
+        # if self.config['full_debug']:
+        #     print(f'after rgb normalization and affine transformation {batch_tensor}')
 
         return batch_tensor
 
@@ -444,63 +432,3 @@ if __name__ == '__main__':
     print(train.arr)
     train_loader = DataLoader(train, batch_size=16,
                               shuffle=True, num_workers=2, pin_memory=False)
-    # in real context, would definitely need to move the training set in the GPU
-    # print(train.arr)
-    # print("len(train), ", len(train))
-    # print("len(arr), ", len(train.arr))
-    # print("len(frames_with_joints)", len(train.frames_with_joints))
-    # print(train[len(train)-1])
-    # print(len(train[len(train)-1][0]))
-    # print(len(train[len(train)-1][1]))
-
-    # test = JHMDBLoad(train_set=False)
-    # print(test[len(test)-1])
-    # print(len(test))
-    # print(test[len(test)-1].shape)
-    # print([type(x) for x in data.train_annotations.keys()]) # a list of strings.
-    # print(data.test_annotations.keys()) # a dictionary
-
-    # dict_keys(['labels', 'gttubes', 'nframes', 'train_videos', 'test_videos', 'resolution'])
-    # labels are the labels that are int he actions
-    # gttubes == ground truth tubes
-    # nframes is the number of frames
-
-    # when I print the data[ggtubes], i get a dictionary with many elements.
-    # Ithink the first position of the array is the frame number.
-
-    # print(type(data.train_annotations['gttubes'])) # notice that this is ANOTHER dictionary
-    # print(data.train_annotations['gttubes'].keys()) # each key represents a video!
-
-    # print(data.train_annotations['gttubes']['pour/Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1'][8]) # and I think each video is annotated such that the first index is the joint value, and the rest of the array are the positions
-
-    # this is another dictionary.
-    # print(type(data.get_names_train_test_split()))
-    # print(len(data.get_names_train_test_split()[0]), len(
-    #     data.get_names_train_test_split()[1]), len(data.get_names_train_test_split()[2]))
-    # print(data.get_names_train_test_split()[1])
-
-    # example_joint = data.rearranged_joints(action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1')
-    # print(example_joint)
-    # print(example_joint.shape)
-    # print(len(example_joint['pos_img'][0][0]))
-    # print(type(example_joint))
-    # print(example_joint.keys())
-    # print(data.get_num_frames(action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1'))
-
-    # test = data.video_to_tensors(action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1')
-    # print(test.shape)
-    # print(test[0])
-
-    # data.draw_joint_on_image(
-    #     action='pour', video='Bartender_School_Students_Practice_pour_u_cm_np1_fr_med_1')
-
-    # then the rest is handled by pytorch:
-    # Example usage
-    # data = [...]  # Your dataset (list of samples)
-    # custom_dataset = CustomDataset(data)
-    # data_loader = DataLoader(custom_dataset, batch_size=32, shuffle=True)
-
-    # # Iterate over batches of data
-    # for batch in data_loader:
-    #     # Process each batch of data
-    #     pass

@@ -71,8 +71,8 @@ num_frames: 16
 channels: 3
 image_height: 240
 image_width: 320
-image_tensor_height: 192 # changed to match VitPose
-image_tensor_width: 256
+image_tensor_height: 256 # changed to match VitPose
+image_tensor_width: 192
 patch_number: 192 # total number of patches, each of size 16 pixels by 16 pixels
 patch_size: 16 # each patch is 16x16
 jump: 1 # number of frames to skip between the different datapoints

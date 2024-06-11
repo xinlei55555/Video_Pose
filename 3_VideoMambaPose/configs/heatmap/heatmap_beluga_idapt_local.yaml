@@ -77,8 +77,8 @@ num_frames: 16
 channels: 3
 image_height: 240
 image_width: 320
-image_tensor_height: 192 
-image_tensor_width: 256
+image_tensor_height: 256 
+image_tensor_width: 192
 patch_number: 192 # number of patches, each of size 4 pixels by 4 pixels
 patch_size: 16 # each patch is 4x4
 jump: 1 # number of frames to skip between the different datapoints
