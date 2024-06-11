@@ -13,6 +13,24 @@ from torchvision import transforms
 
 from import_config import open_config
 
+# config = open_config(file_name='heatmap_beluga_idapt_local.yaml',
+config = open_config(file_name='overfit_heatmap_beluga_local.yaml',
+ folder_path='/home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/configs/heatmap')
+# config = open_config(file_name='heatmap_beluga.yaml',
+                    #  folder_path='/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/configs/heatmap')
+
+# these are hard coded just for ht ecase
+sys.path.append(
+    '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap')
+sys.path.append('/mnt/DATA/Personnel/Other learning/Programming/Professional_Opportunities/KITE - Video Pose ViT/KITE - Video Pose Landmark Detection/3_VideoMambaPose/src/models/experiments/heatmap')
+sys.path.append('/home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap')
+# change the system directory
+
+sys.path.append(config['project_dir'])
+
+# do not hit ctrl shift -i, or it will put this at the top
+from HeatVideoMamba import HeatMapVideoMambaPose
+from AffineTransform import denormalize_fn
 
 def load_model(filepath, parallel=False):
     # Create the model
@@ -22,7 +40,6 @@ def load_model(filepath, parallel=False):
     checkpoint = torch.load(filepath, map_location=torch.device('cpu'))
 
     # TODO fix this, in case
-    # loading model that was trained with DDP
     if parallel:
         checkpoint = adapt_model_parallel(checkpoint)
 
@@ -34,6 +51,8 @@ def load_model(filepath, parallel=False):
     model.eval()
 
     return model
+
+# loading model that was trained with DDP
 
 
 def adapt_model_parallel(checkpoint):
@@ -57,91 +76,64 @@ def inference(model, input_tensor):
     return output
 
 
-def get_input_and_label(use_videos, joint_path, video_path):
+def get_input_and_label(joint_path, video_path, normalized=True, default=False, path='/home/linxin67/scratch/JHMDB'):
     # for the sake of testing, I will juhhst hard copy some files and the respective joint outputs
     # I'll also make sure they were in the test files
     joints = scipy.io.loadmat(os.path.join(joint_path, 'joint_positions.mat'))
-    joints = torch.tensor(joints['pos_img'])
+    if normalized and default:
+        joints = torch.tensor(joints['pos_world'])
+        print('The joints taken are the normalized ones')
+    else:
+        joints = torch.tensor(joints['pos_img'])
+        print('The joints taken are not normalized')
 
     joints = rearrange(joints, 'd n f->f n d')
-    video = video_to_tensors(video_path, use_videos)
+    video = video_to_tensors(config, video_path)
 
     return joints, video
 
 
-def image_to_tensor(image_path):
+def image_to_tensor(config, image_path):
     '''Returns a torch tensor for a given image associated with the path'''
     image = Image.open(image_path).convert('RGB')
+
     transform = transforms.Compose([
-        transforms.ToTensor()
+        # notice that all the images are 320x240. Hence, resizing all to 224 224 is generalized, and should be equally skewed
+        transforms.ToTensor(),
+        transforms.Resize(
+            (config['image_tensor_height'], config['image_tensor_width']))
     ])
     tensor = transform(image)
     return tensor
 
 
-def video_to_tensors(video_path, use_videos):
+def video_to_tensors(config, video_path='/home/linxin67/scratch/JHMDB/Rename_Images/'):
     '''
     Returns a tensor with the following:
     (n_frames, num_channels (3), 224, 224)
     '''
+    # directory_path = os.path.join(path, action, video)
+    video_path = video_path
+    image_tensors = []
 
-    # goes through the each image.
-    if not use_videos:
-        image_tensors = []
-
-        # reorder the images
-        filenames = []
-        for filename in os.listdir(video_path):
-            if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-                filenames.append(filename)
-        filenames.sort()
-        for filename in filenames:
-            file_path = os.path.join(video_path, filename)
-            if os.path.isfile(file_path):
-                image_tensor = image_to_tensor(file_path)
-                image_tensors.append(image_tensor)
-
-        # Concatenates a sequence of tensors along a new dimension.
-        batch_tensor = torch.stack(image_tensors)
-
-    else:
-        if not os.path.isfile(video_path):
-            print(f"The video file {video_path} does not exist.")
-
-        # Initialize a list to store the frames
-        frames = []
-
-        # Open the video file
-        cap = cv2.VideoCapture(video_path)
-
-        # Check if the video was opened successfully
-        if not cap.isOpened():
-            print(f"Error opening video file {video_path}")
-
-        # Read frames until the end of the video
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
-            # Convert frame from BGR to RGB format
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            # Convert frame to tensor and add it to the list
-            frame_tensor = torch.tensor(frame, dtype=torch.float32)
-            frames.append(frame_tensor)
-
-        # Release the video capture object
-        cap.release()
-
-        # Stack all frames into a single tensor
-        batch_tensor = torch.stack(frames)
-        print(batch_tensor.shape)
-
-        # Transpose the tensor to have the shape (frames, channels, height, width)
-        batch_tensor = rearrange(batch_tensor, 'n h w c-> n c h w')
-
+    # file names
+    filenames = []
+    for filename in os.listdir(video_path):
+        if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+            filenames.append(filename)
+    filenames.sort()
+    for filename in filenames:
+        file_path = os.path.join(video_path, filename)
+        if os.path.isfile(file_path):
+            image_tensor = image_to_tensor(config, file_path)
+            image_tensors.append(image_tensor)
+    
+    # Concatenates a sequence of tensors along a new dimension.
+    batch_tensor = torch.stack(image_tensors)
     return batch_tensor
 
-def visualize(joints, frames, file_name, width, height):
+
+def visualize(joints, frames, file_name, width, height, normalized=True):
     '''1: neck
     2: belly
     3: face
@@ -186,15 +178,19 @@ def visualize(joints, frames, file_name, width, height):
         # note that for the visualization, the frame number are going to be different
         image = frames[frame_idx + num_frames_per_video]
 
+        # apply transformation to undo the resize
+        transform = transforms.Compose([
+            # notice that all the images are 320x240. Hence, resizing all to 224 224 is generalized, and should be equally skewed
+            # transforms.ToPILImage(),
+            transforms.Resize((height, width)),  # mayb they had the wrong size
+            # transforms.ToTensor()
+        ])
+        image = transform(image)
         image = rearrange(image, 'c w d->w d c')
 
         # converting and changing to cpu before plotting
         image = image.clone().to('cpu')
         image = image.numpy()
-
-        # Scale image data to the range [0, 1] for floats
-        if image.dtype == np.float32 or image.dtype == np.float64:
-            image = (image - image.min()) / (image.max() - image.min())
 
         joints_per_frame = joints_per_frame.clone().to('cpu')
         joints_per_frame = joints_per_frame.numpy()
@@ -229,32 +225,52 @@ def visualize(joints, frames, file_name, width, height):
 
 
 def main(config):
-    ground_truth = False
+    ground_truth = True
     predicted = True
+    # action_path = 'test_visualization/Pirates_5_wave_h_nm_np1_fr_med_8'
+    # joint_path = 'test_visualization/Copy-of-Pirates_5_wave_h_nm_np1_fr_med_8'
 
-    video_path = 'test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0.avi'
-    joint_path = 'test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0'
-
-    # test_checkpoint = 'heatmap_2.1880.pt'
-    # test_checkpoint = 'heatmap_7.4616.pt'
-    # test_checkpoint = 'heatmap_0.3881.pt'
-    test_checkpoint = 'heatmap_0.6573.pt'
+    # test_checkpoint = 'heatmap_55.9462.pt'
+    # test_checkpoint = 'heatmap_50.3723.pt'
+    # test_checkpoint = 'heatmap_53.1010.pt'
+    test_checkpoint = 'heatmap_14.0769.pt'
+    # test_checkpoint = 'heatmap_52.2855.pt'
     model_path = os.path.join(
         config['checkpoint_directory'], config['checkpoint_name'], test_checkpoint)
 
+    action_path = 'test_visualization/20_good_form_pullups_pullup_f_nm_np1_ri_goo_2'
+    joint_path = 'test_visualization/Copy-of-20_good_form_pullups_pullup_f_nm_np1_ri_goo_2'
+    normalized = config['normalized']
+    default = config['default']
+
+    print(f'The joints are normalized: {normalized}.\n \
+        The joints are normalized with the default: {default}')
+
     # load the whole joint file and the video
-    joints, frames = get_input_and_label(config['use_videos'], joint_path, video_path)
+    joints, frames = get_input_and_label(
+        joint_path, action_path, normalized, default, model_path)
 
+    # width and height
+    # if default and normalized:
+    #     width, height = det_denormalize_values(normalized_joints, joints)
+    # else:
     width, height = config['image_width'], config['image_height']
-    tensor_width, tensor_height = config['image_tensor_width'], config['image_tensor_height']
 
-    if config['full_debug']:
-        print('Here are some joint values', joints[0])
+    # # denormalizationl
+    # if normalized and config['default']:
+    #     # this path is not ready, as I have not tested the scale values.
+    #     print('Denormalization might not work due to absence of scale')
+    #     joints = denormalize_default(joints, heigth, width)
+
+    #     # actually, no, if not default, since this is ground truth, I just took the pos_world
+    #     # joints = denormalize_fn(joints, height, width)
+
+    print(joints[0])
 
     if ground_truth:
         # ground truth
         visualize(joints, frames, 'normalized_pull_ups',
-                  width, height)
+                width, height, normalized=normalized)
 
     # i'll try to fix just the normal visualize predict
     if predicted:
@@ -269,60 +285,39 @@ def main(config):
         frames_per_vid = 16
         # all frames, except first 15 (because each video is 16 frames) with 15 joints, and x y
         outputs = torch.zeros(len(frames)-15, 15, 2)
-
-        # need to reformat the output, find the bounding box, and apply the output
-        # If I have the ground truth data, then I will rely on that for the bounding box
-        if ground_truth:
-            bboxes = bounding_box(joints)
-        # elsewise, use the yolo algorithm
-        else:
-            bboxes = inference_yolo_bounding_box(video_tensor)
-
         for frame in range(15, len(frames)):
             input_frame = frames[frame-(frames_per_vid)+1:frame+1]
-            input_frame = rearrange(input_frame, 'd c h w -> d h w c')
 
-            input_frame, _ = preprocess_video_data(input_frame.numpy(), bboxes.numpy(), joints.numpy(), (tensor_width, tensor_height), config['min_norm'])
-            input_frame = rearrange(input_frame, '(b d) c h w -> b c d h w', b=1)
+            input_frame = rearrange(input_frame, 'd c h w -> c d h w')
 
             input_frame = input_frame.to(device)
 
             # videos.append(input_frame) # need cuda GPU!
             output = inference(model, input_frame)
 
-            output = output.to('cpu')
-            # I think output outputs a batch size of 1, so there is one more dimension
-            _, output = inverse_process_joint_data(bboxes[frame].numpy(), output[0].numpy(), (tensor_width, tensor_height), config['min_norm'], False)
-
             outputs[frame-15] = output
 
-        print('Are the last two outputs the same?: ', outputs[0] == outputs[1])
+        # outputs = torch.as_tensor(outputs)``
+
         # prints the last output
+        print('Are the last two outputs the same?: ', outputs[0] == outputs[1]) # i got true, this means that the two previous frames are always the same resujilts..
         print('output', output)
+
+        # here, we should denormalize the outputs
+        if normalized:
+            if config['default']:
+                # this path is not ready, as I have not tested the scale values.
+                print('Denormalization might not work due to absence of scale')
+                outputs = denormalize_default(joints, heigth, width)
+
+            # actually, no, if not default, since this is ground truth, I just took the pos_world
+            else:
+                outputs = denormalize_fn(outputs, config, height, width)
 
         # visualize
         visualize(outputs, frames, 'predicted', width,
-                  height)
+                height, normalized=normalized)
 
 
 if __name__ == "__main__":
-    # config = open_config(file_name='heatmap_beluga_idapt_local.yaml',
-    config = open_config(file_name='overfit_heatmap_beluga_local.yaml',
-                         folder_path='/home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/configs/heatmap')
-    # config = open_config(file_name='heatmap_beluga.yaml',
-    #  folder_path='/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/configs/heatmap')
-
-    # change the system directory
-    # these are hard coded just for ht ecase
-    sys.path.append(
-        '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap')
-    sys.path.append('/mnt/DATA/Personnel/Other learning/Programming/Professional_Opportunities/KITE - Video Pose ViT/KITE - Video Pose Landmark Detection/3_VideoMambaPose/src/models/experiments/heatmap')
-    sys.path.append(
-        '/home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap')
-    sys.path.append(config['project_dir'])
-
-    # do not hit ctrl shift -i, or it will put this at the top
-    from AffineTransform import denormalize_fn, bounding_box, inference_yolo_bounding_box, inverse_process_joint_data, preprocess_video_data
-    from HeatVideoMamba import HeatMapVideoMambaPose
-
     main(config)

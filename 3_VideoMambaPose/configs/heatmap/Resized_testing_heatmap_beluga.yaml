@@ -6,6 +6,8 @@ model_type: 'Heatmap_2d_deconv_linear_regression'
 
 # full_debug mode will enable a lot of information being printed
 full_debug: False
+show_gradients: True
+show_predictions: False
 
 # architecture mamba
 embed_channels: 192 # number of channels before and after the tiny mamba layers.
@@ -60,6 +62,8 @@ data_path: /home/linxin67/scratch/JHMDB
 annotations_path: /home/linxin67/scratch/JHMDB_old/annotations
 # use avi videos
 use_videos: True
+preprocess_videos: True
+
 # actions to skip
 skip: ['wave']
 num_frames: 16
@@ -67,8 +71,8 @@ num_frames: 16
 channels: 3
 image_height: 240
 image_width: 320
-image_tensor_height: 192 # changed to match VitPose
-image_tensor_width: 256
+image_tensor_height: 256 # changed to match VitPose
+image_tensor_width: 192
 patch_number: 192 # total number of patches, each of size 16 pixels by 16 pixels
 patch_size: 16 # each patch is 16x16
 jump: 1 # number of frames to skip between the different datapoints
@@ -81,4 +85,5 @@ real_job: True
 # normalization
 normalized: True
 default: False # not the default normalization
+min_norm: 0
 

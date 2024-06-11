@@ -6,6 +6,8 @@ model_type: 'latent_space_linear_regression'
 
 # full_debug mode will enable a lot of information being printed
 full_debug: False
+show_gradients: True
+show_predictions: False
 
 # architecture mamba
 embed_channels: 192 # number of channels after the tiny mamba layers.
@@ -61,6 +63,7 @@ dataset_name: 'JHMDB'
 data_path: /home/linxin67/scratch/JHMDB
 annotations_path: /home/linxin67/scratch/JHMDB_old/annotations
 # use avi videos
+preprocess_videos: True
 use_videos: True
 # actions to skip
 skip: ['wave']
@@ -69,8 +72,8 @@ num_frames: 16
 channels: 3
 image_height: 240
 image_width: 320
-image_tensor_height: 192 
-image_tensor_width: 256
+image_tensor_height: 256 
+image_tensor_width: 192
 patch_number: 192 # number of patches, each of size 4 pixels by 4 pixels
 patch_size: 16 # each patch is 4x4
 jump: 1 # number of frames to skip between the different datapoints
@@ -82,4 +85,5 @@ real_job: True
 # normalization
 normalized: True
 default: False # not the default normalization
+min_norm: 0
 
