@@ -229,13 +229,16 @@ def visualize(joints, frames, file_name, width, height):
 
 
 def main(config):
-    ground_truth = True
+    ground_truth = False
     predicted = True
 
-    video_path = 'test_visualization/6arrowswithin30seconds_shoot_bow_f_nm_np1_fr_med_0.avi'
-    joint_path = 'test_visualization/6arrowswithin30seconds_shoot_bow_f_nm_np1_fr_med_0'
+    video_path = 'test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0.avi'
+    joint_path = 'test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0'
 
-    test_checkpoint = 'heatmap_2.1880.pt'
+    # test_checkpoint = 'heatmap_2.1880.pt'
+    # test_checkpoint = 'heatmap_7.4616.pt'
+    # test_checkpoint = 'heatmap_0.3881.pt'
+    test_checkpoint = 'heatmap_0.6573.pt'
     model_path = os.path.join(
         config['checkpoint_directory'], config['checkpoint_name'], test_checkpoint)
 
@@ -289,7 +292,7 @@ def main(config):
 
             output = output.to('cpu')
             # I think output outputs a batch size of 1, so there is one more dimension
-            _, output = inverse_process_joint_data(bboxes[frame].numpy(), output[0].numpy(), (tensor_width, tensor_height), False)
+            _, output = inverse_process_joint_data(bboxes[frame].numpy(), output[0].numpy(), (tensor_width, tensor_height), config['min_norm'], False)
 
             outputs[frame-15] = output
 
