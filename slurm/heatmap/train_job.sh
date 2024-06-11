@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=0.0001_LR_Scheduler_Dropout_fixed_New_LearnRate_Resized_Tanh_custom_normalized_without_wave2       # Job name
+#SBATCH --job-name=0.0005_LR_Scheduler_Dropout_fixed_New_LearnRate_Resized_Tanh_custom_normalized_without_wave2       # Job name
 #SBATCH --account=def-btaati              # Replace with your account
 #SBATCH --time=03-00:00                   # Time limit (DD-HH:MM) ! change this when training.
 #SBATCH --cpus-per-task=1                 # Number of CPU cores per task ! change this when training.
@@ -16,5 +16,5 @@ module restore mamba_modules125
 source /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/mamba_env125/bin/activate
 export WANDB_MODE=offline
 wandb offline
-cd /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap
-python HeatMapTrain.py --config 'heatmap/Dropout_heatmap_beluga.yaml'                   # Command to run your Python script
+cd /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/src
+python train.py --config 'heatmap/Dropout_heatmap_beluga.yaml'                   # Command to run your Python script
