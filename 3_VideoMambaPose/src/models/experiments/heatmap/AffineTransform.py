@@ -375,7 +375,7 @@ def preprocess_video_data(frames, bboxes, joints, out_res, min_norm):
     Preprocesses the video data.
 
     Args:
-        frames: A numpy array with shape (F, H, W, 3)
+        frames: A numpy array with shape (F, H, W, 3), here the default input is (16, 240, 320, 3)
         bbox: A numpy array with shape (F, 4)
             bbox format should be (x, y, w, h)
         joints: A numpy array with shape (F, J, 2)
@@ -439,22 +439,22 @@ def inverse_process_joint_data(bbox, joint, output_res, frame=False):
     # Inverse the of the Affine Transform matrix, notice that the output_res must remain the same, even though to not break the joint values.
     inv_trans = cv2.invertAffineTransform(trans)
 
-        # inverse warping for the joints
+    # inverse warping for the joints
     joint = torch.from_numpy(warp_affine_joints(
-    joint[:, 0:2].numpy().copy(), inv_trans))
+        joint[:, 0:2].numpy().copy(), inv_trans))
 
     # although usually, I would not be denormalizing the frames.
-    if frame: 
+    if frame:
         # denormalization
         invTrans = transforms.Compose([
             transforms.Normalize(mean=[0., 0., 0.], std=[
-                                1/0.229, 1/0.224, 1/0.225]),
-            transforms.Normalize(mean=[-0.485, -0.456, -0.406], std=[1., 1., 1.]),
+                1/0.229, 1/0.224, 1/0.225]),
+            transforms.Normalize(
+                mean=[-0.485, -0.456, -0.406], std=[1., 1., 1.]),
         ])
 
         frame = invTrans(frame)
         frame = rearrange(frame, 'c w h -> h w c')
-
 
         # perform inverse warping
         frame_cropped = cv2.warpAffine(
@@ -462,7 +462,6 @@ def inverse_process_joint_data(bbox, joint, output_res, frame=False):
             inv_trans, (int(image_size[0]), int(image_size[1])),
             flags=cv2.INTER_LINEAR)
         frame = F.to_tensor(frame_cropped)
-
 
     return frame, joint
 
@@ -517,7 +516,7 @@ def det_denormalize_values(x_norm, x_init, scale):
     return w, h
 
 
-def inference_yolo_bounding_box(config, video_tensor):
+def inference_yolo_bounding_box(video_tensor):
     '''Returns cropped image, with correct padding around the bounding box to the image size.'''
     # step 1: detect the person, and display bounding boxes
     model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
@@ -539,56 +538,33 @@ def inference_yolo_bounding_box(config, video_tensor):
 
     return bounding_boxes
 
+# if joints are already given
+def bounding_box(input_joints):
+    '''
+    Given a video containing joints, return the bounding box for each frame into a tensor
 
-# def pad_image_with_box(config, video_tensor, bounding_box, inference, ground_truth_joints = None):
-#     '''
-#     Note: this function was not used in the final product.
-#     Given the bounding boxes and the images, will return the same image with centered,
-#     and cropped version of the image, with white padding outside of the person's bounding box
-#     If we are in inference, then the ground_truth_joints must also be updated. Else, then it is passed as nothing
-#     '''
-#     # remember that currently the video_tensor has 320 x 240. you want to pad until 256x192
-#     frames_num, C, H, W = video_tensor.shape
-#     cropped_frames = torch.zeros(frames_num)
-#     padded_video = torch.zeros(frames_numm)
+    Args:
+        input_joints: A torch tensor containing the joint positions for each frame. (N, num_joints, 2)
 
-#     target_width = config['image_tensor_width']
-#     target_height = config['image_tensor_height']
+    Returns
+        torch.tensor containing the bounding box for each frame (x, y, w, h)
+    '''
+    number_frames = input_joints.shape[0]  # getting the length of the first dimension
+    # (xmin, ymin, xmax, ymax) for each frame
+    bounding_boxes = torch.zeros(number_frames, 4)
 
-#     if frames_num != boundinx_box.shape[0]:
-#         print('Error, the cropped image and video length do not match!!!!')
+    for i in range(number_frames):
+        frame = input_joints[i]
+        xmin = frame[:, 0].min().item()
+        xmax = frame[:, 0].max().item()
+        ymin = frame[:, 1].min().item()
+        ymax = frame[:, 1].max().item()
 
-#     for i in range(frames_num):
-#         frame = video_tensor[i]
-#         bbox = bounding_boxes[i]
+        bounding_boxes[i] = torch.tensor(
+            [xmin, ymin, xmax - xmin, ymax - ymin])
 
-#         # Extract bounding box coordinates
-#         xmin, ymin, xmax, ymax = bounding_box[i]
-#         xmin, ymin, xmax, ymax = int(xmin), int(ymin), int(xmax), int(ymax)
+    return bounding_boxes
 
-#         cropped_height = ymax - ymin
-#         cropped_width = xmax-xmin
-
-#         # Crop the frame using the bounding box
-#         cropped_frame = functional.crop(
-#             frame, ymin, xmin, cropped_height, cropped_width)
-
-#         # In case I need it later
-#         cropped_frames[i] = cropped_frame
-
-#         # Calculate the required padding
-#         padding_left = (target_width - cropped_width) // 2
-#         padding_right = target_width - cropped_width - padding_left
-#         padding_top = (target_height - cropped_height) // 2
-#         padding_bottom = target_height - cropped_height - padding_top
-
-#         # Apply padding
-#         padded_image = F.pad(image,
-#                              padding=(padding_left, padding_top,
-#                                       padding_right, padding_bottom),
-#                              fill=padding_color)
-#         padded_video[i] = padded_image
-#     return padded_video
 
 if __name__ == '__main__':
 
