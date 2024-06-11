@@ -131,10 +131,10 @@ class JHMDBLoad(Dataset):
         '''
         Returns the unpickled version of the annotations in the old path JHMBD_old
         '''
-        os.chdir(path)
+        file_path = os.path.join(path, "JHMDB-GT.pkl")
 
         # Open the first pickled file
-        with open("JHMDB-GT.pkl", 'rb') as pickled_one:
+        with open(file_path, 'rb') as pickled_one:
             try:
                 # other times it is 'utf-8!!!
                 train = pickle.load(pickled_one, encoding='latin1')
@@ -159,7 +159,7 @@ class JHMDBLoad(Dataset):
             Then, 
             In pos image, each array has n number of values, where n is the number of frames in the video.
         '''
-        os.chdir(path)
+        
         mat = scipy.io.loadmat(
             f'{path}/joint_positions/{action}/{video}/joint_positions.mat')
         return mat
@@ -213,7 +213,6 @@ class JHMDBLoad(Dataset):
             3. The test set (idem)
         '''
         directory = os.path.join(path, 'splits')
-        os.chdir(directory)
 
         actions = []
         train = []
