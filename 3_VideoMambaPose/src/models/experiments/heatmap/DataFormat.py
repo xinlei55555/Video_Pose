@@ -349,8 +349,6 @@ class JHMDBLoad(Dataset):
             # Transpose the tensor to have the shape (frames, channels, height, width)
             batch_tensor = batch_tensor.permute(0, 3, 1, 2)
 
-            batch_tensor = transform(batch_tensor)
-
         return batch_tensor
 
 
