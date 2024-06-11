@@ -28,7 +28,7 @@ import LatentJointRegressor as hjr
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
-class LatentVideoMambaPose(nn.Module):
+class HMRVideoMambaPose(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config

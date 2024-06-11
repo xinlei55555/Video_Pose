@@ -1,8 +1,7 @@
 model_name: VideoMambaPose
 # heatmap project directory
-project_dir: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/
 
-model_type: 'Heatmap_2d_deconv_linear_regression'
+model_type: 'heatmap'
 
 # full_debug mode will enable a lot of information being printed
 full_debug: False
@@ -45,7 +44,7 @@ num_gpus: 1
 parallelize: False
 
 # checkpoints
-checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoint
+checkpoint_directory: checkpoints/heatmap
 checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
 # checkpoint_name: 'testing_false_dataset'
 

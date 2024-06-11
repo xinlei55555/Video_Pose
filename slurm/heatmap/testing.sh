@@ -17,4 +17,4 @@ source /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/mamba_env1
 export WANDB_MODE=offline
 wandb offline
 cd /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap
-python HeatMapTrain.py --config 'Resized_testing_heatmap_beluga.yaml'          # Command to run your Python script
+python HeatMapTrain.py --config 'heatmap/Resized_testing_heatmap_beluga.yaml'          # Command to run your Python script
