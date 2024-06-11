@@ -227,6 +227,10 @@ def visualize(joints, frames, file_name, width, height):
 
     print(f"Video saved as {file_name}")
 
+def debug_parameters(config, model):
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            print (name, param.data)
 
 def main(config):
     ground_truth = False
@@ -266,6 +270,16 @@ def main(config):
 
         print(model)
 
+        if debug_parameters:
+            for name, param in model.named_parameters():
+                print(f'Parameter: {name}')
+                print(f'Values: {param.data}')
+                if param.grad is not None:
+                    print(f'Gradients: {param.grad}')
+                else:
+                    print('No gradient computed for this parameter')
+                    print('---')
+    
         frames_per_vid = 16
         # all frames, except first 15 (because each video is 16 frames) with 15 joints, and x y
         outputs = torch.zeros(len(frames)-15, 15, 2)

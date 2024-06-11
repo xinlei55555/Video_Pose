@@ -36,7 +36,7 @@ class JHMDBLoad(Dataset):
 
     # use 16, because transformers can already do 8
     # also we cannot just load all the frames directly into memory, because not enough GPU, but here less than 64GB should be okay
-    def __init__(self, config, train_set, real_job=True, jump=1, normalize=(True, True)):
+    def __init__(self, config, train_set, real_job=True, jump=1, normalize=(True, False)):
         self.config = config
         self.skip = config['skip']
         self.use_videos = config['use_videos']
@@ -90,6 +90,7 @@ class JHMDBLoad(Dataset):
                 for i in range(self.frames_per_vid, len(list(video)), self.jump):
                     # 3-tuple: (index in self.train_frames_with_joints, index in the video, joint values for that given index in the video)
                     self.arr.append([k, i, joints[i]])
+
 
 
     def __len__(self):
