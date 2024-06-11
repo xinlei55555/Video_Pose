@@ -20,7 +20,7 @@ from matplotlib import pyplot as plt
 
 from import_config import open_config
 
-from AffineTransform import preprocess_video_data, bounding_box
+from data_format.AffineTransform import preprocess_video_data, bounding_box
 
 
 class JHMDBLoad(Dataset):

@@ -22,10 +22,11 @@ from timm.models.vision_transformer import _load_weights
 import math
 
 from mamba_ssm.modules.mamba_simple import Mamba
-import HeatmapVideoMamba as hvm
-import HeatMapDeconv2D as hmd2D
-import HeatMapDeconv3D as hmd3D
-import HeatMapJointRegressor as hjr
+
+import models.heatmap.HeatmapVideoMamba as hvm
+import models.heatmap.HeatMapDeconv2D as hmd2D
+import models.heatmap.HeatMapDeconv3D as hmd3D
+import models.heatmap.HeatMapJointRegressor as hjr
 
 
 class HeatMapVideoMambaPose(nn.Module):
