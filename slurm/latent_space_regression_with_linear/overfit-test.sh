@@ -16,5 +16,5 @@ module restore mamba_modules125
 source /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/mamba_env125/bin/activate
 export WANDB_MODE=offline
 wandb offline
-cd /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/latent_space_regression_with_linear
-python LatentTrain.py --config 'latent_space_regression_with_linear/overfit_latent_beluga_local.yaml'                   # Command to run your Python script
+cd /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/src
+python train.py --config 'latent_space_regression_with_linear/overfit_latent_beluga_local.yaml'                   # Command to run your Python script
