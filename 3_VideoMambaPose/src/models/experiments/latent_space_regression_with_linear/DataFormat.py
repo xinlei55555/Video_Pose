@@ -398,7 +398,6 @@ class JHMDBLoad(Dataset):
             # transform = transforms.Compose([transforms.Resize(
             #     (self.config['image_tensor_height'], self.config['image_tensor_width']), antialias=True)])
 
-            batch_tensor = transform(batch_tensor)
 
         # I will apply such transformation in the __getitem__  function instead.
         # if self.config['full_debug']:

@@ -152,7 +152,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
                 print(f'The current learning rate is: {lr}')
 
             # I use the full loss when comparing, to avoid having too small numbers.
-            if test_loss < best_val_loss:
+            if test_loss < best_val_loss or epoch % 50 == 0:
                 best_val_loss = test_loss
 
                 # save model locally

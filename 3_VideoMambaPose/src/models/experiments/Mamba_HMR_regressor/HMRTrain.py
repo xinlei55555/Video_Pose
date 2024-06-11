@@ -129,7 +129,7 @@ def training_loop(config, n_epochs, optimizer, model, loss_fn, train_set, test_s
                 f"Full training loss: {float(train_loss)}, Full test loss: {float(test_loss)}")
 
             # I use the full loss when comparing, to avoid having too small numbers.
-            if test_loss < best_val_loss:
+            if test_loss < best_val_loss or epoch % 50 == 0:
                 best_val_loss = test_loss
 
                 # save model locally
