@@ -57,24 +57,19 @@ def inference(model, input_tensor):
     return output
 
 
-def get_input_and_label(joint_path, video_path, normalized=True, default=False, path='/home/linxin67/scratch/JHMDB'):
+def get_input_and_label(use_videos, joint_path, video_path):
     # for the sake of testing, I will juhhst hard copy some files and the respective joint outputs
     # I'll also make sure they were in the test files
     joints = scipy.io.loadmat(os.path.join(joint_path, 'joint_positions.mat'))
-    if normalized and default:
-        joints = torch.tensor(joints['pos_world'])
-        print('The joints taken are the normalized ones')
-    else:
-        joints = torch.tensor(joints['pos_img'])
-        print('The joints taken are not normalized')
+    joints = torch.tensor(joints['pos_img'])
 
     joints = rearrange(joints, 'd n f->f n d')
-    video = video_to_tensors(config, video_path)
+    video = video_to_tensors(video_path, use_videos)
 
     return joints, video
 
 
-def image_to_tensor(self, image_path):
+def image_to_tensor(image_path):
     '''Returns a torch tensor for a given image associated with the path'''
     image = Image.open(image_path).convert('RGB')
     transform = transforms.Compose([
@@ -84,7 +79,7 @@ def image_to_tensor(self, image_path):
     return tensor
 
 
-def video_to_tensors(self, action, video, use_videos, path):
+def video_to_tensors(video_path, use_videos):
     '''
     Returns a tensor with the following:
     (n_frames, num_channels (3), 224, 224)
@@ -92,7 +87,6 @@ def video_to_tensors(self, action, video, use_videos, path):
 
     # goes through the each image.
     if not use_videos:
-        video_path = os.path.join(path, 'Rename_Images', action, video)
         image_tensors = []
 
         # reorder the images
@@ -111,10 +105,6 @@ def video_to_tensors(self, action, video, use_videos, path):
         batch_tensor = torch.stack(image_tensors)
 
     else:
-        # Check if the video file exists
-        video = video + '.avi'  # adding the .avi extension.
-        video_path = os.path.join(path, 'ReCompress_Videos', action, video)
-
         if not os.path.isfile(video_path):
             print(f"The video file {video_path} does not exist.")
 
@@ -144,16 +134,14 @@ def video_to_tensors(self, action, video, use_videos, path):
 
         # Stack all frames into a single tensor
         batch_tensor = torch.stack(frames)
+        print(batch_tensor.shape)
 
         # Transpose the tensor to have the shape (frames, channels, height, width)
-        batch_tensor = batch_tensor.permute(0, 3, 1, 2)
-
-        batch_tensor = transform(batch_tensor)
+        batch_tensor = rearrange(batch_tensor, 'n h w c-> n c h w')
 
     return batch_tensor
 
-
-def visualize(joints, frames, file_name, width, height, normalized=True):
+def visualize(joints, frames, file_name, width, height):
     '''1: neck
     2: belly
     3: face
@@ -204,6 +192,10 @@ def visualize(joints, frames, file_name, width, height, normalized=True):
         image = image.clone().to('cpu')
         image = image.numpy()
 
+        # Scale image data to the range [0, 1] for floats
+        if image.dtype == np.float32 or image.dtype == np.float64:
+            image = (image - image.min()) / (image.max() - image.min())
+
         joints_per_frame = joints_per_frame.clone().to('cpu')
         joints_per_frame = joints_per_frame.numpy()
 
@@ -240,22 +232,15 @@ def main(config):
     ground_truth = True
     predicted = True
 
-    action_path = 'test_visualization/6arrowswithin30seconds_shoot_bow_f_nm_np1_fr_med_0.avi'
+    video_path = 'test_visualization/6arrowswithin30seconds_shoot_bow_f_nm_np1_fr_med_0.avi'
     joint_path = 'test_visualization/6arrowswithin30seconds_shoot_bow_f_nm_np1_fr_med_0'
 
     test_checkpoint = 'heatmap_2.1880.pt'
     model_path = os.path.join(
         config['checkpoint_directory'], config['checkpoint_name'], test_checkpoint)
 
-    normalized = config['normalized']
-    default = config['default']
-
-    print(f'The joints are normalized: {normalized}.\n \
-        The joints are normalized with the default: {default}')
-
     # load the whole joint file and the video
-    joints, frames = get_input_and_label(
-        joint_path, action_path, normalized, default, model_path)
+    joints, frames = get_input_and_label(config['use_videos'], joint_path, video_path)
 
     width, height = config['image_width'], config['image_height']
     tensor_width, tensor_height = config['image_tensor_width'], config['image_tensor_height']
@@ -266,7 +251,7 @@ def main(config):
     if ground_truth:
         # ground truth
         visualize(joints, frames, 'normalized_pull_ups',
-                  width, height, normalized=normalized)
+                  width, height)
 
     # i'll try to fix just the normal visualize predict
     if predicted:
@@ -292,15 +277,19 @@ def main(config):
 
         for frame in range(15, len(frames)):
             input_frame = frames[frame-(frames_per_vid)+1:frame+1]
+            input_frame = rearrange(input_frame, 'd c h w -> d h w c')
 
-            input_frame = rearrange(input_frame, 'd c h w -> c d h w')
+            input_frame, _ = preprocess_video_data(input_frame.numpy(), bboxes.numpy(), joints.numpy(), (tensor_width, tensor_height), config['min_norm'])
+            input_frame = rearrange(input_frame, '(b d) c h w -> b c d h w', b=1)
 
             input_frame = input_frame.to(device)
 
             # videos.append(input_frame) # need cuda GPU!
             output = inference(model, input_frame)
-            
-            _, output = inverse_process_joint_data(bboxes[frame], output, (tensor_width, tensor_height), False)
+
+            output = output.to('cpu')
+            # I think output outputs a batch size of 1, so there is one more dimension
+            _, output = inverse_process_joint_data(bboxes[frame].numpy(), output[0].numpy(), (tensor_width, tensor_height), False)
 
             outputs[frame-15] = output
 
@@ -310,7 +299,7 @@ def main(config):
 
         # visualize
         visualize(outputs, frames, 'predicted', width,
-                  height, normalized=normalized)
+                  height)
 
 
 if __name__ == "__main__":
@@ -330,7 +319,7 @@ if __name__ == "__main__":
     sys.path.append(config['project_dir'])
 
     # do not hit ctrl shift -i, or it will put this at the top
-    from AffineTransform import denormalize_fn, bounding_box, inference_yolo_bounding_box, inverse_process_joint_data
+    from AffineTransform import denormalize_fn, bounding_box, inference_yolo_bounding_box, inverse_process_joint_data, preprocess_video_data
     from HeatVideoMamba import HeatMapVideoMambaPose
 
     main(config)
