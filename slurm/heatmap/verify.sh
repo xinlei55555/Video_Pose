@@ -9,5 +9,5 @@
 
 module restore mamba_modules125
 source /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/mamba_env125/bin/activate
-cd /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/utils
+cd /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/utils
 python verify_installation.py                    # Command to run your Python script

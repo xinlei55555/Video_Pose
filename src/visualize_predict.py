@@ -167,13 +167,13 @@ def visualize(joints, frames, file_name, width, height):
 
     # generate a new folder name
     idx = 1
-    while os.path.exists(os.path.join('results', file_name)):
+    while os.path.exists(os.path.join('inference/results', file_name)):
         if idx == 1:
             file_name = str(idx) + file_name
         else:
             file_name = str(idx) + file_name[1:]
         idx += 1
-    file_name = os.path.join('results', file_name)
+    file_name = os.path.join('inference/results', file_name)
     os.mkdir(file_name)
 
     # NOTE: even though in the dataloader, I am using a more efficient way, I won't because anyways here, the overhead copying isn't that much
@@ -236,8 +236,8 @@ def main(config):
     ground_truth = False
     predicted = True
 
-    video_path = 'test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0.avi'
-    joint_path = 'test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0'
+    video_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0.avi'
+    joint_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0'
 
     # test_checkpoint = 'heatmap_2.1880.pt'
     # test_checkpoint = 'heatmap_7.4616.pt'
@@ -321,22 +321,16 @@ def main(config):
 
 if __name__ == "__main__":
     # config = open_config(file_name='heatmap_beluga_idapt_local.yaml',
-    config = open_config(file_name='overfit_heatmap_beluga_local.yaml',
-                         folder_path='/home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/configs/heatmap')
+    config = open_config(file_name='heatmap/overfit_heatmap_beluga_local.yaml',
+                         folder_path='configs')
     # config = open_config(file_name='heatmap_beluga.yaml',
     #  folder_path='/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/configs/heatmap')
 
     # change the system directory
     # these are hard coded just for ht ecase
-    sys.path.append(
-        '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap')
-    sys.path.append('/mnt/DATA/Personnel/Other learning/Programming/Professional_Opportunities/KITE - Video Pose ViT/KITE - Video Pose Landmark Detection/3_VideoMambaPose/src/models/experiments/heatmap')
-    sys.path.append(
-        '/home/xinlei/Projects/KITE_MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap')
-    sys.path.append(config['project_dir'])
 
     # do not hit ctrl shift -i, or it will put this at the top
-    from AffineTransform import denormalize_fn, bounding_box, inference_yolo_bounding_box, inverse_process_joint_data, preprocess_video_data
-    from HeatVideoMamba import HeatMapVideoMambaPose
+    from data_format.AffineTransform import denormalize_fn, bounding_box, inference_yolo_bounding_box, inverse_process_joint_data, preprocess_video_data
+    from models.heatmap.HeatVideoMamba import HeatMapVideoMambaPose
 
     main(config)

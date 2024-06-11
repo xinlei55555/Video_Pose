@@ -16,5 +16,5 @@ module restore mamba_modules125
 source /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/mamba_env125/bin/activate
 export WANDB_MODE=offline
 wandb offline
-cd /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap
-python HeatMapTrain.py --config 'Dropout_heatmap_beluga.yaml'                   # Command to run your Python script
+cd /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/src
+python train.py --config 'heatmap/Dropout_heatmap_beluga.yaml'                   # Command to run your Python script

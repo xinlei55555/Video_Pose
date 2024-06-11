@@ -1,41 +1,41 @@
 model_name: VideoMambaPose
 # heatmap project directory
-project_dir: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/
 
-model_type: 'Heatmap_2d_deconv_linear_regression'
+model_type: 'latent_space_regression_with_linear'
 
 # full_debug mode will enable a lot of information being printed
-full_debug: False
-show_gradients: False
+full_debug: False 
+show_gradients: True
 show_predictions: False
 
 # architecture mamba
 embed_channels: 192 # number of channels after the tiny mamba layers.
 num_mamba_blocks: 12
 
-# deconv
-num_deconv: 2
-2d_deconv: True
-deconv_channels: 192
-  # using 2d or 3d deconvolutions
-num_conv: 2
-conv_channels: 256
+# # deconv
+# num_deconv: 2
+# 2d_deconv: True
+# deconv_channels: 192
+#   # using 2d or 3d deconvolutions
+# num_conv: 2
+# conv_channels: 256
 joint_regressor: True
   # joint regressor
 hidden_channels: 512
 output_dimensions: 2 # x, y
-dropout: True
-dropout_percent: 0.25
+dropout: False
+dropout_percent: 0.25 # if dropout is True
+num_hidden_layers: 3 # to replace the deconvolutions and the convolutions.
 
 # training
 epoch_number: 300
 # batch_size: 16
 # batch_size: 8
-batch_size: 16 # just to see how scalable it is
-# learning_rate: 0.0001
-learning_rate: 0.0005
+batch_size: 4 # just to see how scalable it is
+# learning_rate: 0.001
+learning_rate: 0.1
 #scheduler:
-scheduler: True
+scheduler: False
 start_epoch: 1
 
 # device settings
@@ -45,9 +45,10 @@ num_gpus: 1
 parallelize: False
 
 # checkpoints
-checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/heatmap/checkpoint
+# checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/latent_space_regression_with_linear/checkpoint
+checkpoint_directory: checkpoints/latent_space_regression_with_linear
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
-checkpoint_name: '0.0005_Dropout_LR_Scheduler_true'
+checkpoint_name: 'tanh_overfit_model'
 # checkpoint_name: 'testing_false_dataset'
 
 # Follow up on the training of another previous run?
@@ -59,11 +60,12 @@ previous_checkpoint: ''
 
 # data
 dataset_name: 'JHMDB'
-data_path: /home/linxin67/scratch/JHMDB
-annotations_path: /home/linxin67/scratch/JHMDB_old/annotations
+data_path: /home/xinlei/Projects/KITE_MambaPose/Video_Pose/data/JHMDB
+annotations_path: /home/xinlei/Projects/KITE_MambaPose/Video_Pose/data/JHMDB_old/annotations
 # use avi videos
-preprocess_videos: True
 use_videos: True
+preprocess_videos: True
+
 # actions to skip
 skip: ['wave']
 num_frames: 16
@@ -79,10 +81,10 @@ jump: 1 # number of frames to skip between the different datapoints
 joint_number: 15
 
 # if False, uses subset of the data to run
-real_job: True
+real_job: False
 
 # normalization
 normalized: True
 default: False # not the default normalization
-min_norm: 0
+min_norm: -1
 

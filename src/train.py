@@ -9,9 +9,8 @@ import torch.optim as optim
 import wandb
 import argparse
 
-from HeatMapLoss import PoseEstimationLoss
-from HeatVideoMamba import HeatMapVideoMambaPose
-from DataFormat import JHMDBLoad
+from loss.PoseLoss import PoseEstimationLoss
+from data_format.DataFormat import JHMDBLoad
 from import_config import open_config
 
 import os
@@ -215,7 +214,20 @@ def main(rank, world_size, config, config_file_name):
                                  shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
 
         # Initialize the model
-        model = HeatMapVideoMambaPose(config).to(device)
+        # choosing the right model:
+        if config['model_type'] == 'heatmap':
+            model = HeatMapVideoMambaPose(config).to(device)
+
+        elif config['model_type'] == 'latent_HMR':
+            model = LatentVideoMambaPose(config).to(device)
+        
+        elif config['model_type'] == 'latent_space_regression_with_linear':
+            model = LatentVideoMambaPose(config).to(device)
+
+        else:
+            print('Your selected model does not exist! (Yet)')
+            return
+
         model = model.to(device)  # to unique GPU
         print('Model loaded successfully as follows: ', model)
 
@@ -261,7 +273,19 @@ def main(rank, world_size, config, config_file_name):
 
         # loading the model
         # sending the model to the correct rank
-        model = HeatMapVideoMambaPose(config).to(rank)
+        if config['model_type'] == 'heatmap':
+            model = HeatMapVideoMambaPose(config).to(rank)
+
+        elif config['model_type'] == 'latent_HMR':
+            model = LatentVideoMambaPose(config).to(rank)
+        
+        elif config['model_type'] == 'latent_space_regression_with_linear':
+            model = LatentVideoMambaPose(config).to(rank)
+
+        else:
+            print('Your selected model does not exist! (Yet)')
+            return
+        
         model = DDP(model, device_ids=[
                     rank], output_device=rank, find_unused_parameters=True)
 
@@ -286,9 +310,14 @@ def main(rank, world_size, config, config_file_name):
 
 
 if __name__ == '__main__':
+    # importing all possible models:
+    from models.heatmap.HeatVideoMamba import HeatMapVideoMambaPose
+    from models.latent_HMR.HMRMambaPose import HMRVideoMambaPose
+    from models.latent_space_regression_with_linear.LatentMambaPose import LatentVideoMambaPose
+
     # argparse to get the file path of the config file
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default='heatmap_beluga.yaml',
+    parser.add_argument('--config', type=str, default='heatmap/heatmap_beluga.yaml',
                         help='Name of the configuration file')
     args = parser.parse_args()
     config_file = args.config

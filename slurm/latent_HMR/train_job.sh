@@ -17,4 +17,4 @@ source /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/mamba_env1
 export WANDB_MODE=offline
 wandb offline
 cd /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/Mamba_HMR_regressor
-python HMRTrain.py --config 'latent_HMR_beluga.yaml'                   # Command to run your Python script
+python HMRTrain.py --config 'latent_HMR/latent_HMR_beluga.yaml'                   # Command to run your Python script
