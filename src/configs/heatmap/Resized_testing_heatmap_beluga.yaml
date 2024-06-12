@@ -13,6 +13,8 @@ embed_channels: 192 # number of channels before and after the tiny mamba layers.
 # note: the embed channels within mamba is 768.
 num_mamba_blocks: 12
 
+losses: ['mse', 'velocity']
+
 # deconv
 num_deconv: 2
 2d_deconv: True
