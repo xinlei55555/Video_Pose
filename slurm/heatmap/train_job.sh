@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=0.0005_LR_Scheduler_Dropout_fixed_New_LearnRate_Resized_Tanh_custom_normalized_without_wave2       # Job name
+#SBATCH --job-name=0.0001_LR_Scheduler_Dropout_fixed_New_LearnRate_Resized_Tanh_custom_normalized_without_wave2       # Job name
 #SBATCH --account=def-btaati              # Replace with your account
 #SBATCH --time=03-00:00                   # Time limit (DD-HH:MM) ! change this when training.
 #SBATCH --cpus-per-task=1                 # Number of CPU cores per task ! change this when training.
