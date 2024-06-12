@@ -141,7 +141,7 @@ def preprocess_video_data(frames, bboxes, joints, out_res, min_norm):
     return new_frames, new_joints
 
 
-def inverse_process_joint_data(bbox, joint, output_res, min_norm, frame=False):
+def inverse_process_joint_data(bboxes, joints, output_res, min_norm, frame=False):
     '''
     This applies the inverse functions of the preprocess_video_data outputs of a given frame
     Args:
@@ -152,21 +152,31 @@ def inverse_process_joint_data(bbox, joint, output_res, min_norm, frame=False):
     '''
     # note: output_res must be the same as out_res in preprocess_video_data
     image_size = np.array(output_res)
-    center, scale = box2cs(image_size, bbox)
-    rotation = 0
-    
+
     # denormalize values!
-    joint = denormalize_fn(joint, min_norm, output_res[1], output_res[0])
+    joints = denormalize_fn(joints, min_norm, output_res[1], output_res[0])
+    
+    new_joints = []
+    num_joints = joints.shape[0]
 
-    # Calculate the correct inverse transformation matrix
-    trans = get_warp_matrix(rotation, center * 2.0,
-                            image_size - 1.0, scale * 200.0)
+    for idx in range(num_joints):
+        center, scale = box2cs(image_size, bboxes[idx])
+        rotation = 0
 
-    # Inverse the of the Affine Transform matrix, notice that the output_res must remain the same, even though to not break the joint values.
-    inv_trans = cv2.invertAffineTransform(trans)
+        # Calculate the correct inverse transformation matrix
+        trans = get_warp_matrix(rotation, center * 2.0,
+                                image_size - 1.0, scale * 200.0)
 
-    # inverse warping for the joints
-    joint = torch.from_numpy(warp_affine_joints(joint[:, 0:2].copy(), inv_trans))
+        # Inverse the of the Affine Transform matrix, notice that the output_res must remain the same, even though to not break the joint values.
+        inv_trans = cv2.invertAffineTransform(trans)
+
+        # inverse warping for the joints
+        joint = torch.from_numpy(warp_affine_joints(joints[idx][:, 0:2].copy(), inv_trans))
+    
+        new_joints.append(joint)
+    
+    new_joints = torch.stack(new_joints)
+
 
     # although usually, I would not be denormalizing the frames.
     if frame is not False:
@@ -191,7 +201,7 @@ def inverse_process_joint_data(bbox, joint, output_res, min_norm, frame=False):
         frame = F.to_tensor(frame_cropped)
 
 
-    return frame, joint
+    return frame, new_joints
 
 
 def normalize_fn(x, min_norm, h=240.0, w=320.0):
@@ -344,7 +354,7 @@ if __name__ == '__main__':
     # Preprocess and inverse process a single frame
     frame_idx = 0
     preprocessed_frame = preprocessed_frames[frame_idx]
-    preprocessed_joint = preprocessed_joints[frame_idx]
+    preprocessed_joint = preprocessed_joints
     original_frame = frames[frame_idx]
 
     # print('preprocess shape', preprocessed_frame.shape)
@@ -352,7 +362,7 @@ if __name__ == '__main__':
     preprocessed_frame = rearrange(preprocessed_frame, 'c w h -> c h w')
     # (320, 240)) # ERROR, don't the big screen output, put the output you wanted intiially, so it returns you th iniitla coordinates!@ Invert Affine matrix handles it for you!!!
     inv_frame, inv_joint = inverse_process_joint_data(
-        bboxes[frame_idx], preprocessed_joint.numpy(), out_res, -1, preprocessed_frame.numpy())
+        bboxes, preprocessed_joint.numpy(), out_res, -1, preprocessed_frame.numpy())
 
     # Check if the joint values are the same after inverse processing
     # for i in range(len(list(joints))):
