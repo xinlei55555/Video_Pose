@@ -72,7 +72,11 @@ class JointOutput(nn.Module):
         # self.get_shape(x)
 
         # mamba has the following output batch, (num_frames x heigt x width), channel_number
-        return rearrange(x, 'b d c -> b (d c)')  # rearrange
+        if self.config['use_last_frame_only']:
+            x = rearrange(x, 'b d c -> b (d c)')  # rearrange
+        else:
+            x = rearrange(x, 'b (d h w) c-> (b d) (h w c)', b=self.b, d=self.d, h=self.h, w=self.w)
+        return x
 
     def regressors(self, dim_hidden, dim_out):
         # Assuming the input tensor x has shape (batch_size, input_size)
@@ -106,6 +110,8 @@ class JointOutput(nn.Module):
         output = self.regressor(x)
 
         # need to reshape the output
-        output = rearrange(
-            output, 'b (c o)-> b c o', c=self.joint_number, o=self.config['output_dimensions'])
+        if self.config['use_last_frame_only']:
+            output = rearrange(output, 'b (c o)-> b c o', c=self.joint_number, o=self.config['output_dimensions'])
+        else:
+            output = rearrange(output, '(b d) (c o)-> b d c o', c=self.joint_number, o=self.config['output_dimensions'], d=self.d, b=self.b)
         return output

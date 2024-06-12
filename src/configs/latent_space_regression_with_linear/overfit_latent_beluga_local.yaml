@@ -21,6 +21,7 @@ losses: ['mse', 'velocity']
 #   # using 2d or 3d deconvolutions
 # num_conv: 2
 # conv_channels: 256
+use_last_frame_only: False
 joint_regressor: True
   # joint regressor
 hidden_channels: 512
@@ -79,7 +80,7 @@ image_tensor_height: 256
 image_tensor_width: 192
 patch_number: 192 # number of patches, each of size 4 pixels by 4 pixels
 patch_size: 16 # each patch is 4x4
-jump: 1 # number of frames to skip between the different datapoints
+jump: 16 # number of frames to skip between the different datapoints
 joint_number: 15
 
 # if False, uses subset of the data to run

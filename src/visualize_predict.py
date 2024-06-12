@@ -146,7 +146,7 @@ def video_to_tensors(video_path, use_videos):
 
         # Stack all frames into a single tensor
         batch_tensor = torch.stack(frames)
-        print(batch_tensor.shape)
+        print('The shape of your video is', batch_tensor.shape)
 
         # Transpose the tensor to have the shape (frames, channels, height, width)
         batch_tensor = rearrange(batch_tensor, 'n h w c-> n c h w')
@@ -248,6 +248,8 @@ def main(config):
     ground_truth = False
     predicted = True
 
+    jump = config['jump']
+
     video_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0.avi'
     joint_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0'
 
@@ -255,7 +257,8 @@ def main(config):
     # test_checkpoint = 'heatmap_7.4616.pt'
     # test_checkpoint = 'heatmap_0.3881.pt'
     # test_checkpoint = 'heatmap_0.6573.pt'
-    test_checkpoint = 'heatmap_0.2777.pt'
+    # test_checkpoint = 'heatmap_0.2777.pt'
+    test_checkpoint = 'heatmap_0.0409.pt'
     model_path = os.path.join(
         config['checkpoint_directory'], config['checkpoint_name'], test_checkpoint)
 
@@ -283,7 +286,7 @@ def main(config):
 
         print(model)
 
-        if debug_parameters:
+        if config['show_gradients']:
             for name, param in model.named_parameters():
                 print(f'Parameter: {name}')
                 print(f'Values: {param.data}')
@@ -293,19 +296,20 @@ def main(config):
                     print('No gradient computed for this parameter')
                     print('---')
     
-        frames_per_vid = 16
+        frames_per_vid = config['num_frames']
         # all frames, except first 15 (because each video is 16 frames) with 15 joints, and x y
-        outputs = torch.zeros(len(frames)-15, 15, 2)
+        outputs = torch.zeros(len(frames), 15, 2)
 
         # need to reformat the output, find the bounding box, and apply the output
         # If I have the ground truth data, then I will rely on that for the bounding box
-        if ground_truth:
+        if joints is not None:
             bboxes = bounding_box(joints)
         # elsewise, use the yolo algorithm
         else:
-            bboxes = inference_yolo_bounding_box(video_tensor)
+            bboxes = inference_yolo_bounding_box(joints)
 
-        for frame in range(15, len(frames)):
+        
+        for frame in range(15, len(frames), jump):
             input_frame = frames[frame-(frames_per_vid)+1:frame+1]
             input_frame = rearrange(input_frame, 'd c h w -> d h w c')
 
@@ -319,9 +323,13 @@ def main(config):
 
             output = output.to('cpu')
             # I think output outputs a batch size of 1, so there is one more dimension
-            _, output = inverse_process_joint_data(bboxes[frame].numpy(), output[0].numpy(), (tensor_width, tensor_height), config['min_norm'], False)
-
-            outputs[frame-15] = output
+            _, output = inverse_process_joint_data(bboxes.numpy(), output[0].numpy(), (tensor_width, tensor_height), config['min_norm'], False)
+            print(output.shape)
+            print(len(frames))
+            print(outputs.shape)
+            # outputs[frame+1-frames_per_vid:frames+1] = output
+            for i in range(output.shape[0]):
+                outputs[frame + i + 1 - frames_per_vid] = output[i]
 
         print('Are the last two outputs the same?: ', outputs[0] == outputs[1])
         # prints the last output

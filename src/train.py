@@ -25,7 +25,7 @@ def load_checkpoint(filepath, model):
 def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_set, test_set, device, rank, world_size,
                   checkpoint_directory, checkpoint_name,  follow_up=(False, 1, None)):
     # os.chdir(os.path.join(os.getcwd(), checkpoint_directory))
-    os.makedirs(checkpoint_name, exist_ok=True)
+    os.makedirs(os.path.join(checkpoint_directory, checkpoint_name), exist_ok=True)
     best_val_loss = float('inf')
 
     start_epoch = 1
@@ -64,7 +64,8 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
             # first make an initial guess as to the weights (Note: training is done in parallel)
             train_outputs = model(train_inputs)
 
-            if epoch == start_epoch and i == 1:
+            if epoch == start_epoch and i == 0:
+                print('The shape of the inputs is ', train_inputs.shape)
                 print('The shape of the outputs is ', train_outputs.shape)
                 print('The shape of the labels are ', train_labels.shape)
 
@@ -73,7 +74,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
             loss_train = loss_fn(train_outputs.float(), train_labels.float())
     
             # checking for vanishing gradient.
-            if config['show_gradients'] and i == 1:
+            if config['show_gradients'] and i == 0:
                 for name, param in model.named_parameters():
                     print(f'Parameter: {name}')
                     print(f'Values: {param.data}')
@@ -94,7 +95,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
             # .item transforms loss from pytorch tensor to python value
             train_loss += loss_train.item()
 
-            if epoch == start_epoch and i == 1:
+            if epoch == start_epoch and i == 0:
                 # Prints GPU memory summary
                 print('Memory after train_batch (in MB)',
                       torch.cuda.memory_allocated()/1e6)
@@ -118,7 +119,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
 
                 test_loss += loss_val.item()
 
-                if epoch == start_epoch and i == 1:
+                if epoch == start_epoch and i == 0:
                     # Prints GPU memory summary
                     print('Memory after test_batch (in MB)',
                           torch.cuda.memory_allocated()/1e6)

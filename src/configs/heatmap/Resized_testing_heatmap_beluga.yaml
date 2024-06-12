@@ -23,6 +23,7 @@ deconv_channels: 192
 num_conv: 2
 conv_channels: 256
 joint_regressor: True
+use_last_frame_only: False
   # joint regressor
 hidden_channels: 512
 output_dimensions: 2 # x, y
@@ -76,7 +77,7 @@ image_tensor_height: 256 # changed to match VitPose
 image_tensor_width: 192
 patch_number: 192 # total number of patches, each of size 16 pixels by 16 pixels
 patch_size: 16 # each patch is 16x16
-jump: 1 # number of frames to skip between the different datapoints
+jump: 16 # number of frames to skip between the different datapoints
 joint_number: 15
 
 # if False, uses subset of the data to run

@@ -55,8 +55,12 @@ class Deconv(nn.Module):
 
         # and I can just discard the depth, and keep the last layer of the mamba (at least for the 2D deconv)
         # Select the last element in the 'd' dimension
-        x = x[:, -1, :, :, :]  # x.shape now should be [batch, c, h, w]
-
+        if self.config['use_last_frame_only']:
+            x = x[:, -1, :, :, :]  # x.shape now should be [batch, c, h, w]
+        else:
+            # new: will change it so that every frame gets a prediction
+            x = rearrange(x, 'b d c h w -> (b d) c h w',
+                      d=self.d, h=self.h, w=self.w)
         return x
 
     def define_conv_layers(self,

@@ -104,6 +104,7 @@ def preprocess_video_data(frames, bboxes, joints, out_res, min_norm):
         joints: A numpy array with shape (F, J, 2)
         out_res: Output resolution in (w, h) format. By default is (192, 256)
     """
+    print(joints)
     image_size = np.array(out_res)
     num_frames = frames.shape[0]
 
@@ -135,6 +136,7 @@ def preprocess_video_data(frames, bboxes, joints, out_res, min_norm):
     new_frames = torch.stack(new_frames)
     new_joints = torch.stack(new_joints)
 
+    print(new_joints)
     # normalize the joints with custom normalization
     new_joints = normalize_fn(new_joints, min_norm, out_res[1], out_res[0])
 
@@ -155,9 +157,13 @@ def inverse_process_joint_data(bboxes, joints, output_res, min_norm, frame=False
 
     # denormalize values!
     joints = denormalize_fn(joints, min_norm, output_res[1], output_res[0])
-    
+
+    print(joints)
+
     new_joints = []
     num_joints = joints.shape[0]
+
+    print(num_joints)
 
     for idx in range(num_joints):
         center, scale = box2cs(image_size, bboxes[idx])
@@ -171,12 +177,9 @@ def inverse_process_joint_data(bboxes, joints, output_res, min_norm, frame=False
         inv_trans = cv2.invertAffineTransform(trans)
 
         # inverse warping for the joints
-        joint = torch.from_numpy(warp_affine_joints(joints[idx][:, 0:2].copy(), inv_trans))
-    
-        new_joints.append(joint)
-    
-    new_joints = torch.stack(new_joints)
+        new_joints.append(torch.from_numpy(warp_affine_joints(joints[idx][:, 0:2].copy(), inv_trans)))
 
+    new_joints = torch.stack(new_joints)
 
     # although usually, I would not be denormalizing the frames.
     if frame is not False:
@@ -199,7 +202,6 @@ def inverse_process_joint_data(bboxes, joints, output_res, min_norm, frame=False
             inv_trans, (int(image_size[0]), int(image_size[1])),
             flags=cv2.INTER_LINEAR)
         frame = F.to_tensor(frame_cropped)
-
 
     return frame, new_joints
 
@@ -277,6 +279,8 @@ def inference_yolo_bounding_box(video_tensor):
     return bounding_boxes
 
 # if joints are already given
+
+
 def bounding_box(input_joints):
     '''
     Given a video containing joints, return the bounding box for each frame into a tensor
@@ -321,7 +325,6 @@ if __name__ == '__main__':
     # joints = np.array([[[100, 120]] * 15] * num_frames)
     joints = np.random.randint(0, 256, size=(num_frames, 15, 2))
     print(joints[0])
-
 
     # joints = np.array([[[0, 0]] * 15] * num_frames )
     # # Preprocess the video
