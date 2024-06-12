@@ -25,7 +25,7 @@ def load_checkpoint(filepath, model):
 def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_set, test_set, device, rank, world_size,
                   checkpoint_directory, checkpoint_name,  follow_up=(False, 1, None)):
     # os.chdir(os.path.join(os.getcwd(), checkpoint_directory))
-    os.makedirs(checkpoint_name, exist_ok=True)
+    os.makedirs(os.path.join(checkpoint_directory, checkpoint_name), exist_ok=True)
     best_val_loss = float('inf')
 
     start_epoch = 1
@@ -36,7 +36,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
         start_epoch = follow_up[1]
 
     for epoch in range(start_epoch, n_epochs + start_epoch):
-        print(f'Epoch {epoch} started ======>')
+        print(f'[==>] Epoch {epoch} started ')
 
         # telling the data loader which epoch we are at
         if torch.cuda.device_count() > 1 and config['parallelize']:
@@ -53,7 +53,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
                 f'The number of batches in the train_set is {len(train_set)}')
             print(f'The number of batches in the test_set is {len(test_set)}')
 
-        print('train batch for epoch # ', epoch, '==============>')
+        print('[=============>] train batch for epoch # ', epoch )
         for i, data in enumerate(train_set):
             train_inputs, train_labels = data
 
@@ -64,7 +64,8 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
             # first make an initial guess as to the weights (Note: training is done in parallel)
             train_outputs = model(train_inputs)
 
-            if epoch == start_epoch and i == 1:
+            if epoch == start_epoch and i == 0:
+                print('The shape of the inputs is ', train_inputs.shape)
                 print('The shape of the outputs is ', train_outputs.shape)
                 print('The shape of the labels are ', train_labels.shape)
 
@@ -73,7 +74,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
             loss_train = loss_fn(train_outputs.float(), train_labels.float())
     
             # checking for vanishing gradient.
-            if config['show_gradients'] and i == 1:
+            if config['show_gradients'] and i == 0:
                 for name, param in model.named_parameters():
                     print(f'Parameter: {name}')
                     print(f'Values: {param.data}')
@@ -94,7 +95,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
             # .item transforms loss from pytorch tensor to python value
             train_loss += loss_train.item()
 
-            if epoch == start_epoch and i == 1:
+            if epoch == start_epoch and i == 0:
                 # Prints GPU memory summary
                 print('Memory after train_batch (in MB)',
                       torch.cuda.memory_allocated()/1e6)
@@ -104,7 +105,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
         model.eval()  # so that the model does not change the values of the parameters
         test_loss = 0.0
         with torch.no_grad():  # reduce memory while torch is using evaluation mode
-            print('test batch for epoch # ', epoch, '======================>')
+            print('[======================>] test batch for epoch # ', epoch)
             for i, data in enumerate(test_set):
                 test_inputs, test_labels = data
                 test_inputs, test_labels = test_inputs.to(
@@ -118,7 +119,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
 
                 test_loss += loss_val.item()
 
-                if epoch == start_epoch and i == 1:
+                if epoch == start_epoch and i == 0:
                     # Prints GPU memory summary
                     print('Memory after test_batch (in MB)',
                           torch.cuda.memory_allocated()/1e6)
@@ -127,7 +128,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
 
         # update scheduler
         if config['scheduler']:
-            print('Scheduler is currently registering the learning rate.')
+            print('[==========================>] Registering the learning rate.')
             scheduler.step(test_loss)
 
         # the shown loss should be for individual elements in the batch size
@@ -135,15 +136,18 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
             len(train_set), test_loss / len(test_set)
 
         if rank == 0:
+            print(f'[===================================>] Completed Epoch {epoch}')
+            print(f'[************************************************************]')
+            print('Information')
             wandb.log({"Pointwise training loss": show_loss_train})
             wandb.log({"Pointwise testing loss": show_loss_test})
             wandb.log({"Training loss": train_loss})
             wandb.log({"Testing loss": test_loss})
 
-            print(f"Epoch {epoch}, Pointwise Training loss {float(show_loss_train)},"
+            print(f"Epoch {epoch},\n Pointwise Training loss {float(show_loss_train)}, \n"
                   f" Pointwise Validation loss {float(show_loss_test)}")
             print(
-                f"Full training loss: {float(train_loss)}, Full test loss: {float(test_loss)}")
+                f"Full training loss: {float(train_loss)}, \n Full test loss: {float(test_loss)}")
 
             # if scheduler defined:
             if config['scheduler']:
@@ -161,6 +165,8 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
                 print(f'Best model saved at {checkpoint_path}')
                 print("Model parameters are of the following size",
                       len(list(model.parameters())))
+            print(f'[************************************************************]')
+
 
     if rank == 0:
         wandb.finish()
@@ -175,6 +181,8 @@ def setup(rank, world_size):
 def main(rank, world_size, config, config_file_name):
     wandb.init(
         project=config['model_name'],
+        name=config['checkpoint_name'],
+        notes=str(config),
         # entity=config_file_name,  # this will be the new name
         config={
             "dataset": config['dataset_name'],
