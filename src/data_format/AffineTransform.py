@@ -143,7 +143,7 @@ def preprocess_video_data(frames, bboxes, joints, out_res, min_norm):
     return new_frames, new_joints
 
 
-def inverse_process_joint_data(bboxes, joints, output_res, min_norm, frame=False):
+def inverse_process_joints_data(bboxes, joints, output_res, min_norm, frame=False):
     '''
     This applies the inverse functions of the preprocess_video_data outputs of a given frame
     Args:
@@ -204,6 +204,58 @@ def inverse_process_joint_data(bboxes, joints, output_res, min_norm, frame=False
         frame = F.to_tensor(frame_cropped)
 
     return frame, new_joints
+
+def inverse_process_joint_data(bbox, joint, output_res, min_norm, frame=False):
+    '''
+    This applies the inverse functions of the preprocess_video_data outputs of a given frame
+    Args:
+        # frame is a numpy array for the given frame, must be of the format (c w h)
+        bbox is the numpy array for the box information 
+        joint is a numpy array containing the joints for the given frame
+        input_res is a tuple containing the final resolution
+    '''
+    # note: output_res must be the same as out_res in preprocess_video_data
+    image_size = np.array(output_res)
+    center, scale = box2cs(image_size, bbox)
+    rotation = 0
+    
+    # denormalize values!
+    joint = denormalize_fn(joint, min_norm, output_res[1], output_res[0])
+
+    # Calculate the correct inverse transformation matrix
+    trans = get_warp_matrix(rotation, center * 2.0,
+                            image_size - 1.0, scale * 200.0)
+
+    # Inverse the of the Affine Transform matrix, notice that the output_res must remain the same, even though to not break the joint values.
+    inv_trans = cv2.invertAffineTransform(trans)
+
+    # inverse warping for the joints
+    joint = torch.from_numpy(warp_affine_joints(joint[:, 0:2].copy(), inv_trans))
+
+    # although usually, I would not be denormalizing the frames.
+    if frame is not False:
+        frame = torch.from_numpy(frame)
+        # denormalization
+        invTrans = transforms.Compose([
+            transforms.Normalize(mean=[0., 0., 0.], std=[
+                1/0.229, 1/0.224, 1/0.225]),
+            transforms.Normalize(
+                mean=[-0.485, -0.456, -0.406], std=[1., 1., 1.]),
+        ])
+
+        frame = invTrans(frame)
+        frame = rearrange(frame, 'c w h -> h w c')
+
+        frame = frame.numpy()
+        # perform inverse warping
+        frame_cropped = cv2.warpAffine(
+            frame,
+            inv_trans, (int(image_size[0]), int(image_size[1])),
+            flags=cv2.INTER_LINEAR)
+        frame = F.to_tensor(frame_cropped)
+
+
+    return frame, joint
 
 
 def normalize_fn(x, min_norm, h=240.0, w=320.0):
@@ -364,7 +416,7 @@ if __name__ == '__main__':
     # wrong shape! here, its height = 256, and width = 192
     preprocessed_frame = rearrange(preprocessed_frame, 'c w h -> c h w')
     # (320, 240)) # ERROR, don't the big screen output, put the output you wanted intiially, so it returns you th iniitla coordinates!@ Invert Affine matrix handles it for you!!!
-    inv_frame, inv_joint = inverse_process_joint_data(
+    inv_frame, inv_joint = inverse_process_joints_data(
         bboxes, preprocessed_joint.numpy(), out_res, -1, preprocessed_frame.numpy())
 
     # Check if the joint values are the same after inverse processing
@@ -372,7 +424,7 @@ if __name__ == '__main__':
     # print(joints)
     # print(inv_joint)
     # Max difference in joint values after inverse processing: 8.722770417080028e-07!!!! SO GOOD!!!
-    joints_diff = np.abs(joints[0] - inv_joint.numpy())
+    joints_diff = np.abs(joints - inv_joint.numpy())
     print(inv_joint)
     max_diff = np.max(joints_diff)
     print(

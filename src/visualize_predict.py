@@ -258,7 +258,7 @@ def main(config):
     # test_checkpoint = 'heatmap_0.3881.pt'
     # test_checkpoint = 'heatmap_0.6573.pt'
     # test_checkpoint = 'heatmap_0.2777.pt'
-    test_checkpoint = 'heatmap_0.0409.pt'
+    test_checkpoint = 'heatmap_0.1634.pt'
     model_path = os.path.join(
         config['checkpoint_directory'], config['checkpoint_name'], test_checkpoint)
 
@@ -297,8 +297,13 @@ def main(config):
                     print('---')
     
         frames_per_vid = config['num_frames']
+
         # all frames, except first 15 (because each video is 16 frames) with 15 joints, and x y
-        outputs = torch.zeros(len(frames), 15, 2)
+        if config['use_last_frame_only']:
+            outputs = torch.zeros(len(frames)-15, 15, 2)
+
+        else:
+            outputs = torch.zeros(len(frames), 15, 2)
 
         # need to reformat the output, find the bounding box, and apply the output
         # If I have the ground truth data, then I will rely on that for the bounding box
@@ -308,8 +313,8 @@ def main(config):
         else:
             bboxes = inference_yolo_bounding_box(joints)
 
-        
-        for frame in range(15, len(frames), jump):
+        # if only using the last frame
+        for frame in range(15, len(frames)):
             input_frame = frames[frame-(frames_per_vid)+1:frame+1]
             input_frame = rearrange(input_frame, 'd c h w -> d h w c')
 
@@ -322,14 +327,22 @@ def main(config):
             output = inference(model, input_frame)
 
             output = output.to('cpu')
-            # I think output outputs a batch size of 1, so there is one more dimension
-            _, output = inverse_process_joint_data(bboxes.numpy(), output[0].numpy(), (tensor_width, tensor_height), config['min_norm'], False)
-            print(output.shape)
-            print(len(frames))
-            print(outputs.shape)
-            # outputs[frame+1-frames_per_vid:frames+1] = output
-            for i in range(output.shape[0]):
-                outputs[frame + i + 1 - frames_per_vid] = output[i]
+
+            if config['use_last_frame_only']:
+                # I think output outputs a batch size of 1, so there is one more dimension
+                _, output = inverse_process_joint_data(bboxes[frame].numpy(), output[0].numpy(), (tensor_width, tensor_height), config['min_norm'], False)
+
+                outputs[frame-15] = output
+            
+            else:
+                # I think output outputs a batch size of 1, so there is one more dimension
+                _, output = inverse_process_joints_data(bboxes.numpy(), output[0].numpy(), (tensor_width, tensor_height), config['min_norm'], False)
+                print(output.shape)
+                print(len(frames))
+                print(outputs.shape)
+                # outputs[frame+1-frames_per_vid:frames+1] = output
+                for i in range(output.shape[0]):
+                    outputs[frame + i + 1 - frames_per_vid] = output[i]
 
         print('Are the last two outputs the same?: ', outputs[0] == outputs[1])
         # prints the last output
@@ -343,7 +356,7 @@ def main(config):
 if __name__ == "__main__":
     # config = open_config(file_name='heatmap_beluga_idapt_local.yaml',
    # importing all possible models:
-    from data_format.AffineTransform import denormalize_fn, bounding_box, inference_yolo_bounding_box, inverse_process_joint_data, preprocess_video_data
+    from data_format.AffineTransform import denormalize_fn, bounding_box, inference_yolo_bounding_box, inverse_process_joints_data, inverse_process_joint_data, preprocess_video_data
     from models.heatmap.HeatVideoMamba import HeatMapVideoMambaPose
     from models.latent_HMR.HMRMambaPose import HMRVideoMambaPose
     from models.latent_space_regression_with_linear.LatentMambaPose import LatentVideoMambaPose
