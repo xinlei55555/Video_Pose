@@ -10,13 +10,25 @@ from PIL import Image
 from einops import rearrange
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
+import argparse
 
 from import_config import open_config
 
 
-def load_model(filepath, parallel=False):
+def load_model(config , filepath, parallel=False):
     # Create the model
-    model = HeatMapVideoMambaPose(config)
+    if config['model_type'] == 'heatmap':
+        model = HeatMapVideoMambaPose(config)
+
+    elif config['model_type'] == 'latent_HMR':
+        model = LatentVideoMambaPose(config)
+    
+    elif config['model_type'] == 'latent_space_regression_with_linear':
+        model = LatentVideoMambaPose(config)
+
+    else:
+        print('Your selected model does not exist! (Yet)')
+        return
 
     # load the dictionary from checkpoint, and load the weights into the model.
     checkpoint = torch.load(filepath, map_location=torch.device('cpu'))
@@ -242,7 +254,8 @@ def main(config):
     # test_checkpoint = 'heatmap_2.1880.pt'
     # test_checkpoint = 'heatmap_7.4616.pt'
     # test_checkpoint = 'heatmap_0.3881.pt'
-    test_checkpoint = 'heatmap_0.6573.pt'
+    # test_checkpoint = 'heatmap_0.6573.pt'
+    test_checkpoint = 'heatmap_0.2777.pt'
     model_path = os.path.join(
         config['checkpoint_directory'], config['checkpoint_name'], test_checkpoint)
 
@@ -265,7 +278,7 @@ def main(config):
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         # Load the model from the .pt file
-        model = load_model(model_path, config['parallelize'])
+        model = load_model(config, model_path, config['parallelize'])
         model = model.to(device)
 
         print(model)
@@ -321,16 +334,20 @@ def main(config):
 
 if __name__ == "__main__":
     # config = open_config(file_name='heatmap_beluga_idapt_local.yaml',
-    config = open_config(file_name='heatmap/overfit_heatmap_beluga_local.yaml',
-                         folder_path='configs')
-    # config = open_config(file_name='heatmap_beluga.yaml',
-    #  folder_path='/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/configs/heatmap')
-
-    # change the system directory
-    # these are hard coded just for ht ecase
-
-    # do not hit ctrl shift -i, or it will put this at the top
+   # importing all possible models:
     from data_format.AffineTransform import denormalize_fn, bounding_box, inference_yolo_bounding_box, inverse_process_joint_data, preprocess_video_data
     from models.heatmap.HeatVideoMamba import HeatMapVideoMambaPose
+    from models.latent_HMR.HMRMambaPose import HMRVideoMambaPose
+    from models.latent_space_regression_with_linear.LatentMambaPose import LatentVideoMambaPose
+
+    # argparse to get the file path of the config file
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str, default='heatmap/heatmap_beluga.yaml',
+                        help='Name of the configuration file')
+    args = parser.parse_args()
+    config_file = args.config
+
+    # import configurations:
+    config = open_config(config_file)
 
     main(config)

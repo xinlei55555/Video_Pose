@@ -11,6 +11,8 @@ show_predictions: False
 embed_channels: 192 # number of channels after the tiny mamba layers.
 num_mamba_blocks: 12
 
+losses: ['mse', 'velocity']
+
 # deconv
 num_deconv: 2
 2d_deconv: True
@@ -30,7 +32,7 @@ epoch_number: 300
 # batch_size: 16
 # batch_size: 8
 batch_size: 16 # just to see how scalable it is
-learning_rate: 0.0001
+learning_rate: 0.0005
 # learning_rate: 0.0005
 #scheduler:
 scheduler: True
@@ -45,7 +47,7 @@ parallelize: False
 # checkpoints
 checkpoint_directory: checkpoints/heatmap
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
-checkpoint_name: '0.0001_Dropout_LR_Scheduler_true'
+checkpoint_name: '0.0005_Dropout_LR_Scheduler_true'
 # checkpoint_name: 'testing_false_dataset'
 
 # Follow up on the training of another previous run?

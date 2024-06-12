@@ -16,5 +16,5 @@ module restore mamba_modules125
 source /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/mamba_env125/bin/activate
 export WANDB_MODE=offline
 wandb offline
-cd /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/Mamba_HMR_regressor
-python HMRTrain.py --config 'latent_HMR/latent_HMR_beluga.yaml'                   # Command to run your Python script
+cd /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/src
+python train.py --config 'latent_HMR/latent_HMR_beluga.yaml'                   # Command to run your Python script

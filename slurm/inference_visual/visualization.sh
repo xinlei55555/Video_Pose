@@ -17,5 +17,5 @@ source /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/mamba_env1
 export WANDB_MODE=offline
 wandb offline
 # cd /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/inference
-cd /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/inference
+cd /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/src
 python visualize_predict.py                    # Command to run your Python script

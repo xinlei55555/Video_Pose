@@ -5,12 +5,14 @@ model_type: 'latent_space_regression_with_linear'
 
 # full_debug mode will enable a lot of information being printed
 full_debug: False 
-show_gradients: True
+show_gradients: False
 show_predictions: False
 
 # architecture mamba
 embed_channels: 192 # number of channels after the tiny mamba layers.
 num_mamba_blocks: 12
+
+losses: ['mse', 'velocity']
 
 # # deconv
 # num_deconv: 2
@@ -33,7 +35,7 @@ epoch_number: 300
 # batch_size: 8
 batch_size: 4 # just to see how scalable it is
 # learning_rate: 0.001
-learning_rate: 0.1
+learning_rate: 0.0005
 #scheduler:
 scheduler: False
 start_epoch: 1

@@ -22,8 +22,8 @@ from timm.models.vision_transformer import _load_weights
 import math
 
 from mamba_ssm.modules.mamba_simple import Mamba
-import LatentVideoMamba as hvm
-import LatentJointRegressor as hjr
+import models.latent_space_regression_with_linear.LatentVideoMamba as hvm
+import models.latent_space_regression_with_linear.LatentJointRegressor as hjr
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 

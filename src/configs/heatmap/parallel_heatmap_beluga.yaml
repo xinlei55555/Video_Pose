@@ -11,6 +11,8 @@ show_predictions: False
 embed_channels: 192 # number of channels after the tiny mamba layers.
 num_mamba_blocks: 12
 
+losses: ['mse', 'velocity']
+
 # deconv
 num_deconv: 2
 2d_deconv: True
