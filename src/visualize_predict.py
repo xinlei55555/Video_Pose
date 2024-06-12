@@ -250,15 +250,27 @@ def main(config):
 
     jump = config['jump']
 
-    video_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0.avi'
-    joint_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0'
+    # video_path = 'inference/test_visualization/20_good_form_pullups_pullup_f_nm_np1_ri_goo_0.avi'
+    # joint_path = 'inference/test_visualization/20_good_form_pullups_pullup_f_nm_np1_ri_goo_0'
+    # video_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0.avi'
+    # joint_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0'
 
+    video_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12.avi'
+    joint_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12'
     # test_checkpoint = 'heatmap_2.1880.pt'
     # test_checkpoint = 'heatmap_7.4616.pt'
     # test_checkpoint = 'heatmap_0.3881.pt'
     # test_checkpoint = 'heatmap_0.6573.pt'
     # test_checkpoint = 'heatmap_0.2777.pt'
-    test_checkpoint = 'heatmap_0.1634.pt'
+    # test_checkpoint = 'heatmap_4.0263.pt'
+    # test_checkpoint = 'heatmap_0.0375.pt'
+    # test_checkpoint = 'heatmap_0.0313.pt'
+    # test_checkpoint = 'heatmap_0.0128.pt'
+    test_checkpoint = 'heatmap_0.0581.pt'
+    if test_checkpoint is None:
+        lst = sorted(list(os.listdir(os.path.join(config['checkpoint_directory'], config['checkpoint_name']))))
+        test_checkpoint = lst[0]
+    print('Chosen checkpoint is', test_checkpoint)
     model_path = os.path.join(
         config['checkpoint_directory'], config['checkpoint_name'], test_checkpoint)
 
@@ -337,9 +349,6 @@ def main(config):
             else:
                 # I think output outputs a batch size of 1, so there is one more dimension
                 _, output = inverse_process_joints_data(bboxes.numpy(), output[0].numpy(), (tensor_width, tensor_height), config['min_norm'], False)
-                print(output.shape)
-                print(len(frames))
-                print(outputs.shape)
                 # outputs[frame+1-frames_per_vid:frames+1] = output
                 for i in range(output.shape[0]):
                     outputs[frame + i + 1 - frames_per_vid] = output[i]

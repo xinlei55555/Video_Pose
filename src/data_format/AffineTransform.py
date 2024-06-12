@@ -104,7 +104,6 @@ def preprocess_video_data(frames, bboxes, joints, out_res, min_norm):
         joints: A numpy array with shape (F, J, 2)
         out_res: Output resolution in (w, h) format. By default is (192, 256)
     """
-    print(joints)
     image_size = np.array(out_res)
     num_frames = frames.shape[0]
 
@@ -136,7 +135,6 @@ def preprocess_video_data(frames, bboxes, joints, out_res, min_norm):
     new_frames = torch.stack(new_frames)
     new_joints = torch.stack(new_joints)
 
-    print(new_joints)
     # normalize the joints with custom normalization
     new_joints = normalize_fn(new_joints, min_norm, out_res[1], out_res[0])
 
@@ -158,12 +156,8 @@ def inverse_process_joints_data(bboxes, joints, output_res, min_norm, frame=Fals
     # denormalize values!
     joints = denormalize_fn(joints, min_norm, output_res[1], output_res[0])
 
-    print(joints)
-
     new_joints = []
     num_joints = joints.shape[0]
-
-    print(num_joints)
 
     for idx in range(num_joints):
         center, scale = box2cs(image_size, bboxes[idx])
@@ -277,8 +271,8 @@ def denormalize_fn(x, min_norm, h=240.0, w=320.0):
         x[..., 0] = (x[..., 0] + 1.0) * (w / 2.0)  # bewteen -1 and 1
         x[..., 1] = (x[..., 1] + 1.0) * (h / 2.0)
     if min_norm == 0:
-        x[:, :, 0] = x[:, :, 0] * w  # bewteen -1 and 1
-        x[:, :, 1] = x[:, :, 1] * h
+        x[..., 0] = x[..., 0] * w  # bewteen -1 and 1
+        x[..., 1] = x[..., 1] * h
 
     return x
 
@@ -299,7 +293,6 @@ def denormalize_default(x, h=240.0, w=320.0, scale=1):
 
 
 def det_denormalize_values(x_norm, x_init, scale):
-    print(x_init.shape, x_norm.shape)
     h = int(x_init[0][1][1].item() / (0.5 + x_norm[0][1][1].item()))
     w = int(x_init[0][1][0].item() * 2 - 2 * x_norm[0][1][0].item() * h)
     # to change later

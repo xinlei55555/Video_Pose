@@ -85,5 +85,5 @@ real_job: True
 # normalization
 normalized: True
 default: False # not the default normalization
-min_norm: 0
+min_norm: -1
 

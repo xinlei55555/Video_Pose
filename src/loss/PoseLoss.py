@@ -47,8 +47,9 @@ class PoseEstimationLoss(nn.Module):
         """
         # since now I am taking in predicted and targets for each frame in a video
         # inputted shape should be (B, Num_frames, Joint_number, 2)
-        predicted = rearrange(predicted, 'b d j x -> (b d) j x')
-        target = rearrange(target, 'b d j x -> (b d) j x')
+        if not self.config['use_last_frame_only']:
+            predicted = rearrange(predicted, 'b d j x -> (b d) j x')
+            target = rearrange(target, 'b d j x -> (b d) j x')
 
         calculated_loss = 0.0
 

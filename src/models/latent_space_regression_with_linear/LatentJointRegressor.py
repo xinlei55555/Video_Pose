@@ -75,7 +75,7 @@ class JointOutput(nn.Module):
         if self.config['use_last_frame_only']:
             x = rearrange(x, 'b d c -> b (d c)')  # rearrange
         else:
-            x = rearrange(x, 'b (d h w) c-> (b d) (h w c)', b=self.b, d=self.d, h=self.h, w=self.w)
+            x = rearrange(x, 'b (d h w) c-> (b d) (h w c)', d=self.d, h=self.h, w=self.w)
         return x
 
     def regressors(self, dim_hidden, dim_out):
@@ -113,5 +113,5 @@ class JointOutput(nn.Module):
         if self.config['use_last_frame_only']:
             output = rearrange(output, 'b (c o)-> b c o', c=self.joint_number, o=self.config['output_dimensions'])
         else:
-            output = rearrange(output, '(b d) (c o)-> b d c o', c=self.joint_number, o=self.config['output_dimensions'], d=self.d, b=self.b)
+            output = rearrange(output, '(b d) (c o)-> b d c o', c=self.joint_number, o=self.config['output_dimensions'], d=self.d)
         return output

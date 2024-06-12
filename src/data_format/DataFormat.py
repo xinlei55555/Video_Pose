@@ -126,8 +126,9 @@ class JHMDBLoad(Dataset):
         if not self.config['use_last_frame_only']:
             joint_for_frame = joint_for_frame[frame_num+1-self.frames_per_vid:frame_num+1]
 
-        if len(list(joint_for_frame)) != self.frames_per_vid or len(list(joint_for_frame)) != len(list(video)):
-            print("ERROR! Number of frames does not match with joint number")
+            if len(list(joint_for_frame)) != self.frames_per_vid or len(list(joint_for_frame)) != len(list(video)):
+                print("ERROR! Number of frames does not match with joint number")
+                print(f'len(list(joint_for_frame)): {len(list(joint_for_frame))}, self.frames_per_vid: {self.frames_per_vid}, len(list(video)):{len(list(video))}')
 
         # need to rearrange so that channel number is in front.
         video = rearrange(video, 'd c h w -> c d h w')
