@@ -226,11 +226,11 @@ def main(rank, world_size, config, config_file_name):
         if config['model_type'] == 'heatmap':
             model = HeatMapVideoMambaPose(config).to(device)
 
-        elif config['model_type'] == 'latent_HMR':
-            model = LatentVideoMambaPose(config).to(device)
+        elif config['model_type'] == 'HMR_decoder':
+            model = HMRVideoMambaPose(config).to(device)
         
-        elif config['model_type'] == 'latent_space_regression_with_linear':
-            model = LatentVideoMambaPose(config).to(device)
+        elif config['model_type'] == 'MLP_only_decoder':
+            model = MLPVideoMambaPose(config).to(device)
 
         else:
             print('Your selected model does not exist! (Yet)')
@@ -284,11 +284,11 @@ def main(rank, world_size, config, config_file_name):
         if config['model_type'] == 'heatmap':
             model = HeatMapVideoMambaPose(config).to(rank)
 
-        elif config['model_type'] == 'latent_HMR':
-            model = LatentVideoMambaPose(config).to(rank)
+        elif config['model_type'] == 'HMR_decoder':
+            model = HMRVideoMambaPose(config).to(rank)
         
-        elif config['model_type'] == 'latent_space_regression_with_linear':
-            model = LatentVideoMambaPose(config).to(rank)
+        elif config['model_type'] == 'MLP_only_decoder':
+            model = MLPVideoMambaPose(config).to(rank)
 
         else:
             print('Your selected model does not exist! (Yet)')
@@ -320,8 +320,8 @@ def main(rank, world_size, config, config_file_name):
 if __name__ == '__main__':
     # importing all possible models:
     from models.heatmap.HeatVideoMamba import HeatMapVideoMambaPose
-    from models.latent_HMR.HMRMambaPose import HMRVideoMambaPose
-    from models.latent_space_regression_with_linear.LatentMambaPose import LatentVideoMambaPose
+    from models.HMR_decoder.HMRMambaPose import HMRVideoMambaPose
+    from models.MLP_only_decoder.MLPMambaPose import MLPVideoMambaPose
 
     # argparse to get the file path of the config file
     parser = argparse.ArgumentParser()

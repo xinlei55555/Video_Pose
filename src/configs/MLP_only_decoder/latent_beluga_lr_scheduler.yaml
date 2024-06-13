@@ -1,7 +1,7 @@
 model_name: VideoMambaPose
 # heatmap project directory
 
-model_type: 'latent_space_regression_with_linear'
+model_type: 'MLP_only_decoder'
 
 # full_debug mode will enable a lot of information being printed
 full_debug: False
@@ -48,7 +48,7 @@ num_gpus: 1
 parallelize: False
 
 # checkpoints
-checkpoint_directory: checkpoints/latent_space_regression_with_linear
+checkpoint_directory: checkpoints/MLP_only_decoder
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
 checkpoint_name: 'new_lr_0.1_model_linear'
 # checkpoint_name: 'testing_false_dataset'
