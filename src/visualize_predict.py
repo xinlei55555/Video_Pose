@@ -17,23 +17,24 @@ from import_config import open_config
 
 def load_model(config , filepath, parallel=False):
     # Create the model
+    # choosing the right model:
     if config['model_type'] == 'heatmap':
         model = HeatMapVideoMambaPose(config)
 
-    elif config['model_type'] == 'latent_HMR':
-        model = LatentVideoMambaPose(config)
+    elif config['model_type'] == 'HMR_decoder':
+        model = HMRVideoMambaPose(config)
     
-    elif config['model_type'] == 'latent_space_regression_with_linear':
-        model = LatentVideoMambaPose(config)
+    elif config['model_type'] == 'MLP_only_decoder':
+        model = MLPVideoMambaPose(config)
 
     else:
         print('Your selected model does not exist! (Yet)')
         return
 
+
     # load the dictionary from checkpoint, and load the weights into the model.
     checkpoint = torch.load(filepath, map_location=torch.device('cpu'))
 
-    # TODO fix this, in case
     # loading model that was trained with DDP
     if parallel:
         checkpoint = adapt_model_parallel(checkpoint)
@@ -251,14 +252,16 @@ def main(config):
 
     joints_exist = True
     jump = config['jump']
+    if not config['use_last_frame_only'] and jump != config['num_frames']:
+        print("The Jump does not match the parameter for last frame!")
 
     # video_path = 'inference/test_visualization/20_good_form_pullups_pullup_f_nm_np1_ri_goo_0.avi'
     # joint_path = 'inference/test_visualization/20_good_form_pullups_pullup_f_nm_np1_ri_goo_0'
-    # video_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0.avi'
-    # joint_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0'
+    video_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0.avi'
+    joint_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0'
 
-    video_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12.avi'
-    joint_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12'
+    # video_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12.avi'
+    # joint_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12'
     # test_checkpoint = 'heatmap_2.1880.pt'
     # test_checkpoint = 'heatmap_7.4616.pt'
     # test_checkpoint = 'heatmap_0.3881.pt'
@@ -268,7 +271,9 @@ def main(config):
     # test_checkpoint = 'heatmap_0.0375.pt'
     # test_checkpoint = 'heatmap_0.0313.pt'
     # test_checkpoint = 'heatmap_0.0128.pt'
-    test_checkpoint = 'heatmap_0.0581.pt'
+    # test_checkpoint = 'heatmap_0.0581.pt'
+
+    test_checkpoint = 'heatmap_0.0322.pt'
     if test_checkpoint is None:
         lst = sorted(list(os.listdir(os.path.join(config['checkpoint_directory'], config['checkpoint_name']))))
         test_checkpoint = lst[0]
@@ -317,7 +322,8 @@ def main(config):
             outputs = torch.zeros(len(frames)-15, 15, 2)
 
         else:
-            outputs = torch.zeros(len(frames), 15, 2)
+            # here, the output should be a multiple of 16 
+            outputs = torch.zeros(len(frames) - (len(frames) % 16), 15, 2)
 
         # need to reformat the output, find the bounding box, and apply the output
         # If I have the ground truth data, then I will rely on that for the bounding box
@@ -328,7 +334,7 @@ def main(config):
             bboxes = inference_yolo_bounding_box(joints)
 
         # if only using the last frame
-        for frame in range(15, len(frames)):
+        for frame in range(15, len(frames), jump):
             input_frame = frames[frame-(frames_per_vid)+1:frame+1]
             input_frame = rearrange(input_frame, 'd c h w -> d h w c')
 
@@ -369,8 +375,8 @@ if __name__ == "__main__":
    # importing all possible models:
     from data_format.AffineTransform import denormalize_fn, bounding_box, inference_yolo_bounding_box, inverse_process_joints_data, inverse_process_joint_data, preprocess_video_data
     from models.heatmap.HeatVideoMamba import HeatMapVideoMambaPose
-    from models.latent_HMR.HMRMambaPose import HMRVideoMambaPose
-    from models.latent_space_regression_with_linear.LatentMambaPose import LatentVideoMambaPose
+    from models.HMR_decoder.HMRMambaPose import HMRVideoMambaPose
+    from models.MLP_only_decoder.MLPMambaPose import MLPVideoMambaPose
 
     # argparse to get the file path of the config file
     parser = argparse.ArgumentParser()

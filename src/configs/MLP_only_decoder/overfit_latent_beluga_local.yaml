@@ -1,11 +1,11 @@
 model_name: VideoMambaPose
 # heatmap project directory
 
-model_type: 'latent_space_regression_with_linear'
+model_type: 'MLP_only_decoder'
 
 # full_debug mode will enable a lot of information being printed
-full_debug: False
-show_gradients: True
+full_debug: False 
+show_gradients: False
 show_predictions: False
 
 # architecture mamba
@@ -24,7 +24,7 @@ losses: ['mse', 'velocity']
 use_last_frame_only: False
 joint_regressor: True
   # joint regressor
-hidden_channels: 512 # since I am regressing from much more tokens
+hidden_channels: 512
 output_dimensions: 2 # x, y
 dropout: False
 dropout_percent: 0.25 # if dropout is True
@@ -34,9 +34,9 @@ num_hidden_layers: 3 # to replace the deconvolutions and the convolutions.
 epoch_number: 300
 # batch_size: 16
 # batch_size: 8
-batch_size: 16 # just to see how scalable it is
+batch_size: 4 # just to see how scalable it is
 # learning_rate: 0.001
-learning_rate: 0.1
+learning_rate: 0.0005
 #scheduler:
 scheduler: True
 start_epoch: 1
@@ -48,9 +48,10 @@ num_gpus: 1
 parallelize: False
 
 # checkpoints
-checkpoint_directory: checkpoints/latent_space_regression_with_linear
+# checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/latent_space_regression_with_linear/checkpoint
+checkpoint_directory: checkpoints/MLP_only_decoder
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
-checkpoint_name: 'new_lr_0.1_model_linear'
+checkpoint_name: 'velocity_loss_0.0005_16_frames_at_once'
 # checkpoint_name: 'testing_false_dataset'
 
 # Follow up on the training of another previous run?
@@ -62,11 +63,12 @@ previous_checkpoint: ''
 
 # data
 dataset_name: 'JHMDB'
-data_path: /home/linxin67/scratch/JHMDB
-annotations_path: /home/linxin67/scratch/JHMDB_old/annotations
+data_path: /home/xinlei/Projects/KITE_MambaPose/Video_Pose/data/JHMDB
+annotations_path: /home/xinlei/Projects/KITE_MambaPose/Video_Pose/data/JHMDB_old/annotations
 # use avi videos
-preprocess_videos: True
 use_videos: True
+preprocess_videos: True
+
 # actions to skip
 skip: ['wave']
 num_frames: 16
@@ -82,7 +84,7 @@ jump: 16 # number of frames to skip between the different datapoints
 joint_number: 15
 
 # if False, uses subset of the data to run
-real_job: True
+real_job: False
 
 # normalization
 normalized: True

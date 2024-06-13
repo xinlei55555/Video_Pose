@@ -160,7 +160,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
 
                 # save model locally
                 checkpoint_path = os.path.join(
-                    checkpoint_directory, checkpoint_name, f'heatmap_{best_val_loss:.4f}.pt')
+                    checkpoint_directory, checkpoint_name, f"{config['model_type']}_{checkpoint_name}_{best_val_loss:.4f}.pt")
                 torch.save(model.state_dict(), checkpoint_path)
                 print(f'Best model saved at {checkpoint_path}')
                 print("Model parameters are of the following size",
@@ -226,11 +226,11 @@ def main(rank, world_size, config, config_file_name):
         if config['model_type'] == 'heatmap':
             model = HeatMapVideoMambaPose(config).to(device)
 
-        elif config['model_type'] == 'latent_HMR':
-            model = LatentVideoMambaPose(config).to(device)
+        elif config['model_type'] == 'HMR_decoder':
+            model = HMRVideoMambaPose(config).to(device)
         
-        elif config['model_type'] == 'latent_space_regression_with_linear':
-            model = LatentVideoMambaPose(config).to(device)
+        elif config['model_type'] == 'MLP_only_decoder':
+            model = MLPVideoMambaPose(config).to(device)
 
         else:
             print('Your selected model does not exist! (Yet)')
@@ -284,11 +284,11 @@ def main(rank, world_size, config, config_file_name):
         if config['model_type'] == 'heatmap':
             model = HeatMapVideoMambaPose(config).to(rank)
 
-        elif config['model_type'] == 'latent_HMR':
-            model = LatentVideoMambaPose(config).to(rank)
+        elif config['model_type'] == 'HMR_decoder':
+            model = HMRVideoMambaPose(config).to(rank)
         
-        elif config['model_type'] == 'latent_space_regression_with_linear':
-            model = LatentVideoMambaPose(config).to(rank)
+        elif config['model_type'] == 'MLP_only_decoder':
+            model = MLPVideoMambaPose(config).to(rank)
 
         else:
             print('Your selected model does not exist! (Yet)')
@@ -320,8 +320,8 @@ def main(rank, world_size, config, config_file_name):
 if __name__ == '__main__':
     # importing all possible models:
     from models.heatmap.HeatVideoMamba import HeatMapVideoMambaPose
-    from models.latent_HMR.HMRMambaPose import HMRVideoMambaPose
-    from models.latent_space_regression_with_linear.LatentMambaPose import LatentVideoMambaPose
+    from models.HMR_decoder.HMRMambaPose import HMRVideoMambaPose
+    from models.MLP_only_decoder.MLPMambaPose import MLPVideoMambaPose
 
     # argparse to get the file path of the config file
     parser = argparse.ArgumentParser()
@@ -332,6 +332,10 @@ if __name__ == '__main__':
 
     # import configurations:
     config = open_config(config_file)
+    if not config['use_last_frame_only'] and jump != config['num_frames']:
+        print("The Jump does not match the parameter for last frame!")
+
+    # a few sanity checks before running the model
 
     # since not parallel, I set the rank = 0, and the world size = 1 (by default)
     if torch.cuda.device_count() <= 1 or not config['parallelize']:

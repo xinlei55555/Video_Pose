@@ -22,13 +22,13 @@ from timm.models.vision_transformer import _load_weights
 import math
 
 from mamba_ssm.modules.mamba_simple import Mamba
-import models.latent_space_regression_with_linear.LatentVideoMamba as hvm
-import models.latent_space_regression_with_linear.LatentJointRegressor as hjr
+import models.MLP_only_decoder.MLPVideoMamba as hvm
+import models.MLP_only_decoder.MLPJointRegressor as hjr
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
-class LatentVideoMambaPose(nn.Module):
+class MLPVideoMambaPose(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config

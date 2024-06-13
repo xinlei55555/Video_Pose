@@ -20,10 +20,11 @@ class PoseEstimationLoss(nn.Module):
             torch.Tensor: Computed loss.
                 """
         # n_frames = predicted.shape[-3]
-        predicted = rearrange(predicted, '(b d) j x -> b d j x',
-                              d=self.config['num_frames'])
-        target = rearrange(target, '(b d) j x -> b d j x',
-                           d=self.config['num_frames'])
+        if not self.config['use_last_frame_only']:
+            predicted = rearrange(predicted, '(b d) j x -> b d j x',
+                                d=self.config['num_frames'])
+            target = rearrange(target, '(b d) j x -> b d j x',
+                            d=self.config['num_frames'])
 
         # inputted shape should be (B, Num_frames, Joint_number, 2)
         # MSE is the squared difference of all the values between each two frames

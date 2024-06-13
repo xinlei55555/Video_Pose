@@ -47,7 +47,10 @@ class JointOutput(nn.Module):
         self.joint_number = joint_number
         self.input_channels = input_channels
         self.c, self.d, self.h, self.w = input_channels, d, h, w
-        self.dim = self.d * self.h * self.w  # could change later.
+        if self.config['use_last_frame_only']:
+            self.dim = self.d * self.h * self.w  # could change later.
+        else:
+            self.dim = self.h * self.w
         self.c = self.config['embed_channels']
         self.b = self.config['batch_size']
 
