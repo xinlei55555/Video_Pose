@@ -160,7 +160,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
 
                 # save model locally
                 checkpoint_path = os.path.join(
-                    checkpoint_directory, checkpoint_name, f'heatmap_{best_val_loss:.4f}.pt')
+                    checkpoint_directory, checkpoint_name, f"{config['model_type']}_{checkpoint_name}_{best_val_loss:.4f}.pt")
                 torch.save(model.state_dict(), checkpoint_path)
                 print(f'Best model saved at {checkpoint_path}')
                 print("Model parameters are of the following size",
@@ -332,6 +332,10 @@ if __name__ == '__main__':
 
     # import configurations:
     config = open_config(config_file)
+    if not config['use_last_frame_only'] and jump != config['num_frames']:
+        print("The Jump does not match the parameter for last frame!")
+
+    # a few sanity checks before running the model
 
     # since not parallel, I set the rank = 0, and the world size = 1 (by default)
     if torch.cuda.device_count() <= 1 or not config['parallelize']:

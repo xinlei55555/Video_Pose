@@ -21,7 +21,7 @@ losses: ['mse', 'velocity']
 #   # using 2d or 3d deconvolutions
 # num_conv: 2
 # conv_channels: 256
-use_last_frame_only: True
+use_last_frame_only: False
 joint_regressor: True
   # joint regressor
 hidden_channels: 512
@@ -51,7 +51,7 @@ parallelize: False
 # checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/latent_space_regression_with_linear/checkpoint
 checkpoint_directory: checkpoints/MLP_only_decoder
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
-checkpoint_name: 'tanh_overfit_model'
+checkpoint_name: 'velocity_loss_0.0005_16_frames_at_once'
 # checkpoint_name: 'testing_false_dataset'
 
 # Follow up on the training of another previous run?

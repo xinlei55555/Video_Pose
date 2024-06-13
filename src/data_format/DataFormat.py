@@ -94,6 +94,7 @@ class JHMDBLoad(Dataset):
                 print('Joints: ', len(list(joints)))
 
             else:
+                # in all cases, it skips the first frames that are not of the right length, and the jump determines where it ends.
                 if self.config['use_last_frame_only']:
                     for i in range(self.frames_per_vid, len(list(video)), self.jump):
                         # 3-tuple: (index in self.train_frames_with_joints, index in the video, joint values for that given index in the video)
