@@ -65,8 +65,7 @@ class HMRVideoMambaPose(nn.Module):
 
         if self.config['full_debug']:
             print('Output of the mamba model', x.shape)
-        
-        
+                
         x = self.hmr_decoder(x)
 
         if self.config['full_debug']:

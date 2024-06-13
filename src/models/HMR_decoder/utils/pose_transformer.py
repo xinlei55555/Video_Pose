@@ -105,7 +105,7 @@ class CrossAttention(nn.Module):
 
         # this sets context_dim to be the value of dim if context_dim does not exist
         context_dim = default(context_dim, dim)
-        # so context dim should be the input 
+        # so context dim should be the input size (i.e. of the x vector) 
         self.to_kv = nn.Linear(context_dim, inner_dim * 2, bias=False)
         # what is dim???, although now I now dim is the size of the q, the bias.
         self.to_q = nn.Linear(dim, inner_dim, bias=False)
@@ -329,6 +329,7 @@ class TransformerDecoder(nn.Module):
     ):
         super().__init__()
         if not skip_token_embedding:
+            # here, it expands the learnable bias from being 1 dimensions (with respect to the batch size) to having as many dimensions as dim.
             self.to_token_embedding = nn.Linear(token_dim, dim)
         else:
             self.to_token_embedding = nn.Identity()

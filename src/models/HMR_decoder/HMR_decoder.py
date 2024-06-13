@@ -37,7 +37,9 @@ class Mamba_HMR_decoder(nn.Module):
         # number of tokens is used to create the positional encoding. 
         self.num_tokens = 1 # this is what HMR smpl_head did...
         # token_dim is the dimension of each token, in my case, its patch_size * patch_size
-        self.token_dim = self.h * self.w * self.config['embed_channels'] # self.config['path_size'] ** 2.0 
+        # token dimension is the number of tokens that are being inputted, i.e the batch _size * the number of frames
+        self.token_dim = 1#self.config['batch_size'] * self.d #self.h * self.w * self.config['embed_channels'] # self.config['path_size'] ** 2.0 
+        #! although this batch_size sometimes changes...
         # dim is the embedding dimensions for the transformers (also how many neurons in the intput layer of transformers)
             # * note the same as dim_head.
         self.dim = self.config['dim'] # not sure about this value, but I think if context dim is not given, then it is equal to dim. So should maybe be the output.
@@ -45,7 +47,8 @@ class Mamba_HMR_decoder(nn.Module):
         self.heads = self.config['heads'] # number of heads
         self.dim_head = self.config['dim_head']  # dimension of each crossattention head.
         self.mlp_dim = self.config['mlp_dim']
-        self.dropout=self.config['dropout_transformer']
+        self.dropout = self.config['dropout_transformer']
+        self.context_dim = self.h * self.w
 
         self.transformer = TransformerDecoder(
             num_tokens=self.num_tokens, 
@@ -60,7 +63,7 @@ class Mamba_HMR_decoder(nn.Module):
             emb_dropout_type='drop',
             norm="layer",
             norm_cond_dim=-1,
-            context_dim=None,
+            context_dim=self.context_dim,
             skip_token_embedding=False,
         )
 
