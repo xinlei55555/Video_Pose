@@ -27,7 +27,7 @@ class VelocityLoss(nn.Module):
     def __init__(self, config):
         super().__init__()
 
-    def forward(self, predicted, target):
+    def forward(self, predicted, target, last_predicted, last_target):
         """
         Args:
             predicted (torch.Tensor): The predicted joint positions or heatmaps.
@@ -36,5 +36,5 @@ class VelocityLoss(nn.Module):
         Returns:
             torch.Tensor: Computed loss.
         """
-        pass
+        
 

@@ -250,7 +250,7 @@ def main(config):
 
     video_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0.avi'
     joint_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0'
-
+    joints_exist = True
     # test_checkpoint = 'heatmap_2.1880.pt'
     # test_checkpoint = 'heatmap_7.4616.pt'
     # test_checkpoint = 'heatmap_0.3881.pt'
@@ -283,7 +283,7 @@ def main(config):
 
         print(model)
 
-        if debug_parameters:
+        if config['show_gradients']:
             for name, param in model.named_parameters():
                 print(f'Parameter: {name}')
                 print(f'Values: {param.data}')
@@ -299,11 +299,11 @@ def main(config):
 
         # need to reformat the output, find the bounding box, and apply the output
         # If I have the ground truth data, then I will rely on that for the bounding box
-        if ground_truth:
+        if joints_exist:
             bboxes = bounding_box(joints)
         # elsewise, use the yolo algorithm
         else:
-            bboxes = inference_yolo_bounding_box(video_tensor)
+            bboxes = inference_yolo_bounding_box(joints)
 
         for frame in range(15, len(frames)):
             input_frame = frames[frame-(frames_per_vid)+1:frame+1]
