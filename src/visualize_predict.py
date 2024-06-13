@@ -248,6 +248,8 @@ def main(config):
     ground_truth = False
     predicted = True
 
+
+    joints_exist = True
     jump = config['jump']
 
     # video_path = 'inference/test_visualization/20_good_form_pullups_pullup_f_nm_np1_ri_goo_0.avi'
@@ -319,7 +321,7 @@ def main(config):
 
         # need to reformat the output, find the bounding box, and apply the output
         # If I have the ground truth data, then I will rely on that for the bounding box
-        if joints is not None:
+        if joints_exist:
             bboxes = bounding_box(joints)
         # elsewise, use the yolo algorithm
         else:

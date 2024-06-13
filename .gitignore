@@ -25,5 +25,6 @@ checkpoint/
 wandb_old/
 old_local_outputs/
 old/
-local_outputs
+local_outputs/
+outputs/
 2_HeatMap/
