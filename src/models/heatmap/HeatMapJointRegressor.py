@@ -70,15 +70,21 @@ class JointOutput(nn.Module):
 
     def input_flatten(self, x):
         # first get the shape of the input
-        self.get_shape(x)
+        if self.config['use_last_frame_only']:
+            self.get_shape(x)
 
         # x has the following sizes: (16,17 channels, 8, 14, 14) --> The 192 channels were initiated from the patching
         # * I want each channel to be processed separately, as a whole. So flatten each layer.
-        if len(list(x.size())) == 5:
-            return rearrange(x, 'b c d h w -> (b c) (d h w)')  # rearrange
+        if self.config['use_last_frame_only']:
+            if len(list(x.size())) == 5:
+                return rearrange(x, 'b c d h w -> (b c) (d h w)')  # rearrange
+            else:
+                return rearrange(x, 'b c h w -> (b c) (h w)')
         else:
-            return rearrange(x, 'b c h w -> (b c) (h w)')
-
+            if len(list(x.size())) == 5:
+                return rearrange(x, 'b c d h w -> (b d c) (h w)')
+            else:
+                return rearrange(x, '(b d) c h w -> (b d c) (h w)', d=self.d)
     def regressors(self, dim_hidden=512, dim_out=2):
         # Assuming the input tensor x has shape (batch_size, input_size)
         input_size = self.d * self.h * self.w
@@ -100,7 +106,9 @@ class JointOutput(nn.Module):
 
         # need to apply regressor to each channel. (will parallelize)
         output = self.regressor(x)
-
         # need to reshape the output
-        output = rearrange(output, '(b c) o -> b c o', b=self.b, c=self.c)
+        if self.config['use_last_frame_only']:
+            output = rearrange(output, '(b c) o -> b c o', b=self.b, c=self.c)
+        else:
+            output = rearrange(output, '(b d c) o -> b d c o', c=self.c, d=self.d)
         return output

@@ -81,6 +81,10 @@ class JHMDBLoad(Dataset):
 
         # arr where arr[idx] = idx in the self.frames_with_joints
         self.jump = jump
+        # note that if its a test set, then must set jump = number of frames per video
+        if not train_set:
+            self.jump = self.frames_per_vid
+        
         for k in range(len(self.frames_with_joints)):
             video, joints = self.frames_with_joints[k]
 
@@ -90,10 +94,14 @@ class JHMDBLoad(Dataset):
                 print('Joints: ', len(list(joints)))
 
             else:
-                for i in range(self.frames_per_vid, len(list(video)), self.jump):
-                    # 3-tuple: (index in self.train_frames_with_joints, index in the video, joint values for that given index in the video)
-                    self.arr.append([k, i, joints[i]])
-
+                if self.config['use_last_frame_only']:
+                    for i in range(self.frames_per_vid, len(list(video)), self.jump):
+                        # 3-tuple: (index in self.train_frames_with_joints, index in the video, joint values for that given index in the video)
+                        self.arr.append([k, i, joints[i]])
+                else:
+                    for i in range(self.frames_per_vid, len(list(video)), self.jump):
+                        # 3-tuple: (index in self.train_frames_with_joints, index in the video, joint values for that given index in the video)
+                        self.arr.append([k, i, joints])
     def __len__(self):
         return len(list(self.arr))
 
@@ -114,16 +122,22 @@ class JHMDBLoad(Dataset):
         # slicing with pytorch tensors.
         video = self.frames_with_joints[video_num][0][frame_num +
                                                       1-self.frames_per_vid:frame_num+1]
+        # return the array of joints
+        if not self.config['use_last_frame_only']:
+            joint_for_frame = joint_for_frame[frame_num+1-self.frames_per_vid:frame_num+1]
+
+            if len(list(joint_for_frame)) != self.frames_per_vid or len(list(joint_for_frame)) != len(list(video)):
+                print("ERROR! Number of frames does not match with joint number")
+                print(f'len(list(joint_for_frame)): {len(list(joint_for_frame))}, self.frames_per_vid: {self.frames_per_vid}, len(list(video)):{len(list(video))}')
 
         # need to rearrange so that channel number is in front.
         video = rearrange(video, 'd c h w -> c d h w')
 
-        # show this for debug:
+            # show this for debug:
         if self.config['full_debug']:
             print('The shape of the video is', video.shape)
             print(
                 f'index: {index}, video_num: {video_num}, frame_num: {frame_num}, num_of_joints, {joint_for_frame.shape[0]}')
-
         return [video, joint_for_frame]
 
     # this folder is useless
