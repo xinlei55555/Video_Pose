@@ -34,28 +34,34 @@ class Mamba_HMR_decoder(nn.Module):
         self.d, self.h, self.w = d, h, w
         self.out_channels = out_channels
 
-        # number of tokens
-
+        # number of tokens is used to create the positional encoding. 
+        self.num_tokens = 1 # this is what HMR smpl_head did...
         # token_dim is the dimension of each token, in my case, its patch_size * patch_size
-        self.token_dim = 
+        self.token_dim = self.h * self.w * self.config['embed_channels'] # self.config['path_size'] ** 2.0 
+        # dim is the embedding dimensions for the transformers (also how many neurons in the intput layer of transformers)
+            # * note the same as dim_head.
+        self.dim = self.config['dim'] # not sure about this value, but I think if context dim is not given, then it is equal to dim. So should maybe be the output.
+        self.depth = self.config['depth']
+        self.heads = self.config['heads'] # number of heads
+        self.dim_heads = self.config['dim_head']  # dimension of each crossattention head.
+        self.mlp_dim = self.config['mlp_dim']
+        self.dropout=self.config['dropout_transformer']
 
-        # dim
-
-        self.transformer = TransformerCrossAttn(
-            num_tokens, 
-            token_dim,
-            dim,
-            depth,
-            heads,
-            mlp_dim,
-            dim_head: int = 64,
-            dropout: float = 0.0,
-            emb_dropout: float = 0.0,
-            emb_dropout_type: str = 'drop',
-            norm: str = "layer",
-            norm_cond_dim: int = -1,
-            context_dim: Optional[int] = None,
-            skip_token_embedding: bool = False,
+        self.transformer = TransformerDecoder(
+            num_tokens=self.num_tokens, 
+            token_dim=self.token_dim,
+            dim=self.dim,
+            depth=self.depth,
+            heads=self.heads,
+            mlp_dim=self.mlp_dim,
+            dim_head=self.dim_head,
+            dropout=self.dropout,
+            emb_dropout=0.0,
+            emb_dropout_type='drop',
+            norm="layer",
+            norm_cond_dim=-1,
+            context_dim=None,
+            skip_token_embedding=False,
         )
 
     def prep_input(self, x):

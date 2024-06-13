@@ -103,10 +103,15 @@ class CrossAttention(nn.Module):
         self.attend = nn.Softmax(dim=-1)
         self.dropout = nn.Dropout(dropout)
 
+        # this sets context_dim to be the value of dim if context_dim does not exist
         context_dim = default(context_dim, dim)
+        # so context dim should be the input 
         self.to_kv = nn.Linear(context_dim, inner_dim * 2, bias=False)
+        # what is dim???, although now I now dim is the size of the q, the bias.
         self.to_q = nn.Linear(dim, inner_dim, bias=False)
 
+        # and dim is also the output dimension
+        # so conetxt dim should be the input size, while dim should be the output of the cross attention transformer. I can set it as 512
         self.to_out = (
             nn.Sequential(nn.Linear(inner_dim, dim), nn.Dropout(dropout))
             if project_out
@@ -333,6 +338,7 @@ class TransformerDecoder(nn.Module):
                 )
 
         # they are adding positional embedding, and determining the values for the dropout layer.
+        # the size dimensions of the positional embeddings applies to the number of tokens
         self.pos_embedding = nn.Parameter(torch.randn(1, num_tokens, dim))
         if emb_dropout_type == "drop":
             self.dropout = DropTokenDropout(emb_dropout)

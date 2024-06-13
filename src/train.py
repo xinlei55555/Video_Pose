@@ -332,7 +332,7 @@ if __name__ == '__main__':
 
     # import configurations:
     config = open_config(config_file)
-    if not config['use_last_frame_only'] and jump != config['num_frames']:
+    if not config['use_last_frame_only'] and config['jump'] != config['num_frames']:
         print("The Jump does not match the parameter for last frame!")
 
     # a few sanity checks before running the model

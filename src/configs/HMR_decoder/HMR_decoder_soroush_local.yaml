@@ -42,7 +42,7 @@ epoch_number: 300
 # batch_size: 8
 batch_size: 16 # just to see how scalable it is
 # learning_rate: 0.001
-learning_rate: 0.01
+learning_rate: 0.0005
 start_epoch: 1
 
 # device settings
@@ -55,7 +55,7 @@ parallelize: False
 # checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/latent_space_regression_with_linear/checkpoint
 checkpoint_directory: checkpoints/HMR_decoder
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
-checkpoint_name: 'default_model_linear'
+checkpoint_name: 'initial_run'
 # checkpoint_name: 'testing_false_dataset'
 
 # Follow up on the training of another previous run?
@@ -67,8 +67,8 @@ previous_checkpoint: ''
 
 # data
 dataset_name: 'JHMDB'
-data_path: /home/xinlei/Projects/KITE_MambaPose/Video_Pose/data/JHMDB
-annotations_path: /home/xinlei/Projects/KITE_MambaPose/Video_Pose/data/JHMDB_old/annotations
+data_path: /home/xinleilin/Projects/Video_Pose/data/JHMDB
+annotations_path: /home/xinleilin/Projects/Video_Pose/data/JHMDB_old/annotations
 # use avi videos
 use_videos: True
 preprocess_videos: True
@@ -88,7 +88,7 @@ jump: 16 # number of frames to skip between the different datapoints
 joint_number: 15
 
 # if False, uses subset of the data to run
-real_job: True
+real_job: False
 
 # normalization
 normalized: True
