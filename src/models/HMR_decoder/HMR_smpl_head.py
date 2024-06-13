@@ -50,6 +50,7 @@ class SMPLTransformerDecoderHead(nn.Module):
             nn.init.xavier_uniform_(self.deccam.weight, gain=0.01)
 
         mean_params = np.load(cfg.SMPL.MEAN_PARAMS)
+        # initializing the values (I am guessing randomly, or from pretrained data.)
         init_body_pose = torch.from_numpy(mean_params['pose'].astype(np.float32)).unsqueeze(0)
         init_betas = torch.from_numpy(mean_params['shape'].astype('float32')).unsqueeze(0)
         init_cam = torch.from_numpy(mean_params['cam'].astype(np.float32)).unsqueeze(0)
@@ -87,6 +88,7 @@ class SMPLTransformerDecoderHead(nn.Module):
                 token = torch.zeros(batch_size, 1, 1).to(x.device)
 
             # Pass through transformer
+            # what is interesting is that the transformer takes in token, wich is the Q, and then takes in the x (which are the V and K) as "context"
             token_out = self.transformer(token, context=x)
             token_out = token_out.squeeze(1) # (B, C)
 

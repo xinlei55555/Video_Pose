@@ -46,7 +46,7 @@ class HMRVideoMambaPose(nn.Module):
         num_patch_width = int(
             self.config['image_tensor_width'] / self.config['patch_size'])  # 256 / 16 = 16
 
-        self.hmr_decoder = hmrd.Mamba_HMR_decoder(self.config, self.config)
+        self.hmr_decoder = hmrd.Mamba_HMR_decoder(self.config, self.config['num_frames'], num_patch_height, num_patch_width, self.config['joint_number'])
 
         # output into joints
         self.joints = hjr.JointOutput(self.config, input_channels=self.config['joint_number'], joint_number=self.config['joint_number'],
@@ -63,10 +63,14 @@ class HMRVideoMambaPose(nn.Module):
         # uses around 7gb of memory for tiny
         x = self.mamba(x)
 
+        if self.config['full_debug']:
+            print('Output of the mamba model', x.shape)
+        
+        
         x = self.hmr_decoder(x)
 
         if self.config['full_debug']:
-            print('Output of the mamba model', x.shape)
+            print('Output of the transformers layer', x.shape)
 
         x = self.joints(x)
 

@@ -43,7 +43,7 @@ class Mamba_HMR_decoder(nn.Module):
         self.dim = self.config['dim'] # not sure about this value, but I think if context dim is not given, then it is equal to dim. So should maybe be the output.
         self.depth = self.config['depth']
         self.heads = self.config['heads'] # number of heads
-        self.dim_heads = self.config['dim_head']  # dimension of each crossattention head.
+        self.dim_head = self.config['dim_head']  # dimension of each crossattention head.
         self.mlp_dim = self.config['mlp_dim']
         self.dropout=self.config['dropout_transformer']
 
@@ -65,18 +65,13 @@ class Mamba_HMR_decoder(nn.Module):
         )
 
     def prep_input(self, x):
-        """Conv2d's input is of shape (N, C_in, D, H, W) 
-        where N is the batch size as before, 
-        C_in the number of input channels, 
-        Depth input
-        H is the height and 
-        W the width of the image
-        """
+       
         if self.config['full_debug']:
             print('quick debug', self.d, self.h, self.w)
         
         # I want to combine batch and depth, for the 2d
-        x = rearrange(x, 'b (d h w) c -> b d c h w',
+        # Change to token-first (unlike the Deconv layers that Vit Uses)
+        x = rearrange(x, 'b (d h w) c -> b d h w c',
                       d=self.d, h=self.h, w=self.w)
 
         # and I can just discard the depth, and keep the last layer of the mamba (at least for the 2D deconv)
@@ -87,7 +82,7 @@ class Mamba_HMR_decoder(nn.Module):
             raise NotImplementedError
         else:
             # new: will change it so that every frame gets a prediction
-            x = rearrange(x, 'b d c h w -> (b d) c h w',
+            x = rearrange(x, 'b d h w c -> (b d) (h w) c',
                       d=self.d, h=self.h, w=self.w)
         return x
 
@@ -99,8 +94,10 @@ class Mamba_HMR_decoder(nn.Module):
         # preparing the output from the mamba model
         x = self.prep_input(x)
 
-        # transformer block
-        x = self.transformer(x)
+        batch_size = x.shape[0] # this is b * d
+        input_token = torch.zeros(batch_size, 1, 1).to(x.device) # just a learnable token!
 
-        
-        return x
+        # transformer block
+        output_tokens = self.transformer(input_token, context=x)
+
+        return output_tokens
