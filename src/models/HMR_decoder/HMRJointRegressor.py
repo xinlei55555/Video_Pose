@@ -95,6 +95,11 @@ class JointOutput(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
+        '''Idea
+        Merge batch and number of frames together.
+        Then for each channel, run a crossattention layer. So similar to the 2D deconv
+        then at the end run a joint output.
+        '''
         x = self.input_flatten(x)
 
         # need to apply regressor to each channel. (will parallelize)

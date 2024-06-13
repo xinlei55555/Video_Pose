@@ -14,14 +14,17 @@ num_mamba_blocks: 12
 
 losses: ['mse', 'velocity']
 
-# # deconv
-# num_deconv: 2
-# 2d_deconv: True
-# deconv_channels: 192
-#   # using 2d or 3d deconvolutions
-# num_conv: 2
-# conv_channels: 256
 use_last_frame_only: False
+# transformer decoder: # values taken from HMR2.0
+depth: 6
+heads: 8
+mlp_dim: 1024 
+dim_head: 64
+dropout: 0.0
+emb_dropout: 0.0
+norm: layer
+context_dim: 1280 
+# regressor
 joint_regressor: True
   # joint regressor
 hidden_channels: 512

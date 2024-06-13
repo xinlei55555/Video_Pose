@@ -60,6 +60,8 @@ class HMRVideoMambaPose(nn.Module):
         # uses around 7gb of memory for tiny
         x = self.mamba(x)
 
+        
+
         if self.config['full_debug']:
             print('Output of the mamba model', x.shape)
 
