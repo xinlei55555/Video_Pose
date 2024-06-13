@@ -42,53 +42,63 @@ class JointOutput(nn.Module):
         super().__init__()
         # For example, in PyTorch, this method is used to define the layers of the network, such as convolutional layers, linear layers, activation functions, etc.
         # hence need to have the regressor in the initializer if it wants to be saved properly
+        # * I need to verify the output layer sie
         self.config = config
 
         self.joint_number = joint_number
         self.input_channels = input_channels
         self.c, self.d, self.h, self.w = input_channels, d, h, w
-        self.dim = self.d * self.h * self.w  # could change later.
-        self.c = self.config['embed_channels']
         self.b = self.config['batch_size']
 
         self.normalize = normalize
         self.dropout = self.config['dropout']
 
+        if self.dropout:
         # need to be defined in the __init__ so that it ignores in evaluation
-        self.dropout_layer = nn.Dropout(self.config['dropout_percent'])
+            self.dropout_layer = nn.Dropout(self.config['dropout_percent'])
 
         self.regressor = self.regressors(
-            dim_hidden=self.config['hidden_channels'], dim_out=self.joint_number * self.config['output_dimensions'])
+            dim_hidden=self.config['hidden_channels'], dim_out=self.config['output_dimensions'])
 
     # update the shapes that are passed in
-    # def get_shape(self, x):
-    #     self.b, self.dim, self.c = x.shape
-        # note: dim is supposed to be height x width x depth
-        # c is supposed to be 192
+    def get_shape(self, x):
+        if len(list(x.shape)) == 5:
+            self.b, self.c, self.d, self.h, self.w = x.shape
+        else:
+            self.b, self.c, self.h, self.w = x.shape
+            self.d = 1
 
     def input_flatten(self, x):
         # first get the shape of the input
-        # self.get_shape(x)
+        if self.config['use_last_frame_only']:
+            self.get_shape(x)
 
-        # mamba has the following output batch, (num_frames x heigt x width), channel_number
-        return rearrange(x, 'b d c -> b (d c)')  # rearrange
-
-    def regressors(self, dim_hidden, dim_out):
+        # x has the following sizes: (16,17 channels, 8, 14, 14) --> The 192 channels were initiated from the patching
+        # * I want each channel to be processed separately, as a whole. So flatten each layer.
+        # if self.config['use_last_frame_only']:
+        #     if len(list(x.size())) == 5:
+        #         return rearrange(x, 'b c d h w -> (b c) (d h w)')  # rearrange
+        #     else:
+        #         return rearrange(x, 'b c h w -> (b c) (h w)')
+        # else:
+        # if len(list(x.size())) == 5:
+        #     return rearrange(x, 'b c d h w -> (b d c) (h w)')
+        # else:
+        # after transformers, I have one set of channels
+        # Input tensor shape: torch.Size([256, 1, 1024]), now I need to regress back
+        return rearrange(x, '(b d) c a -> (b d c) a', d=self.d)
+    def regressors(self, dim_hidden=512, dim_out=2):
         # Assuming the input tensor x has shape (batch_size, input_size)
-        input_size = self.dim * self.c
+        # input_size = self.d * self.h * self.w
+        input_size = self.config['dim'] # which is the output dimension of transformer
 
         layers = [nn.Linear(input_size, dim_hidden)]  # use power of 2
 
-        # this applies dropout to all the layers except the last one.
-        for _ in range(self.config['num_hidden_layers']):
-            if self.dropout:
-                layers.append(self.dropout_layer)
-            # I will return 3, which are the values for x, y, z
-            # here, my number of output dimensinos would be 30, then reshape
-            layers.extend([nn.ReLU(), nn.Linear(dim_hidden, dim_hidden)])
+        if self.dropout:
+            layers.append(self.dropout_layer)
 
-        # output layer
-        layers.extend([nn.ReLU(), nn.Linear(dim_hidden, dim_out)])
+        layers.extend([nn.ReLU(), nn.Linear(dim_hidden, dim_out  * self.config['joint_number'])]) # I will return 3, which are the values for x, y, z
+        
         if self.normalize:
             # restrict values at the end to be between -1 and 1
             layers.append(nn.Tanh())
@@ -99,8 +109,9 @@ class JointOutput(nn.Module):
 
         # need to apply regressor to each channel. (will parallelize)
         output = self.regressor(x)
-
         # need to reshape the output
-        output = rearrange(
-            output, 'b (c o)-> b c o', c=self.joint_number, o=self.config['output_dimensions'])
+        # if self.config['use_last_frame_only']:
+        #     output = rearrange(output, '(b c) o -> b c o', b=self.b, c=self.c)
+        # else:
+        output = rearrange(output, '(b d) (c o) -> b d c o', c=self.c, d=self.d)
         return output

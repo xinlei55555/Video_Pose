@@ -24,6 +24,7 @@ import math
 from mamba_ssm.modules.mamba_simple import Mamba
 import models.HMR_decoder.HMRVideoMamba as hvm
 import models.HMR_decoder.HMRJointRegressor as hjr
+import models.HMR_decoder.HMR_decoder as hmrd
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -45,6 +46,8 @@ class HMRVideoMambaPose(nn.Module):
         num_patch_width = int(
             self.config['image_tensor_width'] / self.config['patch_size'])  # 256 / 16 = 16
 
+        self.hmr_decoder = hmrd.Mamba_HMR_decoder(self.config, self.config['num_frames'], num_patch_height, num_patch_width, self.config['joint_number'])
+
         # output into joints
         self.joints = hjr.JointOutput(self.config, input_channels=self.config['joint_number'], joint_number=self.config['joint_number'],
                                       d=self.config['num_frames'], h=num_patch_height, w=num_patch_width, normalize=self.config['normalized'])  # for the JHMBD database
@@ -62,6 +65,11 @@ class HMRVideoMambaPose(nn.Module):
 
         if self.config['full_debug']:
             print('Output of the mamba model', x.shape)
+                
+        x = self.hmr_decoder(x)
+
+        if self.config['full_debug']:
+            print('Output of the transformers layer', x.shape)
 
         x = self.joints(x)
 

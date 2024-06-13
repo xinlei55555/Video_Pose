@@ -257,11 +257,11 @@ def main(config):
 
     # video_path = 'inference/test_visualization/20_good_form_pullups_pullup_f_nm_np1_ri_goo_0.avi'
     # joint_path = 'inference/test_visualization/20_good_form_pullups_pullup_f_nm_np1_ri_goo_0'
-    video_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0.avi'
-    joint_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0'
+    # video_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0.avi'
+    # joint_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0'
 
-    # video_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12.avi'
-    # joint_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12'
+    video_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12.avi'
+    joint_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12'
     # test_checkpoint = 'heatmap_2.1880.pt'
     # test_checkpoint = 'heatmap_7.4616.pt'
     # test_checkpoint = 'heatmap_0.3881.pt'
@@ -273,7 +273,8 @@ def main(config):
     # test_checkpoint = 'heatmap_0.0128.pt'
     # test_checkpoint = 'heatmap_0.0581.pt'
 
-    test_checkpoint = 'heatmap_0.0322.pt'
+    # test_checkpoint = 'heatmap_0.0322.pt'
+    test_checkpoint = 'HMR_decoder_initial_run_0.0496.pt'
     if test_checkpoint is None:
         lst = sorted(list(os.listdir(os.path.join(config['checkpoint_directory'], config['checkpoint_name']))))
         test_checkpoint = lst[0]

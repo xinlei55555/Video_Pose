@@ -1,5 +1,6 @@
 model_name: VideoMambaPose
 # heatmap project directory
+
 model_type: 'HMR_decoder'
 
 # full_debug mode will enable a lot of information being printed
@@ -13,17 +14,23 @@ num_mamba_blocks: 12
 
 losses: ['mse', 'velocity']
 
-# # deconv
-# num_deconv: 2
-# 2d_deconv: True
-# deconv_channels: 192
-#   # using 2d or 3d deconvolutions
-# num_conv: 2
-# conv_channels: 256
 use_last_frame_only: False
+# unsure own values for the transformer decoder
+dim: 1024 # just like HMR2.0 set it to be
+# transformer decoder: # values taken from HMR2.0
+depth: 6
+heads: 8
+mlp_dim: 1024 
+dim_head: 64
+dropout_transformer: 0.0
+emb_dropout: 0.0
+norm: layer
+context_dim: 1280 # unsure what this value should be... 1280/16/16 = 5... why?
+
+# regressor
 joint_regressor: True
   # joint regressor
-hidden_channels: 512 # since I am regressing from much more tokens
+hidden_channels: 512
 output_dimensions: 2 # x, y
 dropout: False
 dropout_percent: 0.25 # if dropout is True
@@ -47,7 +54,8 @@ num_gpus: 1
 parallelize: False
 
 # checkpoints
-checkpoint_directory: checkpoint/HMR_decoder
+# checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/latent_space_regression_with_linear/checkpoint
+checkpoint_directory: checkpoints/HMR_decoder
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
 checkpoint_name: 'default_model_linear'
 # checkpoint_name: 'testing_false_dataset'
@@ -61,8 +69,8 @@ previous_checkpoint: ''
 
 # data
 dataset_name: 'JHMDB'
-data_path: /home/linxin67/scratch/JHMDB
-annotations_path: /home/linxin67/scratch/JHMDB_old/annotations
+data_path: /home/xinlei/Projects/KITE_MambaPose/Video_Pose/data/JHMDB
+annotations_path: /home/xinlei/Projects/KITE_MambaPose/Video_Pose/data/JHMDB_old/annotations
 # use avi videos
 use_videos: True
 preprocess_videos: True

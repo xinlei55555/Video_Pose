@@ -39,7 +39,7 @@ class Deconv(nn.Module):
             self.config['num_deconv'], self.config['deconv_channels'])
 
     def prep_input(self, x):
-        """Conv3d's input is of shape (N, C_in, D, H, W) 
+        """Conv2d's input is of shape (N, C_in, D, H, W) 
         where N is the batch size as before, 
         C_in the number of input channels, 
         Depth input

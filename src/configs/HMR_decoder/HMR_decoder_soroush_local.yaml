@@ -5,7 +5,7 @@ model_type: 'HMR_decoder'
 
 # full_debug mode will enable a lot of information being printed
 full_debug: False
-show_gradients: True
+show_gradients: False
 show_predictions: False
 
 # architecture mamba
@@ -14,14 +14,19 @@ num_mamba_blocks: 12
 
 losses: ['mse', 'velocity']
 
-# # deconv
-# num_deconv: 2
-# 2d_deconv: True
-# deconv_channels: 192
-#   # using 2d or 3d deconvolutions
-# num_conv: 2
-# conv_channels: 256
 use_last_frame_only: False
+# unsure own values for the transformer decoder
+dim: 1024 # just like HMR2.0 set it to be
+# transformer decoder: # values taken from HMR2.0
+depth: 6
+heads: 8
+mlp_dim: 1024 
+dim_head: 64
+dropout_transformer: 0.0
+emb_dropout: 0.0
+norm: layer
+
+# regressor
 joint_regressor: True
   # joint regressor
 hidden_channels: 512
@@ -36,7 +41,9 @@ epoch_number: 300
 # batch_size: 8
 batch_size: 16 # just to see how scalable it is
 # learning_rate: 0.001
-learning_rate: 0.01
+learning_rate: 0.0005
+#scheduler:
+scheduler: True
 start_epoch: 1
 
 # device settings
@@ -49,7 +56,7 @@ parallelize: False
 # checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/latent_space_regression_with_linear/checkpoint
 checkpoint_directory: checkpoints/HMR_decoder
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
-checkpoint_name: 'default_model_linear'
+checkpoint_name: 'initial_run'
 # checkpoint_name: 'testing_false_dataset'
 
 # Follow up on the training of another previous run?
@@ -61,8 +68,8 @@ previous_checkpoint: ''
 
 # data
 dataset_name: 'JHMDB'
-data_path: /home/xinlei/Projects/KITE_MambaPose/Video_Pose/data/JHMDB
-annotations_path: /home/xinlei/Projects/KITE_MambaPose/Video_Pose/data/JHMDB_old/annotations
+data_path: /home/xinleilin/Projects/Video_Pose/data/JHMDB
+annotations_path: /home/xinleilin/Projects/Video_Pose/data/JHMDB_old/annotations
 # use avi videos
 use_videos: True
 preprocess_videos: True
@@ -82,7 +89,7 @@ jump: 16 # number of frames to skip between the different datapoints
 joint_number: 15
 
 # if False, uses subset of the data to run
-real_job: True
+real_job: False
 
 # normalization
 normalized: True
