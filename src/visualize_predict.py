@@ -154,7 +154,7 @@ def video_to_tensors(video_path, use_videos):
 
     return batch_tensor
 
-def visualize(joints, frames, file_name, width, height):
+def visualize(joints, frames, file_name, width, height, bboxes=None, use_last_frame_only=False):
     '''1: neck
     2: belly
     3: face
@@ -175,6 +175,9 @@ def visualize(joints, frames, file_name, width, height):
         len(list(joints)), len(list(frames)))  # Number of frames in the video
 
     num_frames_per_video = len(list(frames)) - len(list(joints))
+
+    print(len(list(joints)), 'is the number of joints you have')
+    print(len(list(frames)), 'is the number of frames that you have')
 
     print('The passed width and height are ', width, height)
 
@@ -197,9 +200,14 @@ def visualize(joints, frames, file_name, width, height):
 
         # Create a blank 320x240 image (white background)
         # note that for the visualization, the frame number are going to be different
-        image = frames[frame_idx + num_frames_per_video]
+        if use_last_frame_only:
+            image = frames[frame_idx + num_frames_per_video]
+        # since for the ones that were not 16 frames at once, I started the prediction at frame 0
+        else:
+            image = frames[frame_idx]
 
-        image = rearrange(image, 'c w d->w d c')
+        image = rearrange(image, 'c h w->h w c')
+        
 
         # converting and changing to cpu before plotting
         image = image.clone().to('cpu')
@@ -226,6 +234,12 @@ def visualize(joints, frames, file_name, width, height):
             x, y = pos[0], pos[1]
             plt.text(x, y, str(i+1), color="blue",
                      fontsize=12, ha='right', va='bottom')
+        
+        # Draw bounding boxes if provided
+        if bboxes is not None:
+            bbox = bboxes[frame_idx]
+            x_min, y_min, w, h = bbox[0], bbox[1], bbox[2], bbox[3]
+            plt.gca().add_patch(plt.Rectangle((x_min, y_min), w, h, fill=False, edgecolor='green', linewidth=2))
 
         plt.title(f'Frame {frame_idx + 1}')
         plt.xlabel('X Coordinate')
@@ -247,7 +261,10 @@ def debug_parameters(config, model):
 
 def main(config):
     ground_truth = False
+    resized_ground_truth = True
     predicted = True
+    # better_visualization will always be true except if last frame ig, cuz its much better
+    better_visualization = True
 
 
     joints_exist = True
@@ -291,10 +308,17 @@ def main(config):
     if config['full_debug']:
         print('Here are some joint values', joints[0])
 
+    # get the bounding boxes
+    if joints_exist:
+            bboxes = bounding_box(joints)
+    # elsewise, use the yolo algorithm
+    else:
+        bboxes = inference_yolo_bounding_box(joints)
+
     if ground_truth:
         # ground truth
         visualize(joints, frames, 'normalized_pull_ups',
-                  width, height)
+                  width, height, bboxes, config['use_last_frame_only'])
 
     # i'll try to fix just the normal visualize predict
     if predicted:
@@ -325,22 +349,23 @@ def main(config):
         else:
             # here, the output should be a multiple of 16 
             outputs = torch.zeros(len(frames) - (len(frames) % 16), 15, 2)
+            final_frames = torch.zeros(len(frames) - (len(frames) % 16), 3, config['image_tensor_height'], config['image_tensor_width'])
 
         # need to reformat the output, find the bounding box, and apply the output
         # If I have the ground truth data, then I will rely on that for the bounding box
-        if joints_exist:
-            bboxes = bounding_box(joints)
-        # elsewise, use the yolo algorithm
-        else:
-            bboxes = inference_yolo_bounding_box(joints)
-
+       
+        
         # if only using the last frame
-        for frame in range(15, len(frames), jump):
+        print(len(list(outputs)), 'is the length of the outputs ')
+        for frame in range(15, len(list(outputs)), jump):
+            print(frame, 'is the current frame index')
             input_frame = frames[frame-(frames_per_vid)+1:frame+1]
-            input_frame = rearrange(input_frame, 'd c h w -> d h w c')
+            input_frame = rearrange(input_frame, 'd c h w -> d h w c')                   
 
             input_frame, _ = preprocess_video_data(input_frame.numpy(), bboxes.numpy(), joints.numpy(), (tensor_width, tensor_height), config['min_norm'])
+
             input_frame = rearrange(input_frame, '(b d) c h w -> b c d h w', b=1)
+            print(input_frame.shape, 'is the shape of the input frames')
 
             input_frame = input_frame.to(device)
 
@@ -349,26 +374,61 @@ def main(config):
 
             output = output.to('cpu')
 
+
             if config['use_last_frame_only']:
                 # I think output outputs a batch size of 1, so there is one more dimension
                 _, output = inverse_process_joint_data(bboxes[frame].numpy(), output[0].numpy(), (tensor_width, tensor_height), config['min_norm'], False)
 
                 outputs[frame-15] = output
-            
+
+            elif better_visualization:
+                input_frame = input_frame.to('cpu')
+                input_frame = rearrange(input_frame[0], 'c d h w -> d h w c')
+
+                # just denormalize, and nothing else
+                output = output[0]
+                output = denormalize_fn(output, config['min_norm'], tensor_height, tensor_width)
+                input_frame = rearrange(input_frame, 'b h w c->b c h w')
+                for i in range(output.shape[0]):
+                    outputs[frame + i + 1 - frames_per_vid] = output[i]
+                    print('Currently filling: ', frame + i + 1 - frames_per_vid)
+                    final_frames[frame + i + 1 - frames_per_vid] = input_frame[i]
+
             else:
+                input_frame = input_frame.to('cpu')
+                input_frame = rearrange(input_frame[0], 'c d h w -> d h w c')
                 # I think output outputs a batch size of 1, so there is one more dimension
-                _, output = inverse_process_joints_data(bboxes.numpy(), output[0].numpy(), (tensor_width, tensor_height), config['min_norm'], False)
+                input_frame, output = inverse_process_joints_data(bboxes.numpy(), output[0].numpy(), (tensor_width, tensor_height), config['min_norm'], input_frame.numpy())
+                # print(input_frame.shape)
+                # exit()
+                # input_frame = rearrange(input_frame, 'd h w c -> d c h w ')
+
                 # outputs[frame+1-frames_per_vid:frames+1] = output
                 for i in range(output.shape[0]):
                     outputs[frame + i + 1 - frames_per_vid] = output[i]
+                    print('Currently filling: ', frame + i + 1 - frames_per_vid)
+                    final_frames[frame + i + 1 - frames_per_vid] = input_frame[i]
 
         print('Are the last two outputs the same?: ', outputs[0] == outputs[1])
         # prints the last output
-        print('output', output)
+        # print('output', output)
 
         # visualize
-        visualize(outputs, frames, 'predicted', width,
-                  height)
+        if resized_ground_truth:
+            frames = rearrange(frames, 'd c h w -> d h w c')                   
+            input_frame, test = preprocess_video_data(frames.numpy(), bboxes.numpy(), joints.numpy(), (tensor_width, tensor_height), config['min_norm'])
+                # visualizing the joints that were normalized
+            test = denormalize_fn(test, config['min_norm'], tensor_height, tensor_width)
+            visualize(test ,input_frame, 'aaa', tensor_width, tensor_height, None, False)
+            # exit()
+
+        if better_visualization:
+            visualize(outputs, final_frames, 'predicted', width,
+                  height, None, config['use_last_frame_only'])
+
+        else:
+            visualize(outputs, final_frames, 'predicted', width,
+                  height, bboxes, config['use_last_frame_only'])
 
 
 if __name__ == "__main__":

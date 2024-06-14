@@ -42,13 +42,15 @@ class Mamba_HMR_decoder(nn.Module):
         #! although this batch_size sometimes changes...
         # dim is the embedding dimensions for the transformers (also how many neurons in the intput layer of transformers)
             # * note the same as dim_head.
+        # ! dim is the output dimension of the transformers.
         self.dim = self.config['dim'] # not sure about this value, but I think if context dim is not given, then it is equal to dim. So should maybe be the output.
         self.depth = self.config['depth']
         self.heads = self.config['heads'] # number of heads
         self.dim_head = self.config['dim_head']  # dimension of each crossattention head.
         self.mlp_dim = self.config['mlp_dim']
         self.dropout = self.config['dropout_transformer']
-        self.context_dim = self.h * self.w
+        # self.context_dim = self.h * self.w
+        self.context_dim = self.config['embed_channels'] # context dim is the number of channels that Mamba outputs
 
         self.transformer = TransformerDecoder(
             num_tokens=self.num_tokens, 
