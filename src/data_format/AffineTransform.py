@@ -120,7 +120,7 @@ def preprocess_video_data(frames, bboxes, joints, out_res, min_norm):
             trans, (int(image_size[0]), int(image_size[1])),
             flags=cv2.INTER_LINEAR)
         frames_cropped = F.to_tensor(frames_cropped)
-
+        print(frames_cropped)
         # normalize the RGB data
         frames_cropped = F.normalize(frames_cropped, mean=[0.485, 0.456, 0.406], std=[
             0.229, 0.224, 0.225])
@@ -141,7 +141,7 @@ def preprocess_video_data(frames, bboxes, joints, out_res, min_norm):
     return new_frames, new_joints
 
 
-def inverse_process_joints_data(bboxes, joints, output_res, min_norm, frame=False):
+def inverse_process_joints_data(bboxes, joints, output_res, min_norm, frames=False):
     '''
     This applies the inverse functions of the preprocess_video_data outputs of a given frame
     Args:
@@ -150,13 +150,17 @@ def inverse_process_joints_data(bboxes, joints, output_res, min_norm, frame=Fals
         joint is a numpy array containing the joints for the given frame
         input_res is a tuple containing the final resolution
     '''
+    
     # note: output_res must be the same as out_res in preprocess_video_data
     image_size = np.array(output_res)
 
     # denormalize values!
     joints = denormalize_fn(joints, min_norm, output_res[1], output_res[0])
 
-    new_joints = []
+    if frames is not False:
+        new_joints, new_frames = [], []
+    else:
+        new_joints, new_frames = [], False
     num_joints = joints.shape[0]
 
     for idx in range(num_joints):
@@ -172,32 +176,47 @@ def inverse_process_joints_data(bboxes, joints, output_res, min_norm, frame=Fals
 
         # inverse warping for the joints
         new_joints.append(torch.from_numpy(warp_affine_joints(joints[idx][:, 0:2].copy(), inv_trans)))
+        
+        if frames is not False:
+            # frames = torch.from_numpy(frames[idx])
+            frame = frames[idx]
+           
+            frame = rearrange(frame, 'h w c -> c w h')
+
+            frame = torch.from_numpy(frame)
+
+            # denormalization
+            invTrans = transforms.Compose([
+                transforms.Normalize(mean=[0., 0., 0.], std=[
+                    1/0.229, 1/0.224, 1/0.225]),
+                transforms.Normalize(
+                    mean=[-0.485, -0.456, -0.406], std=[1., 1., 1.]),
+            ]) 
+            frame = invTrans(frame)
+            
+            frame = rearrange(frame, 'c w h-> h w c')
+
+            frame = frame.numpy()
+
+            # perform inverse warping
+            frame_cropped = cv2.warpAffine(
+                frame,
+                inv_trans, (int(image_size[0]), int(image_size[1])),
+                flags=cv2.INTER_LINEAR)
+            frame = F.to_tensor(frame_cropped)
+
+            # frame = rearrange(frame, 'h w c-> c h w') # to remove
+            
+            new_frames.append(frame)
+    
+    if frames is not False:
+        new_frames = torch.stack(new_frames)
 
     new_joints = torch.stack(new_joints)
 
     # although usually, I would not be denormalizing the frames.
-    if frame is not False:
-        frame = torch.from_numpy(frame)
-        # denormalization
-        invTrans = transforms.Compose([
-            transforms.Normalize(mean=[0., 0., 0.], std=[
-                1/0.229, 1/0.224, 1/0.225]),
-            transforms.Normalize(
-                mean=[-0.485, -0.456, -0.406], std=[1., 1., 1.]),
-        ])
-
-        frame = invTrans(frame)
-        frame = rearrange(frame, 'c w h -> h w c')
-
-        frame = frame.numpy()
-        # perform inverse warping
-        frame_cropped = cv2.warpAffine(
-            frame,
-            inv_trans, (int(image_size[0]), int(image_size[1])),
-            flags=cv2.INTER_LINEAR)
-        frame = F.to_tensor(frame_cropped)
-
-    return frame, new_joints
+    
+    return new_frames, new_joints
 
 def inverse_process_joint_data(bbox, joint, output_res, min_norm, frame=False):
     '''
