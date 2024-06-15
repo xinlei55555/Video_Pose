@@ -15,7 +15,6 @@ import argparse
 from import_config import open_config
 
 
-
 def load_model(config , filepath, parallel=False):
     # Create the model
     # choosing the right model:
@@ -172,17 +171,17 @@ def visualize(joints, frames, file_name, width, height, bboxes=None, use_last_fr
     13: left wrist
     14: right ankle
     15: left ankle'''
+    # change to correct directory:
+    num_frames = min(
+        len(list(joints)), len(list(frames)))  # Number of frames in the video
 
-    num_frames, num_joints = frames.shape[0], joints.shape[0]
-    if num_frames != num_joints:
-        print("Error, the number of joints does not equal the number of frames")
-        raise NotImplementedError
-    
-    else:
-        print('Visualization Information: ')
-        print('\t', len(list(joints)), 'is the number of joints you have')
-        print('\t', len(list(frames)), 'is the number of frames that you have')
-        print('\t', 'The passed width and height are ', width, height)
+    num_frames_per_video = len(list(frames)) - len(list(joints))
+
+    print('\t', len(list(joints)), 'is the number of joints you have')
+    print('\t', len(list(frames)), 'is the number of frames that you have')
+
+    print('\t', 'The passed width and height are ', width, height)
+
     # generate a new folder name
     idx = 1
     num_char = len(file_name)
@@ -195,11 +194,19 @@ def visualize(joints, frames, file_name, width, height, bboxes=None, use_last_fr
     file_name = os.path.join('inference/results', file_name)
     os.mkdir(file_name)
 
+    # NOTE: even though in the dataloader, I am using a more efficient way, I won't because anyways here, the overhead copying isn't that much
     # Create a video writer to save the output
     for frame_idx in range(num_frames):
         # Get the joints for the current frame
         joints_per_frame = joints[frame_idx]
+
+        # Create a blank 320x240 image (white background)
+        # note that for the visualization, the frame number are going to be different
+        # if use_last_frame_only:
         image = frames[frame_idx]
+        # since for the ones that were not 16 frames at once, I started the prediction at frame 0
+        # else:
+            # image = frames[frame_idx - num_frames_per_video]
 
         image = rearrange(image, 'c h w->h w c')
         
@@ -217,11 +224,14 @@ def visualize(joints, frames, file_name, width, height, bboxes=None, use_last_fr
         # Plotting the joints onto the image
         plt.figure()
         plt.imshow(image)
+        # testing for if its the normalization that made the values very
+        # plt.scatter(joints_per_frame[:, 0]*320, joints_per_frame[:, 1]*240, c='red', s=10, label='Joints')
         plt.scatter(
             joints_per_frame[:, 0], joints_per_frame[:, 1], c='red', s=10, label='Joints')
 
         # Annotate the joints with their indices
         for i, pos in enumerate(joints_per_frame):
+            # print('pos ', pos)
             x, y = pos[0], pos[1]
             plt.text(x, y, str(i+1), color="blue",
                      fontsize=12, ha='right', va='bottom')
@@ -243,29 +253,34 @@ def visualize(joints, frames, file_name, width, height, bboxes=None, use_last_fr
         plt.savefig(f'{file_name}/frame_{frame_idx}.png')
         plt.close()
 
-    print(f">>> Video saved as {file_name}")
+    print(f">> Video saved as {file_name}")
 
+def debug_parameters(config, model):
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            print (name, param.data)
 
 def main(config):
-    # some default values.
     ground_truth = False
     resized_ground_truth = True
     predicted = True
-    joints_exist = True
+    # better_visualization will always be true except if last frame ig, cuz its much better
+    better_visualization = True
 
-    # some default paths for test and train datapoints:
+
+    joints_exist = True
+    jump = config['jump']
+    if not config['use_last_frame_only'] and jump != config['num_frames']:
+        print("The Jump does not match the parameter for last frame!")
+        raise NotImplementedError
     # video_path = 'inference/test_visualization/20_good_form_pullups_pullup_f_nm_np1_ri_goo_0.avi'
     # joint_path = 'inference/test_visualization/20_good_form_pullups_pullup_f_nm_np1_ri_goo_0'
     # video_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0.avi'
     # joint_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0'
-    if config['use_videos']:
-        video_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12.avi'
-    else:
-        video_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12 copy'
+    video_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12.avi'
     joint_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12'
     
-    # finding a checkpoint and model path:
-    test_checkpoint = 'HMR_decoder_initial_run_0.0401.pt'
+    test_checkpoint = 'HMR_decoder_initial_run_0.0496.pt'
     if test_checkpoint is None:
         lst = sorted(list(os.listdir(os.path.join(config['checkpoint_directory'], config['checkpoint_name']))))
         test_checkpoint = lst[0]
@@ -273,19 +288,14 @@ def main(config):
     model_path = os.path.join(
         config['checkpoint_directory'], config['checkpoint_name'], test_checkpoint)
 
-    # defining the jump
-    jump = config['jump']
-    if not config['use_last_frame_only'] and jump != config['num_frames']:
-        print("The Jump does not match the parameter for last frame!")
-        raise NotImplementedError
-    
-    # defining the sizes of the videos:
+    # load the whole joint file and the video
+    joints, frames = get_input_and_label(config['use_videos'], joint_path, video_path)
+
     width, height = config['image_width'], config['image_height']
     tensor_width, tensor_height = config['image_tensor_width'], config['image_tensor_height']
-    frames_per_vid = config['num_frames']
 
-    # load video and ground truth joints
-    joints, frames = get_input_and_label(config['use_videos'], joint_path, video_path)
+    if config['full_debug']:
+        print('Here are some joint values', joints[0])
 
     # get the bounding boxes
     if joints_exist:
@@ -293,93 +303,142 @@ def main(config):
     # elsewise, use the yolo algorithm
     else:
         bboxes = inference_yolo_bounding_box(joints)
-        
-    # visualizing ground truth
+
     if ground_truth:
+        # ground truth
         visualize(joints, frames, 'normalized_pull_ups',
                   width, height, bboxes, config['use_last_frame_only'])
 
+    # i'll try to fix just the normal visualize predict
     if predicted:
-        # load the model
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         # Load the model from the .pt file
         model = load_model(config, model_path, config['parallelize'])
         model = model.to(device)
 
-        # show models + gradients (if wanted)
-        if config['full_debug']:
-            print(model)
-            if config['show_gradients']:
-                for name, param in model.named_parameters():
-                    print(f'Parameter: {name}')
-                    print(f'Values: {param.data}')
-                    if param.grad is not None:
-                        print(f'Gradients: {param.grad}')
-                    else:
-                        print('No gradient computed for this parameter')
-                        print('---')
+        print(model)
 
-        # predicting only the last frame in a video
+        if config['show_gradients']:
+            for name, param in model.named_parameters():
+                print(f'Parameter: {name}')
+                print(f'Values: {param.data}')
+                if param.grad is not None:
+                    print(f'Gradients: {param.grad}')
+                else:
+                    print('No gradient computed for this parameter')
+                    print('---')
+    
+        frames_per_vid = config['num_frames']
+
+        # all frames, except first 15 (because each video is 16 frames) with 15 joints, and x y
         if config['use_last_frame_only']:
-            # skip the first 15 frames, so only keep from index 15 included onwards
-            frames = frames[15:]
-            # I'll do it later, but basically what I was doing with the old visualization.
-            raise NotImplementedError
-        # predicting all 16 frames of a video
+            outputs = torch.zeros(len(frames)-15, 15, 2)
+            max_num = len(frames) - 15
+
         else:
-            # then I need to remove the last frames, which are not in the modulo 16
-            max_num = len(frames) - (len(frames) % frames_per_vid)
-            frames = frames[:max_num]
+            max_num = len(frames) - (len(frames) % 16)
+            # here, the output should be a multiple of 16 
+            # outputs = torch.zeros(len(frames) - (len(frames) % 16), 15, 2)
+            # final_frames = torch.zeros(len(frames) - (len(frames) % 16), 3, config['image_tensor_height'], config['image_tensor_width'])
+            # how about just use an empty torch tensor to which I contatenate values.
+            outputs = torch.tensor([])
+            final_frames = torch.tensor([])
+        # need to reformat the output, find the bounding box, and apply the output
+        # If I have the ground truth data, then I will rely on that for the bounding box
+        # if only using the last frame
+        print(len(list(outputs)), 'is the length of the outputs ')
+        for frame in range(15, max_num, jump):
+            print(frame, 'is the current frame index')
+            input_frame = frames[frame-(frames_per_vid)+1:frame+1]
+            input_frame = rearrange(input_frame, 'd c h w -> d h w c')                   
 
-            batch_videos = []
-            batch_ground_truth_joints = []
-            for frame_idx in range(15, max_num, frames_per_vid):
-                # get subvideos of 16 frames at once.
-                if frame_idx + frames_per_vid > len(frames):
-                    print('max_num does not seem to be the correct value')
-                    break
-                input_video = frames[frame_idx: frame_idx + frames_per_vid]
-                
-                # preprocess the videos
-                input_video = rearrange(input_video, 'd c h w -> d h w c')          
-                input_video, ground_truth_joints = preprocess_video_data(input_video.numpy(), bboxes.numpy(), joints.numpy(), (tensor_width, tensor_height), config['min_norm'])
-                print(input_video.shape, 'is the shape of the input video')
+            input_frame, _ = preprocess_video_data(input_frame.numpy(), bboxes.numpy(), joints.numpy(), (tensor_width, tensor_height), config['min_norm'])
 
-                # rearrange to channel first                
-                input_video = rearrange(input_video, 'd c h w-> c d h w')
-                
-                batch_videos.append(input_video)
-                batch_ground_truth_joints.append(ground_truth_joints)
-            # make into a single torch tensor
-            batch_videos = torch.stack(batch_videos)
-            batch_ground_truth_joints = torch.stack(batch_ground_truth_joints)
+            input_frame = rearrange(input_frame, '(b d) c h w -> b c d h w', b=1)
+            print(input_frame.shape, 'is the shape of the input frames')
+
+            input_frame = input_frame.to(device)
+
+            # videos.append(input_frame) # need cuda GPU!
+            output = inference(model, input_frame)
+
+            output = output.to('cpu')
+
+
+            if config['use_last_frame_only']:
+                # I think output outputs a batch size of 1, so there is one more dimension
+                _, output = inverse_process_joint_data(bboxes[frame].numpy(), output[0].numpy(), (tensor_width, tensor_height), config['min_norm'], False)
+
+                outputs[frame-15] = output
+
+            elif better_visualization:
+                input_frame = input_frame.to('cpu')
+                input_frame = rearrange(input_frame[0], 'c d h w -> d h w c')
+
+                # just denormalize, and nothing else
+                output = output[0]
+                output = denormalize_fn(output, config['min_norm'], tensor_height, tensor_width)
+                input_frame = rearrange(input_frame, 'b h w c->b c h w')
+                # for i in range(output.shape[0]):
+                #     outputs[frame + i + 1 - frames_per_vid] = output[i]
+                #     print('Currently filling: ', frame + i + 1 - frames_per_vid)
+                #     final_frames[frame + i + 1 - frames_per_vid] = input_frame[i]
+                print(output.shape, 'is the shape of the output of your model')
+                outputs = torch.cat((outputs, output))
+                final_frames = torch.cat((final_frames, input_frame))
+
+            else:
+                input_frame = input_frame.to('cpu')
+                input_frame = rearrange(input_frame[0], 'c d h w -> d h w c')
+                output = output[0]
+                # okay, my inverse process jointdata does NOT work. I don't think it inverses the x values for the width correctly.
+                # !Hence, I will just take the processed frames and simply denormalize the joint values, without inverse affine whatever.
+                # I think output outputs a batch size of 1, so there is one more dimension
+                # input_frame, output = inverse_process_joints_data(bboxes.numpy(), output.numpy(), (tensor_width, tensor_height), config['min_norm'], input_frame.numpy())
+                # print(input_frame.shape)
+                # exit()
+                # input_frame = rearrange(input_frame, 'd h w c -> d c h w ')
+
+                # outputs[frame+1-frames_per_vid:frames+1] = output
+                # for i in range(output.shape[0]):
+                #     outputs[frame + i + 1 - frames_per_vid] = output[i]
+                #     print('Currently filling: ', frame + i + 1 - frames_per_vid)
+                #     final_frames[frame + i + 1 - frames_per_vid] = input_frame[i]
+                outputs = torch.cat([outputs, output])
+                final_frames = torch.cat([final_frames, input_frame])
+        print(outputs.shape, 'is the shape of your outputs')
+        print('Are the last two outputs the same?: ', outputs[0] == outputs[1])
+        # prints the last output
+        # print('output', output)
+
+        # visualize
+        frames = rearrange(frames, 'd c h w -> d h w c')                   
+        frames, test = preprocess_video_data(frames.numpy(), bboxes.numpy(), joints.numpy(), (tensor_width, tensor_height), config['min_norm'])
+        if resized_ground_truth:
+            # visualizing the joints that were normalized
+            test = denormalize_fn(test, config['min_norm'], tensor_height, tensor_width)
+            visualize(test, frames, 'aaa', tensor_width, tensor_height, None, False)
+            # exit()
+
+        if better_visualization:
+            # visualize(outputs, final_frames, 'predicted', width,
+            #       height, None, config['use_last_frame_only'])
+            print(outputs.shape, 'is the shape of the output')
             
-            # run inference
-            batch_videos = batch_videos.to(device)
-            batch_outputs = inference(model, batch_videos)
-            batch_outputs = batch_outputs.to('cpu')
+            # outputs = denormalize_fn(outputs, config['min_norm'], tensor_height, tensor_width)
+            print(outputs[0])
+            visualize(outputs, frames, 'predicted', tensor_width, tensor_height, None, False)
 
-            # creating the final tensors:
-            final_videos = rearrange(batch_videos, 'b c d h w -> (b d) c h w')
-            final_outputs = rearrange(batch_outputs, 'b d j x -> (b d) j x')
-            ground_truth_joints = rearrange(batch_ground_truth_joints, 'b d j x->(b d) j x')
-
-            # denormalize the final_outputs to suit the new screen size
-            final_outputs = denormalize_fn(final_outputs, config['min_norm'], h=tensor_height, w=tensor_width)
-            ground_truth_joints = denormalize_fn(ground_truth_joints, config['min_norm'], h=tensor_height, w=tensor_width)
-            
-            # visualization
-            visualize(final_outputs, final_videos, 'Predicted', tensor_width, tensor_height, None, False)
-
-            # showing the ground truth with the resized joints
-            if resized_ground_truth:
-                visualize(ground_truth_joints, final_videos, 'Resized_ground_truth', tensor_width, tensor_height, None, False)
+        else:
+            visualize(outputs, final_frames, 'predicted', width,
+                  height, bboxes, config['use_last_frame_only'])
 
 
-
-if __name__ == '__main__':
-    from data_format.AffineTransform import denormalize_fn, bounding_box, inference_yolo_bounding_box, preprocess_video_data#, inverse_process_joints_data, inverse_process_joint_data, preprocess_video_data
+if __name__ == "__main__":
+    # config = open_config(file_name='heatmap_beluga_idapt_local.yaml',
+   # importing all possible models:
+    from data_format.AffineTransform import denormalize_fn, bounding_box, inference_yolo_bounding_box, inverse_process_joints_data, inverse_process_joint_data, preprocess_video_data
     from models.heatmap.HeatVideoMamba import HeatMapVideoMambaPose
     from models.HMR_decoder.HMRMambaPose import HMRVideoMambaPose
     from models.MLP_only_decoder.MLPMambaPose import MLPVideoMambaPose
