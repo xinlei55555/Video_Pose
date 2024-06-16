@@ -342,11 +342,12 @@ def main(config):
                 print(frame_idx, frame_idx+frames_per_vid)
                 input_video = frames.detach().clone()[frame_idx: frame_idx + frames_per_vid]
                 ground_truth_joints = joints.detach().clone()[frame_idx: frame_idx + frames_per_vid]
+                bboxes_indexed = bboxes.detach().clone()[frame_idx: frame_idx + frames_per_vid]
 
                 # preprocess the videos
                 input_video = rearrange(input_video, 'd c h w -> d h w c')          
                 print(input_video.shape, 'is the shape of the input video')
-                input_video, ground_truth_joints = preprocess_video_data(input_video.detach().clone().numpy(), bboxes.detach().clone().numpy(), ground_truth_joints.detach().clone().numpy(), (tensor_width, tensor_height), config['min_norm'])
+                input_video, ground_truth_joints = preprocess_video_data(input_video.detach().clone().numpy(), bboxes_indexed.detach().clone().numpy(), ground_truth_joints.detach().clone().numpy(), (tensor_width, tensor_height), config['min_norm'])
 
                 # rearrange to channel first                
                 input_video = rearrange(input_video, 'd c h w-> c d h w')
