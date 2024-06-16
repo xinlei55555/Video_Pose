@@ -280,7 +280,7 @@ def main(config):
     video_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12.avi'
     joint_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12'
     
-    test_checkpoint = 'HMR_decoder_initial_run_0.0496.pt'
+    test_checkpoint = 'HMR_decoder_initial_run_0.0401.pt'
     if test_checkpoint is None:
         lst = sorted(list(os.listdir(os.path.join(config['checkpoint_directory'], config['checkpoint_name']))))
         test_checkpoint = lst[0]

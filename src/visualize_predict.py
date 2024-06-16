@@ -323,28 +323,30 @@ def main(config):
         # predicting only the last frame in a video
         if config['use_last_frame_only']:
             # skip the first 15 frames, so only keep from index 15 included onwards
-            frames = frames[15:]
+            frames = frames[15:].detach.clone()
             # I'll do it later, but basically what I was doing with the old visualization.
             raise NotImplementedError
         # predicting all 16 frames of a video
         else:
             # then I need to remove the last frames, which are not in the modulo 16
             max_num = len(frames) - (len(frames) % frames_per_vid)
-            frames = frames[:max_num]
+            frames = frames[:max_num].detach().clone()
 
             batch_videos = []
             batch_ground_truth_joints = []
-            for frame_idx in range(15, max_num, frames_per_vid):
+            for frame_idx in range(0, max_num, frames_per_vid):
                 # get subvideos of 16 frames at once.
                 if frame_idx + frames_per_vid > len(frames):
                     print('max_num does not seem to be the correct value')
                     break
-                input_video = frames[frame_idx: frame_idx + frames_per_vid]
-                
+                print(frame_idx, frame_idx+frames_per_vid)
+                input_video = frames.detach().clone()[frame_idx: frame_idx + frames_per_vid]
+                ground_truth_joints = joints.detach().clone()[frame_idx: frame_idx + frames_per_vid]
+
                 # preprocess the videos
                 input_video = rearrange(input_video, 'd c h w -> d h w c')          
-                input_video, ground_truth_joints = preprocess_video_data(input_video.numpy(), bboxes.numpy(), joints.numpy(), (tensor_width, tensor_height), config['min_norm'])
                 print(input_video.shape, 'is the shape of the input video')
+                input_video, ground_truth_joints = preprocess_video_data(input_video.detach().clone().numpy(), bboxes.detach().clone().numpy(), ground_truth_joints.detach().clone().numpy(), (tensor_width, tensor_height), config['min_norm'])
 
                 # rearrange to channel first                
                 input_video = rearrange(input_video, 'd c h w-> c d h w')
@@ -357,7 +359,7 @@ def main(config):
             
             # run inference
             batch_videos = batch_videos.to(device)
-            batch_outputs = inference(model, batch_videos)
+            batch_outputs = inference(model, batch_videos.detach().clone())
             batch_outputs = batch_outputs.to('cpu')
 
             # creating the final tensors:

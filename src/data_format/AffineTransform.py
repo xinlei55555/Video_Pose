@@ -141,134 +141,134 @@ def preprocess_video_data(frames, bboxes, joints, out_res, min_norm):
     return new_frames, new_joints
 
 # I am unsure if the correct translation is applied to the values in the new frames. (same for the )
-# def inverse_process_joints_data(bboxes, joints, output_res, min_norm, frames=False):
-#     '''
-#     This applies the inverse functions of the preprocess_video_data outputs of a given frame
-#     Args:
-#         # frame is a numpy array for the given frame, must be of the format (c w h)
-#         bbox is the numpy array for the box information 
-#         joint is a numpy array containing the joints for the given frame
-#         input_res is a tuple containing the final resolution
-#     '''
+def inverse_process_joints_data(bboxes, joints, output_res, min_norm, frames=False):
+    '''
+    This applies the inverse functions of the preprocess_video_data outputs of a given frame
+    Args:
+        # frame is a numpy array for the given frame, must be of the format (c w h)
+        bbox is the numpy array for the box information 
+        joint is a numpy array containing the joints for the given frame
+        input_res is a tuple containing the final resolution
+    '''
     
-#     # note: output_res must be the same as out_res in preprocess_video_data
-#     image_size = np.array(output_res)
+    # note: output_res must be the same as out_res in preprocess_video_data
+    image_size = np.array(output_res)
 
-#     # denormalize values!
-#     joints = denormalize_fn(joints, min_norm, output_res[1], output_res[0])
+    # denormalize values!
+    joints = denormalize_fn(joints, min_norm, output_res[1], output_res[0])
 
-#     if frames is not False:
-#         new_joints, new_frames = [], []
-#     else:
-#         new_joints, new_frames = [], False
-#     num_joints = joints.shape[0]
+    if frames is not False:
+        new_joints, new_frames = [], []
+    else:
+        new_joints, new_frames = [], False
+    num_joints = joints.shape[0]
 
-#     for idx in range(num_joints):
-#         center, scale = box2cs(image_size, bboxes[idx])
-#         rotation = 0
+    for idx in range(num_joints):
+        center, scale = box2cs(image_size, bboxes[idx])
+        rotation = 0
 
-#         # Calculate the correct inverse transformation matrix
-#         trans = get_warp_matrix(rotation, center * 2.0,
-#                                 image_size - 1.0, scale * 200.0)
+        # Calculate the correct inverse transformation matrix
+        trans = get_warp_matrix(rotation, center * 2.0,
+                                image_size - 1.0, scale * 200.0)
 
-#         # Inverse the of the Affine Transform matrix, notice that the output_res must remain the same, even though to not break the joint values.
-#         inv_trans = cv2.invertAffineTransform(trans)
+        # Inverse the of the Affine Transform matrix, notice that the output_res must remain the same, even though to not break the joint values.
+        inv_trans = cv2.invertAffineTransform(trans)
 
-#         # inverse warping for the joints
-#         new_joints.append(torch.from_numpy(warp_affine_joints(joints[idx][:, 0:2].copy(), inv_trans)))
+        # inverse warping for the joints
+        new_joints.append(torch.from_numpy(warp_affine_joints(joints[idx][:, 0:2].copy(), inv_trans)))
         
-#         if frames is not False:
-#             # frames = torch.from_numpy(frames[idx])
-#             frame = frames[idx]
+        if frames is not False:
+            # frames = torch.from_numpy(frames[idx])
+            frame = frames[idx]
            
-#             frame = rearrange(frame, 'h w c -> c w h')
+            frame = rearrange(frame, 'h w c -> c w h')
 
-#             frame = torch.from_numpy(frame)
+            frame = torch.from_numpy(frame)
 
-#             # denormalization
-#             invTrans = transforms.Compose([
-#                 transforms.Normalize(mean=[0., 0., 0.], std=[
-#                     1/0.229, 1/0.224, 1/0.225]),
-#                 transforms.Normalize(
-#                     mean=[-0.485, -0.456, -0.406], std=[1., 1., 1.]),
-#             ]) 
-#             frame = invTrans(frame)
+            # denormalization
+            invTrans = transforms.Compose([
+                transforms.Normalize(mean=[0., 0., 0.], std=[
+                    1/0.229, 1/0.224, 1/0.225]),
+                transforms.Normalize(
+                    mean=[-0.485, -0.456, -0.406], std=[1., 1., 1.]),
+            ]) 
+            frame = invTrans(frame)
             
-#             frame = rearrange(frame, 'c w h-> h w c')
+            frame = rearrange(frame, 'c w h-> h w c')
 
-#             frame = frame.numpy()
+            frame = frame.numpy()
 
-#             # perform inverse warping
-#             frame_cropped = cv2.warpAffine(
-#                 frame,
-#                 inv_trans, (int(image_size[0]), int(image_size[1])),
-#                 flags=cv2.INTER_LINEAR)
-#             frame = F.to_tensor(frame_cropped)
+            # perform inverse warping
+            frame_cropped = cv2.warpAffine(
+                frame,
+                inv_trans, (int(image_size[0]), int(image_size[1])),
+                flags=cv2.INTER_LINEAR)
+            frame = F.to_tensor(frame_cropped)
 
-#             # frame = rearrange(frame, 'h w c-> c h w') # to remove
+            # frame = rearrange(frame, 'h w c-> c h w') # to remove
             
-#             new_frames.append(frame)
+            new_frames.append(frame)
     
-#     if frames is not False:
-#         new_frames = torch.stack(new_frames)
+    if frames is not False:
+        new_frames = torch.stack(new_frames)
 
-#     new_joints = torch.stack(new_joints)
+    new_joints = torch.stack(new_joints)
 
-#     # although usually, I would not be denormalizing the frames.
+    # although usually, I would not be denormalizing the frames.
     
-#     return new_frames, new_joints
+    return new_frames, new_joints
 
-# def inverse_process_joint_data(bbox, joint, output_res, min_norm, frame=False):
-#     '''
-#     This applies the inverse functions of the preprocess_video_data outputs of a given frame
-#     Args:
-#         # frame is a numpy array for the given frame, must be of the format (c w h)
-#         bbox is the numpy array for the box information 
-#         joint is a numpy array containing the joints for the given frame
-#         input_res is a tuple containing the final resolution
-#     '''
-#     # note: output_res must be the same as out_res in preprocess_video_data
-#     image_size = np.array(output_res)
-#     center, scale = box2cs(image_size, bbox)
-#     rotation = 0
+def inverse_process_joint_data(bbox, joint, output_res, min_norm, frame=False):
+    '''
+    This applies the inverse functions of the preprocess_video_data outputs of a given frame
+    Args:
+        # frame is a numpy array for the given frame, must be of the format (c w h)
+        bbox is the numpy array for the box information 
+        joint is a numpy array containing the joints for the given frame
+        input_res is a tuple containing the final resolution
+    '''
+    # note: output_res must be the same as out_res in preprocess_video_data
+    image_size = np.array(output_res)
+    center, scale = box2cs(image_size, bbox)
+    rotation = 0
     
-#     # denormalize values!
-#     joint = denormalize_fn(joint, min_norm, output_res[1], output_res[0])
+    # denormalize values!
+    joint = denormalize_fn(joint, min_norm, output_res[1], output_res[0])
 
-#     # Calculate the correct inverse transformation matrix
-#     trans = get_warp_matrix(rotation, center * 2.0,
-#                             image_size - 1.0, scale * 200.0)
+    # Calculate the correct inverse transformation matrix
+    trans = get_warp_matrix(rotation, center * 2.0,
+                            image_size - 1.0, scale * 200.0)
 
-#     # Inverse the of the Affine Transform matrix, notice that the output_res must remain the same, even though to not break the joint values.
-#     inv_trans = cv2.invertAffineTransform(trans)
+    # Inverse the of the Affine Transform matrix, notice that the output_res must remain the same, even though to not break the joint values.
+    inv_trans = cv2.invertAffineTransform(trans)
 
-#     # inverse warping for the joints
-#     joint = torch.from_numpy(warp_affine_joints(joint[:, 0:2].copy(), inv_trans))
+    # inverse warping for the joints
+    joint = torch.from_numpy(warp_affine_joints(joint[:, 0:2].copy(), inv_trans))
 
-#     # although usually, I would not be denormalizing the frames.
-#     if frame is not False:
-#         frame = torch.from_numpy(frame)
-#         # denormalization
-#         invTrans = transforms.Compose([
-#             transforms.Normalize(mean=[0., 0., 0.], std=[
-#                 1/0.229, 1/0.224, 1/0.225]),
-#             transforms.Normalize(
-#                 mean=[-0.485, -0.456, -0.406], std=[1., 1., 1.]),
-#         ])
+    # although usually, I would not be denormalizing the frames.
+    if frame is not False:
+        frame = torch.from_numpy(frame)
+        # denormalization
+        invTrans = transforms.Compose([
+            transforms.Normalize(mean=[0., 0., 0.], std=[
+                1/0.229, 1/0.224, 1/0.225]),
+            transforms.Normalize(
+                mean=[-0.485, -0.456, -0.406], std=[1., 1., 1.]),
+        ])
 
-#         frame = invTrans(frame)
-#         frame = rearrange(frame, 'c w h -> h w c')
+        frame = invTrans(frame)
+        frame = rearrange(frame, 'c w h -> h w c')
 
-#         frame = frame.numpy()
-#         # perform inverse warping
-#         frame_cropped = cv2.warpAffine(
-#             frame,
-#             inv_trans, (int(image_size[0]), int(image_size[1])),
-#             flags=cv2.INTER_LINEAR)
-#         frame = F.to_tensor(frame_cropped)
+        frame = frame.numpy()
+        # perform inverse warping
+        frame_cropped = cv2.warpAffine(
+            frame,
+            inv_trans, (int(image_size[0]), int(image_size[1])),
+            flags=cv2.INTER_LINEAR)
+        frame = F.to_tensor(frame_cropped)
 
 
-#     return frame, joint
+    return frame, joint
 
 
 def normalize_fn(x, min_norm, h=240.0, w=320.0):
