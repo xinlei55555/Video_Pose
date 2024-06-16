@@ -12,7 +12,7 @@ show_predictions: False
 embed_channels: 192 # number of channels after the tiny mamba layers.
 num_mamba_blocks: 12
 
-losses: ['mse', 'velocity']
+losses: ['mse', 'velocity', 'angle']
 
 use_last_frame_only: False
 # unsure own values for the transformer decoder
@@ -57,7 +57,7 @@ parallelize: False
 # checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/latent_space_regression_with_linear/checkpoint
 checkpoint_directory: checkpoints/HMR_decoder
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
-checkpoint_name: 'initial_run'
+checkpoint_name: 'angle_velocity_1_train_input_transformer'
 # checkpoint_name: 'testing_false_dataset'
 
 # Follow up on the training of another previous run?
@@ -76,7 +76,7 @@ use_videos: True
 preprocess_videos: True
 
 # actions to skip
-skip: ['wave']
+skip: ['wave', 'velocity', 'angle']
 num_frames: 16
 # RGB
 channels: 3

@@ -260,7 +260,7 @@ class JHMDBLoad(Dataset):
                     value = int(row[1])
 
                     # if only testing, then just take the minimum number of actions
-                    if not self.real_job and (len(train) > 20 or len(test) > 1 or (len(actions) > 1)):
+                    if not self.real_job and (len(train) > 1 or len(test) > 1 or (len(actions) > 1)):
                         print("length of actions", len(actions))
                         print('The following are the actions: ', actions)
                         print('The following are the train files: ', train)

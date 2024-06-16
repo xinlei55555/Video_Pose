@@ -265,7 +265,11 @@ def main(config):
     joint_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12'
     
     # finding a checkpoint and model path:
-    test_checkpoint = 'HMR_decoder_initial_run_0.0401.pt'
+    test_checkpoint = None
+    # test_checkpoint = 'HMR_decoder_initial_run_0.0401.pt'
+    # test_checkpoint = 'heatmap_0.0413.pt'
+    # test_checkpoint = 'HMR_decoder_1_train_input_transformer_0.0531.pt'
+    # test_checkpoint = 'HMR_decoder_angle_velocity_1_train_input_transformer_0.0535.pt'
     if test_checkpoint is None:
         lst = sorted(list(os.listdir(os.path.join(config['checkpoint_directory'], config['checkpoint_name']))))
         test_checkpoint = lst[0]
@@ -296,7 +300,7 @@ def main(config):
         
     # visualizing ground truth
     if ground_truth:
-        visualize(joints, frames, 'normalized_pull_ups',
+        visualize(joints, frames, 'Normalized_ground_truth',
                   width, height, bboxes, config['use_last_frame_only'])
 
     if predicted:
@@ -372,12 +376,15 @@ def main(config):
             final_outputs = denormalize_fn(final_outputs, config['min_norm'], h=tensor_height, w=tensor_width)
             ground_truth_joints = denormalize_fn(ground_truth_joints, config['min_norm'], h=tensor_height, w=tensor_width)
             
+            # creating the directory, if doesn't exist
+            os.makedirs(f'inference/results/{config["checkpoint_name"]}', exist_ok=True)
+            
             # visualization
-            visualize(final_outputs, final_videos, 'Predicted', tensor_width, tensor_height, None, False)
+            visualize(final_outputs, final_videos, f"{config['checkpoint_name']}/Predicted", tensor_width, tensor_height, None, False)
 
             # showing the ground truth with the resized joints
             if resized_ground_truth:
-                visualize(ground_truth_joints, final_videos, 'Resized_ground_truth', tensor_width, tensor_height, None, False)
+                visualize(ground_truth_joints, final_videos, f"{config['checkpoint_name']}/resized_ground_truth", tensor_width, tensor_height, None, False)
 
 
 

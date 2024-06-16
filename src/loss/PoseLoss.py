@@ -9,6 +9,7 @@ class PoseEstimationLoss(nn.Module):
         self.config = config
         self.mse_loss = nn.MSELoss()
         self.velocity_loss = self.velocity_loss_fn
+        self.angle_loss = self.angle_loss_fn
 
     def velocity_loss_fn(self, predicted, target):
         """
@@ -37,6 +38,32 @@ class PoseEstimationLoss(nn.Module):
         # then we want the difference between both
         return abs(target_differences - predicted_differences)
 
+    def angle_loss_fn(self, predicted, target):
+        """
+        Args:
+            predicted (torch.Tensor): The predicted joint positions or heatmaps.
+            target (torch.Tensor): The ground truth joint positions or heatmaps.
+
+        Returns:
+            torch.Tensor: Computed loss.
+        """
+        def compute_angle(joints):
+            """
+            Compute the angle between consecutive joints.
+            Args:
+                joints (torch.Tensor): The joint positions of shape (B, J, 2).
+            Returns:
+                torch.Tensor: The angles between consecutive joints.
+            """
+            vector = joints[:, 1:, :] - joints[:, :-1, :]
+            angles = torch.atan2(vector[..., 1], vector[..., 0])
+            return angles
+
+        predicted_angles = compute_angle(predicted)
+        target_angles = compute_angle(target)
+
+        return self.mse_loss(predicted_angles, target_angles)
+
     def forward(self, predicted, target):
         """
         Args:
@@ -59,6 +86,9 @@ class PoseEstimationLoss(nn.Module):
 
         if 'velocity' in self.config['losses']:
             calculated_loss += self.velocity_loss(predicted, target)
+
+        if 'angle' in self.config['losses']:
+            calculated_loss += self.angle_loss(predicted, target)
 
         if self.config['show_predictions']:
             print(f'The target values are : ', target)
