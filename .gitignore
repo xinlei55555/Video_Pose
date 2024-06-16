@@ -28,3 +28,6 @@ old/
 local_outputs/
 outputs/
 2_HeatMap/
+*.mat
+.AppleDouble/
+old_results/

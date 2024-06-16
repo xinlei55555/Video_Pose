@@ -120,7 +120,7 @@ def preprocess_video_data(frames, bboxes, joints, out_res, min_norm):
             trans, (int(image_size[0]), int(image_size[1])),
             flags=cv2.INTER_LINEAR)
         frames_cropped = F.to_tensor(frames_cropped)
-        print(frames_cropped)
+        
         # normalize the RGB data
         frames_cropped = F.normalize(frames_cropped, mean=[0.485, 0.456, 0.406], std=[
             0.229, 0.224, 0.225])
@@ -140,7 +140,7 @@ def preprocess_video_data(frames, bboxes, joints, out_res, min_norm):
 
     return new_frames, new_joints
 
-
+# I am unsure if the correct translation is applied to the values in the new frames. (same for the )
 def inverse_process_joints_data(bboxes, joints, output_res, min_norm, frames=False):
     '''
     This applies the inverse functions of the preprocess_video_data outputs of a given frame
@@ -388,7 +388,6 @@ if __name__ == '__main__':
     # # joints = np.rand(num_frames, 17, 2) * [width, height]
     # joints = np.array([[[100, 120]] * 15] * num_frames)
     joints = np.random.randint(0, 256, size=(num_frames, 15, 2))
-    print(joints[0])
 
     # joints = np.array([[[0, 0]] * 15] * num_frames )
     # # Preprocess the video

@@ -48,7 +48,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
 
         if epoch == start_epoch:
             # Prints GPU memory summary
-            print('Memory before (in MB)', torch.cuda.memory_allocated()/1e6)
+            print('\t Memory before (in MB)', torch.cuda.memory_allocated()/1e6)
             print(
                 f'The number of batches in the train_set is {len(train_set)}')
             print(f'The number of batches in the test_set is {len(test_set)}')
@@ -97,7 +97,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
 
             if epoch == start_epoch and i == 0:
                 # Prints GPU memory summary
-                print('Memory after train_batch (in MB)',
+                print('\t Memory after train_batch (in MB)',
                       torch.cuda.memory_allocated()/1e6)
 
             torch.cuda.empty_cache()  # Clear cache to save memory
@@ -121,7 +121,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
 
                 if epoch == start_epoch and i == 0:
                     # Prints GPU memory summary
-                    print('Memory after test_batch (in MB)',
+                    print('\t Memory after test_batch (in MB)',
                           torch.cuda.memory_allocated()/1e6)
 
                 torch.cuda.empty_cache()  # Clear cache to save memory
@@ -144,10 +144,10 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
             wandb.log({"Training loss": train_loss})
             wandb.log({"Testing loss": test_loss})
 
-            print(f"Epoch {epoch},\n Pointwise Training loss {float(show_loss_train)}, \n"
-                  f" Pointwise Validation loss {float(show_loss_test)}")
+            print(f"Epoch {epoch},\n \t Pointwise Training loss {float(show_loss_train)}, \n"
+                  f" \t Pointwise Validation loss {float(show_loss_test)}")
             print(
-                f"Full training loss: {float(train_loss)}, \n Full test loss: {float(test_loss)}")
+                f"\t Full training loss: {float(train_loss)}, \n \t Full test loss: {float(test_loss)}")
 
             # if scheduler defined:
             if config['scheduler']:
@@ -155,15 +155,15 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
                 print(f'The current learning rate is: {lr}')
 
             # I use the full loss when comparing, to avoid having too small numbers.
-            if test_loss < best_val_loss or epoch % 50 == 0:
+            if test_loss < best_val_loss:
                 best_val_loss = test_loss
-
+            if test_loss < best_val_loss or epoch % 50 == 0:
                 # save model locally
                 checkpoint_path = os.path.join(
-                    checkpoint_directory, checkpoint_name, f"{config['model_type']}_{checkpoint_name}_{best_val_loss:.4f}.pt")
+                    checkpoint_directory, checkpoint_name, f"{config['model_type']}_{checkpoint_name}_{test_loss:.4f}.pt")
                 torch.save(model.state_dict(), checkpoint_path)
                 print(f'Best model saved at {checkpoint_path}')
-                print("Model parameters are of the following size",
+                print("\t Model parameters are of the following size",
                       len(list(model.parameters())))
             print(f'[************************************************************]')
 
