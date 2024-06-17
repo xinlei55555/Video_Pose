@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=Latent_space       # Job name
+#SBATCH --job-name=HMR_Decoder      # Job name
 #SBATCH --account=def-btaati              # Replace with your account
 #SBATCH --time=04-00:00                   # Time limit (DD-HH:MM) ! change this when training.
 #SBATCH --cpus-per-task=1                 # Number of CPU cores per task ! change this when training.
