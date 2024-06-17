@@ -12,7 +12,7 @@ show_predictions: False
 embed_channels: 192 # number of channels after the tiny mamba layers.
 num_mamba_blocks: 12
 
-losses: ['mse', 'velocity']
+losses: {'mse': 1.0, 'velocity': 20.0}
 
 use_last_frame_only: False
 # unsure own values for the transformer decoder
