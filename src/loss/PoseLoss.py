@@ -8,11 +8,13 @@ class PoseEstimationLoss(nn.Module):
         super().__init__()
         self.config = config
         self.mse_loss = nn.MSELoss()
+        self.mpjpe = self.loss_mpjpe
         self.velocity_loss = self.velocity_loss_fn
         self.angle_loss = self.angle_loss_fn
 
     def velocity_loss_fn(self, predicted, target):
         """
+        Mean per-joint velocity error (i.e. mean Euclidean distance of the 1st derivative)
         Args:
             predicted (torch.Tensor): The predicted joint positions or heatmaps.
             target (torch.Tensor): The ground truth joint positions or heatmaps.
@@ -30,13 +32,12 @@ class PoseEstimationLoss(nn.Module):
         # inputted shape should be (B, Num_frames, Joint_number, 2)
         # MSE is the squared difference of all the values between each two frames
         # this gives me the difference between each two frames within a video
-        predicted_differences = self.mse_loss(
-            predicted[..., 1:, :, :], predicted[..., :-1, :, :])
-        target_differences = self.mse_loss(
-            target[..., 1:, :, :], target[..., :-1, :, :])
+        predicted_differences = predicted[..., 1:, :, :] - predicted[..., :-1, :, :]
+        target_differences = target[..., 1:, :, :] - target[..., :-1, :, :]
 
-        # then we want the difference between both
-        return abs(target_differences - predicted_differences)
+        # then we want the difference between both, THIS IS THE SAME AS MSE
+        difference_norms = torch.norm(target_differences - predicted_differences, dim=-3)
+        return torch.mean(difference_norms)
 
     def angle_loss_fn(self, predicted, target):
         """
@@ -62,7 +63,20 @@ class PoseEstimationLoss(nn.Module):
         predicted_angles = compute_angle(predicted)
         target_angles = compute_angle(target)
 
+        # normalize the angle values
+        predicted_angles /= 360.0
+        target_angles /= 360.0
+
         return self.mse_loss(predicted_angles, target_angles)
+
+    def loss_mpjpe(self, predicted, target):
+        """
+        Mean per-joint position error (i.e. mean Euclidean distance),
+        often referred to as "Protocol #1" in many papers.
+        """
+        assert predicted.shape == target.shape
+        # this is mean squared
+        return torch.mean(torch.norm(predicted - target, dim=len(target.shape)-1))
 
     def forward(self, predicted, target):
         """
@@ -82,13 +96,16 @@ class PoseEstimationLoss(nn.Module):
         calculated_loss = 0.0
 
         if 'mse' in self.config['losses']:
-            calculated_loss += self.mse_loss(predicted, target)
+            calculated_loss += self.mse_loss(predicted, target) * self.config['losses']['mse']
 
         if 'velocity' in self.config['losses']:
-            calculated_loss += self.velocity_loss(predicted, target)
+            calculated_loss += self.velocity_loss(predicted, target) * self.config['losses']['velocity']
 
         if 'angle' in self.config['losses']:
-            calculated_loss += self.angle_loss(predicted, target)
+            calculated_loss += self.angle_loss(predicted, target) * self.config['losses']['angle']
+
+        if 'mpjpe' in self.config['losses']:
+            calculated_loss += self.mpjpe(predicted, target) * self.config['losses']['mpjpe']
 
         if self.config['show_predictions']:
             print(f'The target values are : ', target)

@@ -188,9 +188,9 @@ def visualize(joints, frames, file_name, width, height, bboxes=None, use_last_fr
     num_char = len(file_name)
     while os.path.exists(os.path.join('inference/results', file_name)):
         if idx == 1:
-            file_name = str(idx) + file_name
+            file_name = file_name + str(idx)
         else:
-            file_name = str(idx) + file_name[-num_char:]
+            file_name = file_name[:num_char] + str(idx)
         idx += 1
     file_name = os.path.join('inference/results', file_name)
     os.mkdir(file_name)
@@ -249,7 +249,7 @@ def visualize(joints, frames, file_name, width, height, bboxes=None, use_last_fr
 def main(config):
     # some default values.
     ground_truth = False
-    resized_ground_truth = True
+    resized_ground_truth = False
     predicted = True
     joints_exist = True
 
@@ -260,16 +260,28 @@ def main(config):
     # joint_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0'
     if config['use_videos']:
         video_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12.avi'
+        # video_path = 'inference/test_visualization/HowtoswingaBaseballbat_swing_baseball_f_nm_np1_le_bad_0.avi'
     else:
         video_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12 copy'
     joint_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12'
+    # joint_path = 'inference/test_visualization/HowtoswingaBaseballbat_swing_baseball_f_nm_np1_le_bad_0'
     
     # finding a checkpoint and model path:
-    test_checkpoint = None
     # test_checkpoint = 'HMR_decoder_initial_run_0.0401.pt'
     # test_checkpoint = 'heatmap_0.0413.pt'
     # test_checkpoint = 'HMR_decoder_1_train_input_transformer_0.0531.pt'
     # test_checkpoint = 'HMR_decoder_angle_velocity_1_train_input_transformer_0.0535.pt'
+    # test_checkpoint = 'HMR_decoder_angle_velocity_1_train_input_transformer_2.3679.pt'
+    # test_checkpoint = 'HMR_decoder_angle_velocity_1_train_input_transformer_2.0946.pt'
+    test_checkpoint  = 'HMR_decoder_angle_velocity_1_train_input_transformer_0.0469.pt'
+    test_checkpoint = 'HMR_decoder_angle_velocity_1_train_input_transformer_0.0537.pt'
+    test_checkpoint = 'HMR_decoder_new_velocity_1_train_input_transformer_4.8700.pt'
+    test_checkpoint = 'HMR_decoder_new_mjpje_velocity_1_train_input_transformer_5.6138.pt'
+    test_checkpoint = 'HMR_decoder_new_velocity_1_train_input_transformer_1.5393.pt'
+    test_checkpoint = None
+    # test_checkpoint = 'HMR_decoder_new_velocity_10_angle_1_mse_5_train_input_transformer_3.5849_epoch_150.pt'
+    test_checkpoint = 'HMR_decoder_new_velocity_10_angle_1_mse_5_train_input_transformer_4.2295_epoch_100.pt'
+
     if test_checkpoint is None:
         lst = sorted(list(os.listdir(os.path.join(config['checkpoint_directory'], config['checkpoint_name']))))
         test_checkpoint = lst[0]

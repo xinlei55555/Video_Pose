@@ -160,7 +160,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
                     best_val_loss = test_loss
                 # save model locally
                 checkpoint_path = os.path.join(
-                    checkpoint_directory, checkpoint_name, f"{config['model_type']}_{checkpoint_name}_{test_loss:.4f}.pt")
+                    checkpoint_directory, checkpoint_name, f"{config['model_type']}_{checkpoint_name}_{test_loss:.4f}_epoch_{epoch}.pt")
                 torch.save(model.state_dict(), checkpoint_path)
                 print(f'Best model saved at {checkpoint_path}')
                 print("\t Model parameters are of the following size",

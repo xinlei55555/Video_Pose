@@ -12,7 +12,7 @@ show_predictions: False
 embed_channels: 192 # number of channels after the tiny mamba layers.
 num_mamba_blocks: 12
 
-losses: ['mse', 'velocity', 'angle']
+losses: {'mse': 0.0, 'velocity': 10.0, 'angle': 1.0, 'mpjpe': 5.0}
 
 use_last_frame_only: False
 # unsure own values for the transformer decoder
@@ -40,11 +40,11 @@ epoch_number: 300
 # batch_size: 16
 # batch_size: 8
 batch_size: 16 # just to see how scalable it is
-# learning_rate: 0.001
-# learning_rate: 0.0005
 learning_rate: 0.0001
+# learning_rate: 0.00005
+# learning_rate: 0.0005
 #scheduler:
-scheduler: True
+scheduler: False # just for the sake of overfittin
 start_epoch: 1
 
 # device settings
@@ -57,7 +57,7 @@ parallelize: False
 # checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/latent_space_regression_with_linear/checkpoint
 checkpoint_directory: checkpoints/HMR_decoder
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
-checkpoint_name: 'angle_velocity_1_train_input_transformer'
+checkpoint_name: 'new_velocity_10_angle_1_mse_5_train_input_transformer'
 # checkpoint_name: 'testing_false_dataset'
 
 # Follow up on the training of another previous run?
@@ -76,7 +76,7 @@ use_videos: True
 preprocess_videos: True
 
 # actions to skip
-skip: ['wave', 'velocity', 'angle']
+skip: ['wave']
 num_frames: 16
 # RGB
 channels: 3

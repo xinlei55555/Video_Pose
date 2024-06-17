@@ -260,7 +260,10 @@ class JHMDBLoad(Dataset):
                     value = int(row[1])
 
                     # if only testing, then just take the minimum number of actions
-                    if not self.real_job and (len(train) > 1 or len(test) > 1 or (len(actions) > 1)):
+                    if not self.real_job: #and (len(train) > 1 or len(test) > 1 or (len(actions) > 1)):
+                        # always append the same action name for testing purposes.
+                        train.append(('swing_baseball', 'practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12', self.get_num_frames('swing_baseball', 'practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12')))
+                        test.append(('swing_baseball', 'practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_13', self.get_num_frames('swing_baseball', 'practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_13')))
                         print("length of actions", len(actions))
                         print('The following are the actions: ', actions)
                         print('The following are the train files: ', train)
