@@ -339,7 +339,7 @@ def main(config):
         # predicting only the last frame in a video
         if config['use_last_frame_only']:
             # skip the first 15 frames, so only keep from index 15 included onwards
-            frames = frames[15:].detach.clone()
+            frames = frames[frames_per_vid-1:].detach.clone()
             # I'll do it later, but basically what I was doing with the old visualization.
             raise NotImplementedError
         # predicting all 16 frames of a video
