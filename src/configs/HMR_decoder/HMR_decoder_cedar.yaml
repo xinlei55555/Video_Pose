@@ -52,7 +52,7 @@ parallelize: False
 # checkpoints
 checkpoint_directory: checkpoint/HMR_decoder
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
-checkpoint_name: 'Full_training_batch_beluga_1'
+checkpoint_name: 'jump2_0.0001_Full_training_batch_cedar_1'
 # checkpoint_name: 'testing_false_dataset'
 
 # Follow up on the training of another previous run?
@@ -81,7 +81,7 @@ image_tensor_height: 256
 image_tensor_width: 192
 patch_number: 192 # number of patches, each of size 4 pixels by 4 pixels
 patch_size: 16 # each patch is 4x4
-jump: 16 # number of frames to skip between the different datapoints
+jump: 2 # number of frames to skip between the different datapoints in TRAINING (not testing)
 joint_number: 15
 
 # if False, uses subset of the data to run
