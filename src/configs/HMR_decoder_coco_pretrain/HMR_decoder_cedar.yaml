@@ -1,0 +1,94 @@
+model_name: VideoMambaPose
+# heatmap project directory
+model_type: 'HMR_decoder'
+
+# full_debug mode will enable a lot of information being printed
+full_debug: False
+show_gradients: False
+show_predictions: False
+
+# architecture mamba
+embed_channels: 192 # number of channels after the tiny mamba layers.
+num_mamba_blocks: 12
+
+losses: {'mse': 0.0, 'velocity': 10.0, 'angle': 1.0, 'mpjpe': 5.0}
+
+# unsure own values for the transformer decoder
+dim: 1024 # just like HMR2.0 set it to be
+# transformer decoder: # values taken from HMR2.0
+depth: 6
+heads: 8
+mlp_dim: 1024 
+dim_head: 64
+dropout_transformer: 0.0
+emb_dropout: 0.0
+norm: layer
+use_last_frame_only: False
+joint_regressor: True
+  # joint regressor
+hidden_channels: 512 # since I am regressing from much more tokens
+output_dimensions: 2 # x, y
+dropout: True
+dropout_percent: 0.25 # if dropout is True
+num_hidden_layers: 3 # to replace the deconvolutions and the convolutions.
+
+# training
+epoch_number: 300
+# batch_size: 16
+# batch_size: 8
+batch_size: 16 # just to see how scalable it is
+# learning_rate: 0.001
+learning_rate: 0.0001
+#scheduler:
+scheduler: True
+start_epoch: 1
+
+# device settings
+  # (should be changed depending on the model)
+num_cpus: 1
+num_gpus: 1
+parallelize: False
+
+# checkpoints
+checkpoint_directory: checkpoint/HMR_decoder
+# checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
+checkpoint_name: 'jump2_0.0001_Full_training_batch_cedar_1'
+# checkpoint_name: 'testing_false_dataset'
+
+# Follow up on the training of another previous run?
+follow_up: False
+
+  # if yes
+previous_training_epoch: 1
+previous_checkpoint: ''
+
+# data
+dataset_name: 'JHMDB'
+data_path: /home/linxin67/scratch/JHMDB
+annotations_path: /home/linxin67/scratch/JHMDB_old/annotations
+# use avi videos
+use_videos: True
+preprocess_videos: True
+
+# actions to skip
+skip: ['wave']
+num_frames: 16
+# RGB
+channels: 3
+image_height: 240
+image_width: 320
+image_tensor_height: 256 
+image_tensor_width: 192
+patch_number: 192 # number of patches, each of size 4 pixels by 4 pixels
+patch_size: 16 # each patch is 4x4
+jump: 2 # number of frames to skip between the different datapoints in TRAINING (not testing)
+joint_number: 15
+
+# if False, uses subset of the data to run
+real_job: True
+
+# normalization
+normalized: True
+default: False # not the default normalization
+min_norm: -1
+
