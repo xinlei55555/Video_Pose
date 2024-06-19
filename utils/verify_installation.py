@@ -1,5 +1,6 @@
 import torch
 from causal_conv1d import causal_conv1d_fn
+from mamba_ssm import Mamba
 
 batch, dim, seq, width = 10, 5, 17, 4
 x = torch.zeros((batch, dim, seq)).to('cuda')
@@ -11,7 +12,6 @@ print(causal_conv1d_fn(x, weight, bias, None))
 # -------------- cchecking if installation
 # import torch
 
-from mamba_ssm import Mamba
 
 batch, length, dim = 2, 64, 16
 x = torch.randn(batch, length, dim).to("cuda")

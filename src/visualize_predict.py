@@ -254,16 +254,16 @@ def main(config):
     joints_exist = True
 
     # some default paths for test and train datapoints:
-    # video_path = 'inference/test_visualization/20_good_form_pullups_pullup_f_nm_np1_ri_goo_0.avi'
-    # joint_path = 'inference/test_visualization/20_good_form_pullups_pullup_f_nm_np1_ri_goo_0'
     # video_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0.avi'
     # joint_path = 'inference/test_visualization/11_4_08ErikaRecurveBack_shoot_bow_u_nm_np1_ba_med_0'
     if config['use_videos']:
-        video_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12.avi'
+        video_path = 'inference/test_visualization/20_good_form_pullups_pullup_f_nm_np1_ri_goo_0.avi'
+        # video_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12.avi'
         # video_path = 'inference/test_visualization/HowtoswingaBaseballbat_swing_baseball_f_nm_np1_le_bad_0.avi'
     else:
         video_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12 copy'
-    joint_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12'
+    joint_path = 'inference/test_visualization/20_good_form_pullups_pullup_f_nm_np1_ri_goo_0'
+    # joint_path = 'inference/test_visualization/practicingmybaseballswing2009_swing_baseball_f_cm_np1_fr_med_12'
     # joint_path = 'inference/test_visualization/HowtoswingaBaseballbat_swing_baseball_f_nm_np1_le_bad_0'
     
     # finding a checkpoint and model path:
@@ -279,8 +279,9 @@ def main(config):
     test_checkpoint = 'HMR_decoder_new_mjpje_velocity_1_train_input_transformer_5.6138.pt'
     test_checkpoint = 'HMR_decoder_new_velocity_1_train_input_transformer_1.5393.pt'
     test_checkpoint = None
+    test_checkpoint = 'HMR_decoder_Full_training_batch_cedar_1_70.2160_e poch_153.pt'
     # test_checkpoint = 'HMR_decoder_new_velocity_10_angle_1_mse_5_train_input_transformer_3.5849_epoch_150.pt'
-    test_checkpoint = 'HMR_decoder_new_velocity_10_angle_1_mse_5_train_input_transformer_4.2295_epoch_100.pt'
+    # test_checkpoint = 'HMR_decoder_new_velocity_10_angle_1_mse_5_train_input_transformer_4.2295_epoch_100.pt'
 
     if test_checkpoint is None:
         lst = sorted(list(os.listdir(os.path.join(config['checkpoint_directory'], config['checkpoint_name']))))
@@ -339,7 +340,7 @@ def main(config):
         # predicting only the last frame in a video
         if config['use_last_frame_only']:
             # skip the first 15 frames, so only keep from index 15 included onwards
-            frames = frames[15:].detach.clone()
+            frames = frames[frames_per_vid-1:].detach.clone()
             # I'll do it later, but basically what I was doing with the old visualization.
             raise NotImplementedError
         # predicting all 16 frames of a video
@@ -389,14 +390,14 @@ def main(config):
             ground_truth_joints = denormalize_fn(ground_truth_joints, config['min_norm'], h=tensor_height, w=tensor_width)
             
             # creating the directory, if doesn't exist
-            os.makedirs(f'inference/results/{config["checkpoint_name"]}', exist_ok=True)
+            os.makedirs(f'inference/results/{config["model_type"]}/{config["checkpoint_name"]}', exist_ok=True)
             
             # visualization
-            visualize(final_outputs, final_videos, f"{config['checkpoint_name']}/Predicted", tensor_width, tensor_height, None, False)
+            visualize(final_outputs, final_videos, f"{config['model_type']}/{config['checkpoint_name']}/Predicted", tensor_width, tensor_height, None, False)
 
             # showing the ground truth with the resized joints
             if resized_ground_truth:
-                visualize(ground_truth_joints, final_videos, f"{config['checkpoint_name']}/resized_ground_truth", tensor_width, tensor_height, None, False)
+                visualize(ground_truth_joints, final_videos, f"{config['model_type']}/{config['checkpoint_name']}/resized_ground_truth", tensor_width, tensor_height, None, False)
 
 
 

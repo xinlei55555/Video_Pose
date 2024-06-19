@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=Latent_space       # Job name
 #SBATCH --account=def-btaati              # Replace with your account
-#SBATCH --time=03-00:00                   # Time limit (DD-HH:MM) ! change this when training.
+#SBATCH --time=04-00:00                   # Time limit (DD-HH:MM) ! change this when training.
 #SBATCH --cpus-per-task=1                 # Number of CPU cores per task ! change this when training.
 #SBATCH --gres=gpu:1                      # Number of GPUs per node 
 #SBATCH --mem-per-gpu=64000M                    # Total memory per node (less means faster allocation) 
@@ -17,4 +17,4 @@ source /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/mamba_env1
 export WANDB_MODE=offline
 wandb offline
 cd /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/src
-python train.py --config 'latent_HMR/latent_HMR_beluga.yaml'                   # Command to run your Python script
+python train.py --config 'HMR_decoder/HMR_decoder_beluga.yaml'                   # Command to run your Python script
