@@ -29,7 +29,7 @@ import models.HMR_decoder.HMR_decoder as hmrd
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
-class HMRVideoMambaPose(nn.Module):
+class HMRVideoMambaPoseCOCO(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config

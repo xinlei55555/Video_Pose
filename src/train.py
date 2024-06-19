@@ -11,6 +11,7 @@ import argparse
 
 from loss.PoseLoss import PoseEstimationLoss
 from data_format.DataFormat import JHMDBLoad
+from data_format.CocoVideoLoader import COCOVideoLoader
 from import_config import open_config
 
 import os
@@ -199,12 +200,17 @@ def main(rank, world_size, config, config_file_name):
     real_job = config['real_job']
     checkpoint_dir = config['checkpoint_directory']
     checkpoint_name = config['checkpoint_name']
-
+    dataset_name = config['dataset_name']
     # loading the data initially:
-    train_set = JHMDBLoad(config, train_set=True, real_job=real_job,
-                          jump=jump, normalize=(normalize, default))
-    test_set = JHMDBLoad(config, train_set=False, real_job=real_job,
-                         jump=jump, normalize=(normalize, default))
+    if dataset_name == 'JHMDB':
+        train_set = JHMDBLoad(config, train_set=True, real_job=real_job,
+                            jump=jump, normalize=(normalize, default))
+        test_set = JHMDBLoad(config, train_set=False, real_job=real_job,
+                            jump=jump, normalize=(normalize, default))
+    if dataset_name == 'COCO':
+        train_set = COCOVideoLoader(config, train_set = True, real_job=real_job)
+        test_set = COCOVideoLoader(config, train_set = False, real_job=real_job)
+
 
     if torch.cuda.device_count() == 1 or not config['parallelize']:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -231,6 +237,9 @@ def main(rank, world_size, config, config_file_name):
         
         elif config['model_type'] == 'MLP_only_decoder':
             model = MLPVideoMambaPose(config).to(device)
+        
+        elif config['model_type'] == 'HMR_decoder_coco_pretrain':
+            model = mHMRVideoMambaPoseCOCO(config).to(rank)
 
         else:
             print('Your selected model does not exist! (Yet)')
@@ -289,6 +298,9 @@ def main(rank, world_size, config, config_file_name):
         
         elif config['model_type'] == 'MLP_only_decoder':
             model = MLPVideoMambaPose(config).to(rank)
+        
+        elif config['model_type'] == 'HMR_decoder_coco_pretrain':
+            model = mHMRVideoMambaPoseCOCO(config).to(rank)
 
         else:
             print('Your selected model does not exist! (Yet)')
@@ -322,6 +334,7 @@ if __name__ == '__main__':
     from models.heatmap.HeatVideoMamba import HeatMapVideoMambaPose
     from models.HMR_decoder.HMRMambaPose import HMRVideoMambaPose
     from models.MLP_only_decoder.MLPMambaPose import MLPVideoMambaPose
+    from models.HMR_decoder_coco_pretrain.HMRMambaPose import HMRVideoMambaPoseCOCO
 
     # argparse to get the file path of the config file
     parser = argparse.ArgumentParser()
