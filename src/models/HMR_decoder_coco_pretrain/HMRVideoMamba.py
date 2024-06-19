@@ -354,13 +354,13 @@ class VisionMamba(nn.Module):
         # concatenate the positional embedding
         # x = torch.cat((cls_token, x), dim=1)
         # * Still need positional embedding
-        x = x + self.pos_embed
+        x = x #+ self.pos_embed
 
         # temporal pos
         # cls_tokens = x[:B, :1, :]
         # x = x[:, 1:]
         x = rearrange(x, '(b t) n m -> (b n) t m', b=B, t=T)
-        x = x + self.temporal_pos_embedding
+        x = x #+ self.temporal_pos_embedding
         x = rearrange(x, '(b n) t m -> b (t n) m', b=B, t=T)
         # x = torch.cat((cls_tokens, x), dim=1)
         # ! This is only if we need to use heatmaps.!

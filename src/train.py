@@ -239,7 +239,7 @@ def main(rank, world_size, config, config_file_name):
             model = MLPVideoMambaPose(config).to(device)
         
         elif config['model_type'] == 'HMR_decoder_coco_pretrain':
-            model = mHMRVideoMambaPoseCOCO(config).to(rank)
+            model = HMRVideoMambaPoseCOCO(config).to(rank)
 
         else:
             print('Your selected model does not exist! (Yet)')

@@ -12,7 +12,9 @@ show_predictions: False
 embed_channels: 192 # number of channels after the tiny mamba layers.
 num_mamba_blocks: 12
 
-losses: {'mse': 0.0, 'velocity': 10.0, 'angle': 1.0, 'mpjpe': 5.0}
+# losses: {'mse': 0.0, 'velocity': 10.0, 'angle': 1.0, 'mpjpe': 5.0}
+# when pretraining on coco, i won't have all my weird losses lolll
+losses: {'mse': 0.0, 'velocity': 0.0, 'angle': 0.0, 'mpjpe': 1.0}
 
 use_last_frame_only: False
 # unsure own values for the transformer decoder
