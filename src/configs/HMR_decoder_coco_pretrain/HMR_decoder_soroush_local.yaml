@@ -1,0 +1,100 @@
+model_name: VideoMambaPose
+# heatmap project directory
+
+model_type: 'HMR_decoder_coco_pretrain'
+
+# full_debug mode will enable a lot of information being printed
+full_debug: False
+show_gradients: False
+show_predictions: False
+
+# architecture mamba
+embed_channels: 192 # number of channels after the tiny mamba layers.
+num_mamba_blocks: 12
+
+losses: {'mse': 0.0, 'velocity': 10.0, 'angle': 1.0, 'mpjpe': 5.0}
+
+use_last_frame_only: False
+# unsure own values for the transformer decoder
+dim: 1024 # just like HMR2.0 set it to be
+# transformer decoder: # values taken from HMR2.0
+depth: 6
+heads: 8
+mlp_dim: 1024 
+dim_head: 64
+dropout_transformer: 0.0
+emb_dropout: 0.0
+norm: layer
+
+# regressor
+joint_regressor: True
+  # joint regressor
+hidden_channels: 512
+output_dimensions: 2 # x, y
+dropout: True
+dropout_percent: 0.25 # if dropout is True
+num_hidden_layers: 3 # to replace the deconvolutions and the convolutions.
+
+# training
+epoch_number: 300
+# batch_size: 16
+# batch_size: 8
+batch_size: 16 # just to see how scalable it is
+learning_rate: 0.0001
+# learning_rate: 0.00005
+# learning_rate: 0.0005
+#scheduler:
+scheduler: False # just for the sake of overfittin
+start_epoch: 1
+
+# device settings
+  # (should be changed depending on the model)
+num_cpus: 1
+num_gpus: 1
+parallelize: False
+
+# checkpoints
+# checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/latent_space_regression_with_linear/checkpoint
+checkpoint_directory: checkpoints/HMR_decoder_coco_pretrain
+# checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
+# checkpoint_name: 'new_velocity_10_angle_1_mse_5_train_input_transformer'
+# checkpoint_name: 'testing_false_dataset'
+checkpoint_name: 'Coco_pretrain'
+
+# Follow up on the training of another previous run?
+follow_up: False
+
+  # if yes
+previous_training_epoch: 1
+previous_checkpoint: ''
+
+# data
+dataset_name: 'COCO'
+data_path: '/home/xinleilin/Projects/Video_Pose/data/COCO-Pose/coco'
+annotations_path: /home/xinleilin/Projects/Video_Pose/data/COCO-Pose/coco/annotations
+# use avi videos
+use_videos: True
+preprocess_videos: True
+
+# actions to skip
+skip: ['wave']
+num_frames: 16
+# RGB
+channels: 3
+image_height: 480
+image_width: 640
+image_tensor_height: 256 
+image_tensor_width: 192
+patch_number: 192 # number of patches, each of size 4 pixels by 4 pixels
+patch_size: 16 # each patch is 4x4
+jump: 16 # number of frames to skip between the different datapoints
+joint_number: 17 # COCO has 17 joints.
+
+# if False, uses subset of the data to run
+real_job: False
+
+# normalization
+normalized: True
+default: False # not the default normalization
+min_norm: -1
+
