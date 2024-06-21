@@ -52,6 +52,8 @@ class COCOLoader(Dataset):
                 continue
             else:
                 self.new_image_ids.append(index)
+        
+        print(f"The length of the train: {train} is : {len(self.new_image_ids)} divided by the number of frames")
 
     def __len__(self):
         return len(self.new_image_ids)

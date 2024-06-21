@@ -30,6 +30,10 @@ dropout: False
 dropout_percent: 0.25 # if dropout is True
 num_hidden_layers: 3 # to replace the deconvolutions and the convolutions.
 
+# weight decay and optimizer
+optimizer: 'adamW'
+weight_decay: 0.1 # value found in VideoMamba
+
 # training
 epoch_number: 300
 # batch_size: 16
@@ -39,6 +43,8 @@ batch_size: 4 # just to see how scalable it is
 learning_rate: 0.0001
 #scheduler:
 scheduler: True
+scheduler_factor: 0.1
+
 start_epoch: 1
 
 # device settings

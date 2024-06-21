@@ -37,7 +37,7 @@ class HMRVideoMambaPoseCOCO(nn.Module):
         self.img_width = self.config['image_tensor_width']
 
         # encoder
-        self.mamba = hvm.videomamba_tiny(img_size=(self.img_width, self.img_height),
+        self.mamba = hvm.videomamba_tiny(depth=self.config['num_mamba_blocks'], img_size=(self.img_width, self.img_height),
                                          patch_size=self.config['patch_size'], embed_dim=self.config['embed_channels'], num_frames=self.config['num_frames'])
 
         # number of patches (dimensions)

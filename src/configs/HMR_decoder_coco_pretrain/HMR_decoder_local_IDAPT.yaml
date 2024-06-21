@@ -41,12 +41,13 @@ num_hidden_layers: 3 # to replace the deconvolutions and the convolutions.
 epoch_number: 300
 # batch_size: 16
 # batch_size: 8
-batch_size: 16 # just to see how scalable it is
-learning_rate: 0.0001
+batch_size: 1 # just to see how scalable it is
+learning_rate: 0.00005
 # learning_rate: 0.00005
 # learning_rate: 0.0005
 #scheduler:
 scheduler: False # just for the sake of overfittin
+scheduler_factor: 0.1
 start_epoch: 1
 
 # device settings
@@ -93,7 +94,7 @@ jump: 16 # number of frames to skip between the different datapoints
 joint_number: 17 # COCO has 17 joints.
 
 # if False, uses subset of the data to run
-real_job: False
+real_job: True
 
 # normalization
 normalized: True

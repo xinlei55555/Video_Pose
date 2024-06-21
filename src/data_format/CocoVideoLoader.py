@@ -29,11 +29,11 @@ class COCOVideoLoader(Dataset):
         self.tensor_height = self.config['image_tensor_height']
         self.tensor_width = self.config['image_tensor_width']
         self.min_norm = self.config['min_norm']
+
     def __len__(self):
         # if self.real_job:
         return (len(self.image_data) // self.frames_num)
         
-    
     def __getitem__(self, index):
         vid_index = index * self.frames_num
 

@@ -8,6 +8,7 @@ import torch.optim as optim
 
 import wandb
 import argparse
+from tqdm import tqdm
 
 from loss.PoseLoss import PoseEstimationLoss
 from data_format.DataFormat import JHMDBLoad
@@ -28,6 +29,9 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
     # os.chdir(os.path.join(os.getcwd(), checkpoint_directory))
     os.makedirs(os.path.join(checkpoint_directory, checkpoint_name), exist_ok=True)
     best_val_loss = float('inf')
+
+    # logging the gradients in the model
+    wandb.watch(model, log_freq=10)
 
     start_epoch = 1
     # then load checkpoint to follow up on the model
@@ -313,12 +317,20 @@ def main(rank, world_size, config, config_file_name):
         loss_fn = PoseEstimationLoss(config)
 
         # optimizer
-        optimizer = torch.optim.Adam(
-            model.parameters(), lr=config['learning_rate'])
+        if config['optimizer'] == 'adam':
+            optimizer = torch.optim.Adam(
+                model.parameters(), lr=config['learning_rate'])
+    
+        if config['optimizer'] == 'adamW':
+            optimizer = torch.optim.AdamW(model.parameters(), lr=config['learning_rate'], weight_decay=config['weight_decay'])
+
+        else:
+            print("No optimizers selected!")
+            raise NotImplementedError
 
         # learning rate scheduler
         # I will leave the rest of the parameters as the default
-        scheduler = RLR(optimizer=optimizer, factor=0.5) # half the learning rate each time
+        scheduler = RLR(optimizer=optimizer, factor=config['scheduler_factor']) # half the learning rate each time
 
         # Training loop
         print(f"The model has started training, with the following characteristics:")
