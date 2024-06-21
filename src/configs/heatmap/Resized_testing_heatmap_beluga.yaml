@@ -38,6 +38,8 @@ batch_size: 1 # just to see how scalable it is
 learning_rate: 0.001
 #scheduler:
 scheduler: True
+scheduler_factor: 0.1
+
 start_epoch: 1
 
 # device settings
