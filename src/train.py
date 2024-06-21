@@ -31,7 +31,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
     best_val_loss = float('inf')
 
     # logging the gradients in the model
-    wandb.init(model, log_freq=10)
+    wandb.watch(model, log_freq=10)
 
     start_epoch = 1
     # then load checkpoint to follow up on the model
