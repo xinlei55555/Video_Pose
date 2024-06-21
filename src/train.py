@@ -8,6 +8,7 @@ import torch.optim as optim
 
 import wandb
 import argparse
+from tqdm import tqdm
 
 from loss.PoseLoss import PoseEstimationLoss
 from data_format.DataFormat import JHMDBLoad
@@ -28,6 +29,9 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
     # os.chdir(os.path.join(os.getcwd(), checkpoint_directory))
     os.makedirs(os.path.join(checkpoint_directory, checkpoint_name), exist_ok=True)
     best_val_loss = float('inf')
+
+    # logging the gradients in the model
+    wandb.init(model, log_freq=10)
 
     start_epoch = 1
     # then load checkpoint to follow up on the model
@@ -55,7 +59,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
             print(f'The number of batches in the test_set is {len(test_set)}')
 
         print('[=============>] train batch for epoch # ', epoch )
-        for i, data in enumerate(train_set):
+        for i, data in tqdm(enumerate(train_set)):
             train_inputs, train_labels = data
 
             # should load individual batches to GPU
@@ -107,7 +111,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
         test_loss = 0.0
         with torch.no_grad():  # reduce memory while torch is using evaluation mode
             print('[======================>] test batch for epoch # ', epoch)
-            for i, data in enumerate(test_set):
+            for i, data in tqdm(enumerate(test_set)):
                 test_inputs, test_labels = data
                 test_inputs, test_labels = test_inputs.to(
                     device), test_labels.to(device)

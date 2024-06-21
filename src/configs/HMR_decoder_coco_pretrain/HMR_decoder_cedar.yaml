@@ -42,7 +42,7 @@ epoch_number: 300
 # batch_size: 16
 # batch_size: 8
 batch_size: 16 # just to see how scalable it is
-learning_rate: 0.0005
+learning_rate: 0.0000001
 # learning_rate: 0.00005
 # learning_rate: 0.0005
 #scheduler:
@@ -61,7 +61,7 @@ checkpoint_directory: checkpoints/HMR_decoder_coco_pretrain
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
 # checkpoint_name: 'new_velocity_10_angle_1_mse_5_train_input_transformer'
 # checkpoint_name: 'testing_false_dataset'
-checkpoint_name: 'Coco_pretrain'
+checkpoint_name: '12_mamba_1e-7_Coco_pretrain_full_cedars'
 
 # Follow up on the training of another previous run?
 follow_up: False
@@ -72,8 +72,8 @@ previous_checkpoint: ''
 
 # data
 dataset_name: 'COCO'
-data_path: '/home/xinleilin/Projects/Video_Pose/data/COCO-Pose/coco'
-annotations_path: /home/xinleilin/Projects/Video_Pose/data/COCO-Pose/coco/annotations
+data_path: '/home/linxin67/scratch/COCO-Pose/coco'
+annotations_path: /home/linxin67/scratch/COCO-Pose/coco/annotations
 # use avi videos
 use_videos: True
 preprocess_videos: True
@@ -93,7 +93,7 @@ jump: 16 # number of frames to skip between the different datapoints
 joint_number: 17 # COCO has 17 joints.
 
 # if False, uses subset of the data to run
-real_job: False
+real_job: True
 
 # normalization
 normalized: True

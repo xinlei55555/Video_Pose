@@ -94,8 +94,13 @@ class JointOutput(nn.Module):
 
         layers = [nn.Linear(input_size, dim_hidden)]  # use power of 2
 
-        if self.dropout:
-            layers.append(self.dropout_layer)
+        # this applies dropout to all the layers except the last one.
+        for _ in range(self.config['num_hidden_layers']):
+            if self.dropout:
+                layers.append(self.dropout_layer)
+            # I will return 3, which are the values for x, y, z
+            # here, my number of output dimensinos would be 30, then reshape
+            layers.extend([nn.ReLU(), nn.Linear(dim_hidden, dim_hidden)])
 
         layers.extend([nn.ReLU(), nn.Linear(dim_hidden, dim_out  * self.config['joint_number'])]) # I will return 3, which are the values for x, y, z
         
