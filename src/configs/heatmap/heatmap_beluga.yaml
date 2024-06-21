@@ -28,6 +28,10 @@ output_dimensions: 2 # x, y
 dropout: True
 dropout_percent: 0.25 # if dropout is True
 
+# weight decay and optimizer
+optimizer: 'adamW'
+weight_decay: 0.1 # value found in VideoMamba
+
 # training
 epoch_number: 300
 # batch_size: 16

@@ -59,7 +59,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
             print(f'The number of batches in the test_set is {len(test_set)}')
 
         print('[=============>] train batch for epoch # ', epoch )
-        for i, data in tqdm(enumerate(train_set)):
+        for i, data in enumerate(train_set):
             train_inputs, train_labels = data
 
             # should load individual batches to GPU
@@ -111,7 +111,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
         test_loss = 0.0
         with torch.no_grad():  # reduce memory while torch is using evaluation mode
             print('[======================>] test batch for epoch # ', epoch)
-            for i, data in tqdm(enumerate(test_set)):
+            for i, data in enumerate(test_set):
                 test_inputs, test_labels = data
                 test_inputs, test_labels = test_inputs.to(
                     device), test_labels.to(device)
@@ -317,12 +317,20 @@ def main(rank, world_size, config, config_file_name):
         loss_fn = PoseEstimationLoss(config)
 
         # optimizer
-        optimizer = torch.optim.Adam(
-            model.parameters(), lr=config['learning_rate'])
+        if config['optimizer'] == 'adam':
+            optimizer = torch.optim.Adam(
+                model.parameters(), lr=config['learning_rate'])
+    
+        if config['optimizer'] == 'adamW':
+            optimizer = torch.optim.AdamW(model.parameters(), lr=config['learning_rate'], weight_decay=config['weight_decay'])
+
+        else:
+            print("No optimizers selected!")
+            raise NotImplementedError
 
         # learning rate scheduler
         # I will leave the rest of the parameters as the default
-        scheduler = RLR(optimizer=optimizer, factor=0.5) # half the learning rate each time
+        scheduler = RLR(optimizer=optimizer, factor=config['scheduler_factor']) # half the learning rate each time
 
         # Training loop
         print(f"The model has started training, with the following characteristics:")

@@ -37,16 +37,21 @@ dropout: True
 dropout_percent: 0.25 # if dropout is True
 num_hidden_layers: 3 # to replace the deconvolutions and the convolutions.
 
+# weight decay and optimizer
+optimizer: 'adamW'
+weight_decay: 0.1 # value found from video mamba 
+
 # training
 epoch_number: 300
 # batch_size: 16
 # batch_size: 8
 batch_size: 16 # just to see how scalable it is
-learning_rate: 0.0000001
+learning_rate: 0.00001
 # learning_rate: 0.00005
 # learning_rate: 0.0005
 #scheduler:
-scheduler: False # just for the sake of overfittin
+scheduler: True # just for the sake of overfittin
+scheduler_factor: 0.1
 start_epoch: 1
 
 # device settings
@@ -61,7 +66,7 @@ checkpoint_directory: checkpoints/HMR_decoder_coco_pretrain
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
 # checkpoint_name: 'new_velocity_10_angle_1_mse_5_train_input_transformer'
 # checkpoint_name: 'testing_false_dataset'
-checkpoint_name: '12_mamba_1e-7_Coco_pretrain_full_cedars'
+checkpoint_name: '0.1_weight_decay_0.1_lr_scheduler_12_mamba_1e-5_Coco_pretrain_full_cedars'
 
 # Follow up on the training of another previous run?
 follow_up: False
