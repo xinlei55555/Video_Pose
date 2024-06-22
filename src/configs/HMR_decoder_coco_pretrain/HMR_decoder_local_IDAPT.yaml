@@ -37,6 +37,13 @@ dropout: True
 dropout_percent: 0.25 # if dropout is True
 num_hidden_layers: 3 # to replace the deconvolutions and the convolutions.
 
+
+# weight decay and optimizer
+optimizer: 'adamW'
+weight_decay: 0.1 # value found from video mamba 
+
+max_grad_norm: 1.0 # use something negative to not have it
+
 # training
 epoch_number: 300
 # batch_size: 16

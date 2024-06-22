@@ -94,6 +94,10 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
             # this is what computes the derivative of the loss
             loss_train.backward()  # !this will accumulate the gradients at the leaf nodes
 
+            # Gradient clipping
+            if config['max_grad_norm'] > 0:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config['max_grad_norm'])  # Clip gradients with a maximum norm of 1.0
+
             # then, the optimizer will update the values of the weights based on all the derivatives of the losses computed by loss_train.backward()
             optimizer.step()
 
@@ -318,8 +322,7 @@ def main(rank, world_size, config, config_file_name):
 
         # optimizer
         if config['optimizer'] == 'adam':
-            optimizer = torch.optim.Adam(
-                model.parameters(), lr=config['learning_rate'])
+            optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'])
     
         if config['optimizer'] == 'adamW':
             optimizer = torch.optim.AdamW(model.parameters(), lr=config['learning_rate'], weight_decay=config['weight_decay'])
