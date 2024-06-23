@@ -98,6 +98,7 @@ jump: 16 # number of frames to skip between the different datapoints
 joint_number: 17 # COCO has 17 joints.
 
 # if False, uses subset of the data to run
+use_val_only: False
 real_job: True
 
 # normalization

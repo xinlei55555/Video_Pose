@@ -100,6 +100,7 @@ joint_number: 17 # COCO has 17 joints.
 
 # if False, uses subset of the data to run
 real_job: False
+use_val_only: True
 
 # normalization
 normalized: True

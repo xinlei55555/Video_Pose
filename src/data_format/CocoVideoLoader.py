@@ -31,7 +31,7 @@ class COCOVideoLoader(Dataset):
         self.min_norm = self.config['min_norm']
 
     def __len__(self):
-        # if self.real_job:
+        # you want to remove some of the information given that 
         return (len(self.image_data) // self.frames_num)
         
     def __getitem__(self, index):
