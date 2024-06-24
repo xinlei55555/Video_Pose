@@ -48,7 +48,7 @@ epoch_number: 300
 # batch_size: 16
 # batch_size: 8
 batch_size: 16 # just to see how scalable it is
-learning_rate: 0.000001
+learning_rate: 0.00005
 # learning_rate: 0.00005
 # learning_rate: 0.0005
 #scheduler:
@@ -74,7 +74,7 @@ checkpoint_directory: checkpoints/HMR_decoder_coco_pretrain
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
 # checkpoint_name: 'new_velocity_10_angle_1_mse_5_train_input_transformer'
 # checkpoint_name: 'testing_false_dataset'
-checkpoint_name: 'cosine_anneal_clip-gradient_0.1_weight_decay_0.1_lr_scheduler_12_mamba_1e-6_Coco_pretrain_full_cedars'
+checkpoint_name: 'image_video_cosine_anneal_clip-gradient_0.1_weight_decay_0.1_lr_scheduler_12_mamba_5e-5_Coco_pretrain_full_cedars'
 
 # Follow up on the training of another previous run?
 follow_up: False
