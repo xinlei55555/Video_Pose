@@ -15,7 +15,6 @@ import argparse
 from import_config import open_config
 
 
-
 def load_model(config , filepath, parallel=False):
     # Create the model
     # choosing the right model:
@@ -28,10 +27,12 @@ def load_model(config , filepath, parallel=False):
     elif config['model_type'] == 'MLP_only_decoder':
         model = MLPVideoMambaPose(config)
 
+    elif config['model_type'] == 'HMR_decoder_coco_pretrain':
+            model = mHMRVideoMambaPoseCOCO(config).to(rank)
+
     else:
         print('Your selected model does not exist! (Yet)')
         return
-
 
     # load the dictionary from checkpoint, and load the weights into the model.
     checkpoint = torch.load(filepath, map_location=torch.device('cpu'))

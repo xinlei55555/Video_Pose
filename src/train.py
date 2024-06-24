@@ -212,6 +212,7 @@ def main(rank, world_size, config, config_file_name):
     checkpoint_dir = config['checkpoint_directory']
     checkpoint_name = config['checkpoint_name']
     dataset_name = config['dataset_name']
+
     # loading the data initially:
     if dataset_name == 'JHMDB':
         train_set = JHMDBLoad(config, train_set=True, real_job=real_job,
@@ -259,30 +260,6 @@ def main(rank, world_size, config, config_file_name):
         model = model.to(device)  # to unique GPU
         print('Model loaded successfully as follows: ', model)
 
-        # loss
-        loss_fn = PoseEstimationLoss(config)
-
-        # optimizer
-        optimizer = torch.optim.Adam(
-            model.parameters(), lr=config['learning_rate'])
-        
-        # learning rate scheduler
-        # I will leave the rest of the parameters as the default
-        if config['scheduler_fct'] == 'RRLP':
-            scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, factor=0.5) # half the learning rate each time
-        if config['scheduler_fct'] == 'cosine':
-            T_0 = config['T_0']
-            T_mult = config['T_mult'] # doubling the spacing bewteen each reset
-            eta_min = config['eta_min'] # the minimum learning rate
-            last_epoch = num_epochs
-            scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer=optimizer, T_0=T_0, T_mult=T_mult, eta_min=eta_min, last_epoch=last_epoch)
-
-        # Training loop
-        print(f"The model has started training, with the following characteristics:")
-
-        training_loop(config, num_epochs, optimizer, scheduler, model, loss_fn,
-                      train_loader, test_loader, device, rank, world_size, checkpoint_dir, checkpoint_name, follow_up)
-
     elif torch.cuda.device_count() == 0:
         print("ERROR! No GPU detected...")
         return
@@ -327,36 +304,42 @@ def main(rank, world_size, config, config_file_name):
         model = DDP(model, device_ids=[
                     rank], output_device=rank, find_unused_parameters=True)
 
-        # loss
-        loss_fn = PoseEstimationLoss(config)
+    # loss
+    loss_fn = PoseEstimationLoss(config)
 
-        # optimizer
-        if config['optimizer'] == 'adam':
-            optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'])
+    # optimizer
+    if config['optimizer'] == 'adam':
+        optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'])
+
+    if config['optimizer'] == 'adamW':
+        optimizer = torch.optim.AdamW(model.parameters(), lr=config['learning_rate'], weight_decay=config['weight_decay'])
+
+    else:
+        print("No optimizers selected!")
+        raise NotImplementedError
     
-        if config['optimizer'] == 'adamW':
-            optimizer = torch.optim.AdamW(model.parameters(), lr=config['learning_rate'], weight_decay=config['weight_decay'])
+    # learning rate scheduler
+    # I will leave the rest of the parameters as the default
+    if config['scheduler_fct'] == 'RRLP':
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, factor=0.5) # half the learning rate each time
 
-        else:
-            print("No optimizers selected!")
-            raise NotImplementedError
+    if config['scheduler_fct'] == 'cosine':
+        for param_group in optimizer.param_groups:
+            param_group.setdefault('initial_lr', config['learning_rate'])
+        T_0 = config['T_0']
+        T_mult = config['T_mult'] # doubling the spacing bewteen each reset
+        eta_min = config['eta_min'] # the minimum learning rate
+        last_epoch = num_epochs
+        scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer=optimizer, T_0=T_0, T_mult=T_mult, eta_min=eta_min, last_epoch=last_epoch)
 
-        # learning rate scheduler
-        # I will leave the rest of the parameters as the default
-        if config['scheduler_fct'] == 'RRLP':
-            scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, factor=0.5) # half the learning rate each time
-        if config['scheduler_fct'] == 'cosine':
-            T_0 = config['T_0']
-            T_mult = config['T_mult'] # doubling the spacing bewteen each reset
-            eta_min = config['eta_min'] # the minimum learning rate
-            last_epoch = num_epochs
-            scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer=optimizer, T_0=T_0, T_mult=T_mult, eta_min=eta_min, last_epoch=last_epoch)
 
-        # Training loop
-        print(f"The model has started training, with the following characteristics:")
-        training_loop(config, num_epochs, optimizer, scheduler, model, loss_fn,
-                      train_loader, test_loader, device, rank, world_size, checkpoint_dir, checkpoint_name, follow_up)
+    # Training loop
+    print(f"The model has started training, with the following characteristics:")
+    training_loop(config, num_epochs, optimizer, scheduler, model, loss_fn,
+                    train_loader, test_loader, device, rank, world_size, checkpoint_dir, checkpoint_name, follow_up)
 
+
+    if torch.cuda.device_count() > 1 and config['parallelize']:
         # Cleanup
         dist.destroy_process_group()
 
