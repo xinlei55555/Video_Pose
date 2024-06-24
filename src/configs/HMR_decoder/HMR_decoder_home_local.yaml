@@ -51,6 +51,12 @@ batch_size: 16 # just to see how scalable it is
 learning_rate: 0.01
 #scheduler:
 scheduler: True
+scheduler_fct: cosine
+# for cosine
+T_0: 10
+T_mult: 2 # doubling the spacing bewteen each reset
+eta_min: 0.0000005 #the minimum learning rate
+# for RRLP
 scheduler_factor: 0.1
 start_epoch: 1
 

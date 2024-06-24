@@ -47,6 +47,12 @@ batch_size: 16 # just to see how scalable it is
 learning_rate: 0.00005
 #scheduler:
 scheduler: True
+scheduler_fct: cosine
+# for cosine
+T_0: 10
+T_mult: 2 # doubling the spacing bewteen each reset
+eta_min: 0.0000005 #the minimum learning rate
+# for RRLP
 scheduler_factor: 0.1
 start_epoch: 1
 
@@ -59,7 +65,7 @@ parallelize: False
 # checkpoints
 checkpoint_directory: checkpoint/HMR_decoder
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
-checkpoint_name: 'clipt_gradient_weight_decay_0.1_jump2_0.00005_Full_training_batch_cedar_1'
+checkpoint_name: 'cosine_anneal_clipt_gradient_weight_decay_0.1_jump2_0.00005_Full_training_batch_cedar_1'
 # checkpoint_name: 'testing_false_dataset'
 
 # Follow up on the training of another previous run?
