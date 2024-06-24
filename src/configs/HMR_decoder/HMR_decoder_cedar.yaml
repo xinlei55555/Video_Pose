@@ -36,15 +36,23 @@ num_hidden_layers: 3 # to replace the deconvolutions and the convolutions.
 optimizer: 'adamW'
 weight_decay: 0.1 # value found in VideoMamba
 
+max_grad_norm: 1.0 # use something negative to not have it
+
 # training
 epoch_number: 300
 # batch_size: 16
 # batch_size: 8
 batch_size: 16 # just to see how scalable it is
 # learning_rate: 0.001
-learning_rate: 0.0001
+learning_rate: 0.00005
 #scheduler:
 scheduler: True
+scheduler_fct: cosine
+# for cosine
+T_0: 10
+T_mult: 2 # doubling the spacing bewteen each reset
+eta_min: 0.0000005 #the minimum learning rate
+# for RRLP
 scheduler_factor: 0.1
 start_epoch: 1
 
@@ -57,7 +65,7 @@ parallelize: False
 # checkpoints
 checkpoint_directory: checkpoint/HMR_decoder
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
-checkpoint_name: 'jump2_0.0001_Full_training_batch_cedar_1'
+checkpoint_name: 'cosine_anneal_clipt_gradient_weight_decay_0.1_jump2_0.00005_Full_training_batch_cedar_1'
 # checkpoint_name: 'testing_false_dataset'
 
 # Follow up on the training of another previous run?

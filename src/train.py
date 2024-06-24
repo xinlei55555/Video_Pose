@@ -94,6 +94,10 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
             # this is what computes the derivative of the loss
             loss_train.backward()  # !this will accumulate the gradients at the leaf nodes
 
+            # Gradient clipping
+            if config['max_grad_norm'] > 0:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config['max_grad_norm'])  # Clip gradients with a maximum norm of 1.0
+
             # then, the optimizer will update the values of the weights based on all the derivatives of the losses computed by loss_train.backward()
             optimizer.step()
 
@@ -134,7 +138,10 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
         # update scheduler
         if config['scheduler']:
             print('[==========================>] Registering the learning rate.')
-            scheduler.step(test_loss)
+            if config['scheduler_fct'] == 'RRLP':
+                scheduler.step(test_loss)
+            if config['scheduler_fct'] == 'cosine':
+                scheduler.step()
 
         # the shown loss should be for individual elements in the batch size
         show_loss_train, show_loss_test = train_loss / \
@@ -261,7 +268,14 @@ def main(rank, world_size, config, config_file_name):
         
         # learning rate scheduler
         # I will leave the rest of the parameters as the default
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, factor=0.5) # half the learning rate each time
+        if config['scheduler_fct'] == 'RRLP':
+            scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, factor=0.5) # half the learning rate each time
+        if config['scheduler_fct'] == 'cosine':
+            T_0 = config['T_0']
+            T_mult = config['T_mult'] # doubling the spacing bewteen each reset
+            eta_min = config['eta_min'] # the minimum learning rate
+            last_epoch = num_epochs
+            scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer=optimizer, T_0=T_0, T_mult=T_mult, eta_min=eta_min, last_epoch=last_epoch)
 
         # Training loop
         print(f"The model has started training, with the following characteristics:")
@@ -318,8 +332,7 @@ def main(rank, world_size, config, config_file_name):
 
         # optimizer
         if config['optimizer'] == 'adam':
-            optimizer = torch.optim.Adam(
-                model.parameters(), lr=config['learning_rate'])
+            optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'])
     
         if config['optimizer'] == 'adamW':
             optimizer = torch.optim.AdamW(model.parameters(), lr=config['learning_rate'], weight_decay=config['weight_decay'])
@@ -330,7 +343,14 @@ def main(rank, world_size, config, config_file_name):
 
         # learning rate scheduler
         # I will leave the rest of the parameters as the default
-        scheduler = RLR(optimizer=optimizer, factor=config['scheduler_factor']) # half the learning rate each time
+        if config['scheduler_fct'] == 'RRLP':
+            scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, factor=0.5) # half the learning rate each time
+        if config['scheduler_fct'] == 'cosine':
+            T_0 = config['T_0']
+            T_mult = config['T_mult'] # doubling the spacing bewteen each reset
+            eta_min = config['eta_min'] # the minimum learning rate
+            last_epoch = num_epochs
+            scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer=optimizer, T_0=T_0, T_mult=T_mult, eta_min=eta_min, last_epoch=last_epoch)
 
         # Training loop
         print(f"The model has started training, with the following characteristics:")

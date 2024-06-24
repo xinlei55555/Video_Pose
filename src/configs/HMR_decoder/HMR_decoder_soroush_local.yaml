@@ -39,6 +39,8 @@ num_hidden_layers: 3 # to replace the deconvolutions and the convolutions.
 optimizer: 'adamW'
 weight_decay: 0.1 # value found in VideoMamba
 
+max_grad_norm: 1.0 # use something negative to not have it
+
 # training
 epoch_number: 300
 # batch_size: 16
@@ -48,7 +50,13 @@ learning_rate: 0.0001
 # learning_rate: 0.00005
 # learning_rate: 0.0005
 #scheduler:
-scheduler: False # just for the sake of overfittin
+scheduler: False
+scheduler_fct: cosine
+# for cosine
+T_0: 10
+T_mult: 2 # doubling the spacing bewteen each reset
+eta_min: 0.0000005 #the minimum learning rate
+# for RRLP
 scheduler_factor: 0.1
 start_epoch: 1
 
