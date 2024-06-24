@@ -11,7 +11,7 @@ show_predictions: False
 embed_channels: 192 # number of channels after the tiny mamba layers.
 num_mamba_blocks: 12
 
-losses: {'mse': 0.0, 'velocity': 10.0, 'angle': 1.0, 'mpjpe': 5.0}
+losses: {'mse': 5.0, 'velocity': 10.0, 'angle': 1.0, 'mpjpe': 0.0}
 
 # unsure own values for the transformer decoder
 dim: 1024 # just like HMR2.0 set it to be
@@ -31,6 +31,7 @@ output_dimensions: 2 # x, y
 dropout: True
 dropout_percent: 0.25 # if dropout is True
 num_hidden_layers: 3 # to replace the deconvolutions and the convolutions.
+activation_fct: 'gelu'
 
 # weight decay and optimizer
 optimizer: 'adamW'

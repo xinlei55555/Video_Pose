@@ -3,6 +3,8 @@ import torch.nn as nn
 
 from einops import rearrange
 
+import math
+
 class PoseEstimationLoss(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -110,5 +112,9 @@ class PoseEstimationLoss(nn.Module):
         if self.config['show_predictions']:
             print(f'The target values are : ', target)
             print(f'The predicted values are : ', predicted)
+
+        # if math.isnan(calculated_loss):
+        #     print(f'The target values are : ', target)
+        #     print(f'The predicted values are : ', predicted)
 
         return calculated_loss

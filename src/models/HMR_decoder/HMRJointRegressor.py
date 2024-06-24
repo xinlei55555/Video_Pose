@@ -53,6 +53,8 @@ class JointOutput(nn.Module):
         self.normalize = normalize
         self.dropout = self.config['dropout']
 
+        self.activation_fct = config['activation_fct']
+
         if self.dropout:
         # need to be defined in the __init__ so that it ignores in evaluation
             self.dropout_layer = nn.Dropout(self.config['dropout_percent'])
@@ -87,6 +89,7 @@ class JointOutput(nn.Module):
         # after transformers, I have one set of channels
         # Input tensor shape: torch.Size([256, 1, 1024]), now I need to regress back
         return rearrange(x, '(b d) c a -> (b d c) a', d=self.d)
+    
     def regressors(self, dim_hidden=512, dim_out=2):
         # Assuming the input tensor x has shape (batch_size, input_size)
         # input_size = self.d * self.h * self.w
@@ -100,14 +103,22 @@ class JointOutput(nn.Module):
                 layers.append(self.dropout_layer)
             # I will return 3, which are the values for x, y, z
             # here, my number of output dimensinos would be 30, then reshape
-            layers.extend([nn.ReLU(), nn.Linear(dim_hidden, dim_hidden)])
+            if self.activation_fct == 'relu':
+                layers.extend([nn.ReLU(), nn.Linear(dim_hidden, dim_hidden)])
+            if self.activation_fct == 'gelu':
+                layers.extend([nn.GELU(), nn.Linear(dim_hidden, dim_hidden)])
 
-        layers.extend([nn.ReLU(), nn.Linear(dim_hidden, dim_out  * self.config['joint_number'])]) # I will return 3, which are the values for x, y, z
-        
+        if self.activation_fct == 'relu':
+            layers.extend([nn.ReLU(), nn.Linear(dim_hidden, dim_out  * self.config['joint_number'])]) # I will return 3, which are the values for x, y, z
+        if self.activation_fct == 'gelu':
+            layers.extend([nn.GELU(), nn.Linear(dim_hidden, dim_out  * self.config['joint_number'])])
+
         if self.normalize:
             # restrict values at the end to be between -1 and 1
             layers.append(nn.Tanh())
         return nn.Sequential(*layers)
+
+
 
     def forward(self, x):
         x = self.input_flatten(x)
