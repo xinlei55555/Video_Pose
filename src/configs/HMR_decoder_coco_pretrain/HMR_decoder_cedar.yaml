@@ -93,7 +93,7 @@ preprocess_videos: True
 
 # actions to skip
 skip: ['wave']
-num_frames: 16
+num_frames: 1
 # RGB
 channels: 3
 image_height: 480

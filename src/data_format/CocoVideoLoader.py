@@ -65,7 +65,6 @@ class COCOVideoLoader(Dataset):
         #     # some of the bbox have width, and height 0!!!! that means there is nothing in it... (so let me just ignore them in COCOImageLoader)
         image, joint = preprocess_video_data(image.numpy(), bbox.numpy(), joint.numpy(), (self.tensor_width, self.tensor_height), self.min_norm)
         # technically, I have depth = 1... do it's like a one frame video.
-        print(image.shape) # unsure about this step
         image = rearrange(image, 'd c h w -> c d h w')
         return [image, joint]
         
