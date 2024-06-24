@@ -32,30 +32,40 @@ class COCOVideoLoader(Dataset):
 
     def __len__(self):
         # if self.real_job:
-        return (len(self.image_data) // self.frames_num)
+        return (len(self.image_data)) # nevermind, I make each image a video #// self.frames_num)
         
     def __getitem__(self, index):
-        vid_index = index * self.frames_num
+        vid_index = index #* self.frames_num
 
         # slicing to get the video
-        video, joints, bboxes = [], [], []
-        for idx in range(vid_index, vid_index+self.frames_num):
-            image, joint, bbox = self.image_data[idx]
-            # making them all batch size = 1
-            # image = image.unsqueeze(0)
-            image = rearrange(image, '(d c) h w -> d h w c', d=1)
-            joint = joint.unsqueeze(0)
-            bbox = bbox.unsqueeze(0)
-            # some of the bbox have width, and height 0!!!! that means there is nothing in it... (so let me just ignore them in COCOImageLoader)
-            image, joint = preprocess_video_data(image.numpy(), bbox.numpy(), joint.numpy(), (self.tensor_width, self.tensor_height), self.min_norm)
-            video.append(image[0])
-            joints.append(joint[0])
-            # bboxes.append(bbox[0])
-        video = torch.stack(video)
-        joints = torch.stack(joints)
-        video = rearrange(video, 'd c h w->c d h w')
+        # video, joints, bboxes = [], [], []
+        # for idx in range(vid_index, vid_index+self.frames_num):
+        #     image, joint, bbox = self.image_data[idx]
+        #     # making them all batch size = 1
+        #     # image = image.unsqueeze(0)
+        #     image = rearrange(image, '(d c) h w -> d h w c', d=1)
+        #     joint = joint.unsqueeze(0)
+        #     bbox = bbox.unsqueeze(0)
+        #     # some of the bbox have width, and height 0!!!! that means there is nothing in it... (so let me just ignore them in COCOImageLoader)
+        #     image, joint = preprocess_video_data(image.numpy(), bbox.numpy(), joint.numpy(), (self.tensor_width, self.tensor_height), self.min_norm)
+        #     video.append(image[0])
+        #     joints.append(joint[0])
+        #     # bboxes.append(bbox[0])
+        # video = torch.stack(video)
+        # joints = torch.stack(joints)
+        # video = rearrange(video, 'd c h w->c d h w')
 
-        return [video, joints]
+        #-----------------------------------------
+        image, joint, bbox = self.image_data[idx]
+        # making them all batch size = 1
+        # image = image.unsqueeze(0)
+        image = rearrange(image, '(d c) h w -> d h w c', d=1)
+        joint = joint.unsqueeze(0)
+        bbox = bbox.unsqueeze(0)
+        #     # some of the bbox have width, and height 0!!!! that means there is nothing in it... (so let me just ignore them in COCOImageLoader)
+        image, joint = preprocess_video_data(image.numpy(), bbox.numpy(), joint.numpy(), (self.tensor_width, self.tensor_height), self.min_norm)
+        # technically, I have depth = 1... do it's like a one frame video.
+        return [image, joint]
         
 
 if __name__ == '__main__':

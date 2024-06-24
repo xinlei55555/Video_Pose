@@ -339,6 +339,7 @@ class VisionMamba(nn.Module):
         if len(list(x.size())) == 4:
             x = rearrange(x, '(b c) t h w -> b c t h w', b=1)
 
+        # in coco pretrain, t = 1
         # 16, 192, 8, 14, 14 
         B, C, T, H, W = x.shape
 
@@ -354,13 +355,13 @@ class VisionMamba(nn.Module):
         # concatenate the positional embedding
         # x = torch.cat((cls_token, x), dim=1)
         # * Still need positional embedding
-        x = x #+ self.pos_embed
+        x = x + self.pos_embed # but no need temporal embedding
 
         # temporal pos
         # cls_tokens = x[:B, :1, :]
         # x = x[:, 1:]
         x = rearrange(x, '(b t) n m -> (b n) t m', b=B, t=T)
-        x = x #+ self.temporal_pos_embedding
+        x = x #+ self.temporal_pos_embedding # I just removed it lol
         x = rearrange(x, '(b n) t m -> b (t n) m', b=B, t=T)
         # x = torch.cat((cls_tokens, x), dim=1)
         # ! This is only if we need to use heatmaps.!
