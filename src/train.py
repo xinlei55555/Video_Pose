@@ -25,7 +25,7 @@ def load_checkpoint(filepath, model):
 
 
 def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_set, test_set, device, rank, world_size,
-                  checkpoint_directory, checkpoint_name,  follow_up=(False, 1, None)):
+                  checkpoint_directory, checkpoint_name, dataset_name, follow_up=(False, 1, None)):
     # os.chdir(os.path.join(os.getcwd(), checkpoint_directory))
     os.makedirs(os.path.join(checkpoint_directory, checkpoint_name), exist_ok=True)
     best_val_loss = float('inf')
@@ -349,7 +349,7 @@ def main(rank, world_size, config, config_file_name):
     # Training loop
     print(f"The model has started training, with the following characteristics:")
     training_loop(config, num_epochs, optimizer, scheduler, model, loss_fn,
-                    train_loader, test_loader, device, rank, world_size, checkpoint_dir, checkpoint_name, follow_up)
+                    train_loader, test_loader, device, rank, world_size, checkpoint_dir, checkpoint_name, dataset_name, follow_up)
 
 
     if torch.cuda.device_count() > 1 and config['parallelize']:
