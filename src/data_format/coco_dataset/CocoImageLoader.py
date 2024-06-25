@@ -93,9 +93,11 @@ class COCOLoader(Dataset):
         bbox = torch.tensor(bbox, dtype=torch.float32)
 
         # Since I only want the x, y values, and not the visibility flag
-        keypoints = keypoints[:, :-1]
+        # Remove the last column and store it in mask
+        mask = keypoints[:, -1]
+        keypoints = keypoints[:, :-1] # YES YOU WANT THE VISIBILITY TT
 
-        return image, keypoints, bbox
+        return image, keypoints, bbox, mask
 
 def get_transforms():
     # note that there are a lot of imagesssss sizesssss

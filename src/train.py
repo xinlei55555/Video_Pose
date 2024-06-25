@@ -60,7 +60,13 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
 
         print('[=============>] train batch for epoch # ', epoch )
         for i, data in enumerate(train_set):
-            train_inputs, train_labels = data
+            if dataset_name == 'JHMDB':
+                train_inputs, train_labels = data
+                mask = None
+
+            if dataset_name == 'COCO':
+                train_inputs, train_labels, mask = data
+                mask = mask.to(device)
 
             # should load individual batches to GPU
             train_inputs, train_labels = train_inputs.to(
@@ -76,7 +82,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
 
             # determine the loss using the loss_fn which is passed into the training loop.
             # Note: Need to pass float! (not double)
-            loss_train = loss_fn(train_outputs.float(), train_labels.float())
+            loss_train = loss_fn(train_outputs.float(), train_labels.float(), mask)
     
             # checking for vanishing gradient.
             if config['show_gradients'] and i == 0:
@@ -116,7 +122,14 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
         with torch.no_grad():  # reduce memory while torch is using evaluation mode
             print('[======================>] test batch for epoch # ', epoch)
             for i, data in enumerate(test_set):
-                test_inputs, test_labels = data
+                if dataset_name == 'JHMDB':
+                    test_inputs, test_labels = data
+                    mask = None
+
+                if dataset_name == 'COCO':
+                    test_inputs, test_labels, mask = data
+                    mask = mask.to(device)
+
                 test_inputs, test_labels = test_inputs.to(
                     device), test_labels.to(device)
 
@@ -124,7 +137,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
                 test_outputs = model(test_inputs)
 
                 # get the loss again for the validation
-                loss_val = loss_fn(test_outputs.float(), test_labels.float())
+                loss_val = loss_fn(test_outputs.float(), test_labels.float(), mask)
 
                 test_loss += loss_val.item()
 

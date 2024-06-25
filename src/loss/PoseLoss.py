@@ -80,7 +80,7 @@ class PoseEstimationLoss(nn.Module):
         # this is mean squared
         return torch.mean(torch.norm(predicted - target, dim=len(target.shape)-1))
 
-    def forward(self, predicted, target):
+    def forward(self, predicted, target, mask=None):
         """
         Args:
             predicted (torch.Tensor): The predicted joint positions or heatmaps.
@@ -94,6 +94,29 @@ class PoseEstimationLoss(nn.Module):
         if not self.config['use_last_frame_only']:
             predicted = rearrange(predicted, 'b d j x -> (b d) j x')
             target = rearrange(target, 'b d j x -> (b d) j x')
+
+
+        # I need to mask all the values that are not visible in the dataset
+        if mask:
+            # T, J, X = predicted.shape
+            # for i in range(T):
+            #     for idx in range(J):
+            #         if mask[i][idx] == 0.:
+            #             # ignore those values.
+            #             predicted[i][idx][0] = predicted[i][idx][1] = target[i][idx][0] = target[i][idx][1] = 0.
+
+            # Get the shape of the predicted tensor
+            T, J, X = predicted.shape
+
+            # Create a boolean mask where mask == 0
+            zero_mask = (mask == 0)
+
+            # Expand the mask to match the shape of the last dimension
+            zero_mask = zero_mask.unsqueeze(-1).expand(-1, -1, X)
+
+            # Set the values to 0 where the mask is 0
+            predicted[zero_mask] = 0
+            target[zero_mask] = 0
 
         calculated_loss = 0.0
 
