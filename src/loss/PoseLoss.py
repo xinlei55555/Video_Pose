@@ -2,13 +2,14 @@ import torch
 import torch.nn as nn
 
 from einops import rearrange
-
+import sys
 import math
 
 class PoseEstimationLoss(nn.Module):
-    def __init__(self, config):
+    def __init__(self):
         super().__init__()
         self.config = config
+        # self.config = {'use_last_frame_only': True, 'num_frames': 1, 'losses': {'mse': 1.0, 'velocity': 0.0, 'angle': 0.0, 'mpjpe': 0.0}, 'show_predictions': False}
         self.mse_loss = nn.MSELoss()
         self.mpjpe = self.loss_mpjpe
         self.velocity_loss = self.velocity_loss_fn
@@ -80,7 +81,7 @@ class PoseEstimationLoss(nn.Module):
         # this is mean squared
         return torch.mean(torch.norm(predicted - target, dim=len(target.shape)-1))
 
-    def forward(self, predicted, target, mask=None):
+    def forward(self, predicted, target, visibility=None):
         """
         Args:
             predicted (torch.Tensor): The predicted joint positions or heatmaps.
@@ -95,10 +96,8 @@ class PoseEstimationLoss(nn.Module):
             predicted = rearrange(predicted, 'b d j x -> (b d) j x')
             target = rearrange(target, 'b d j x -> (b d) j x')
         
-
-
-        # I need to mask all the values that are not visible in the dataset
-        if mask is not None:
+        # I need to visibility all the values that are not visible in the dataset
+        if visibility is not None:
             # T, J, X = predicted.shape
             # for i in range(T):
             #     for idx in range(J):
@@ -110,27 +109,27 @@ class PoseEstimationLoss(nn.Module):
             T, J, X = predicted.shape
 
             # Create a boolean mask where mask == 0
-            zero_mask = (mask == 0)
+            zero_mask = (visibility != 0)
 
             # Expand the mask to match the shape of the last dimension
             zero_mask = zero_mask.unsqueeze(-1).expand(-1, -1, X)
 
-            # Instead of in-place modification, create new tensors with masked values set to 0
-            predicted = predicted * (~zero_mask).float()
-            target = target * (~zero_mask).float()
+             # Instead of in-place modification, create new tensors with masked values set to 0
+            predicted = predicted * (zero_mask).float()
+            target = target * (zero_mask).float()
 
         calculated_loss = 0.0
 
-        if 'mse' in self.config['losses']:
+        if 'mse' in self.config['losses'] and self.config['losses']['mse'] > 0:
             calculated_loss += self.mse_loss(predicted, target) * self.config['losses']['mse']
 
-        if 'velocity' in self.config['losses']:
+        if 'velocity' in self.config['losses'] and self.config['losses']['velocity'] > 0:
             calculated_loss += self.velocity_loss(predicted, target) * self.config['losses']['velocity']
 
-        if 'angle' in self.config['losses']:
+        if 'angle' in self.config['losses'] and self.config['losses']['angle'] > 0:
             calculated_loss += self.angle_loss(predicted, target) * self.config['losses']['angle']
 
-        if 'mpjpe' in self.config['losses']:
+        if 'mpjpe' in self.config['losses']and self.config['losses']['mpjpe'] > 0:
             calculated_loss += self.mpjpe(predicted, target) * self.config['losses']['mpjpe']
 
         if self.config['show_predictions']:
@@ -142,7 +141,16 @@ class PoseEstimationLoss(nn.Module):
         if math.isnan(calculated_loss) or math.isfinite(calculated_loss):
             print(f'The target values are : ', target)
             print(f'The predicted values are : ', predicted)
+            
+            print(f'calculated loss was {calculated_loss}')
             # breaks.
             sys.exit(1)
 
         return calculated_loss
+
+if __name__=='__main__':
+    x = torch.randn(16, 1, 15, 2)
+    y = torch.randn(16, 1, 15, 2)
+    loss_fn = PoseEstimationLoss()
+    y = loss_fn(x, y)
+    print(y.shape)
