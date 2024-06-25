@@ -6,7 +6,7 @@ model_type: 'HMR_decoder_coco_pretrain'
 # full_debug mode will enable a lot of information being printed
 full_debug: False
 show_gradients: False
-show_predictions: False 
+show_predictions: True 
 
 # architecture mamba
 embed_channels: 192 # number of channels after the tiny mamba layers.

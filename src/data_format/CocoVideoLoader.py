@@ -68,7 +68,7 @@ class COCOVideoLoader(Dataset):
         image = rearrange(image, 'd c h w -> c d h w')
 
         # check if all the joint values are between -1 and 1
-        if not torch.all((joint >= -1) & (joint <= 1)):
+        if self.config['full_debug'] and not torch.all((joint >= -1) & (joint <= 1)):
             print("Error, some of the normalized values are not between -1 and 1")
 
         return [image, joint, mask]

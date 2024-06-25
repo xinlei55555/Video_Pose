@@ -94,10 +94,11 @@ class PoseEstimationLoss(nn.Module):
         if not self.config['use_last_frame_only']:
             predicted = rearrange(predicted, 'b d j x -> (b d) j x')
             target = rearrange(target, 'b d j x -> (b d) j x')
+        
 
 
         # I need to mask all the values that are not visible in the dataset
-        if mask:
+        if mask is not None:
             # T, J, X = predicted.shape
             # for i in range(T):
             #     for idx in range(J):
@@ -114,9 +115,9 @@ class PoseEstimationLoss(nn.Module):
             # Expand the mask to match the shape of the last dimension
             zero_mask = zero_mask.unsqueeze(-1).expand(-1, -1, X)
 
-            # Set the values to 0 where the mask is 0
-            predicted[zero_mask] = 0
-            target[zero_mask] = 0
+            # Instead of in-place modification, create new tensors with masked values set to 0
+            predicted = predicted * (~zero_mask).float()
+            target = target * (~zero_mask).float()
 
         calculated_loss = 0.0
 
@@ -136,8 +137,12 @@ class PoseEstimationLoss(nn.Module):
             print(f'The target values are : ', target)
             print(f'The predicted values are : ', predicted)
 
-        # if math.isnan(calculated_loss):
-        #     print(f'The target values are : ', target)
-        #     print(f'The predicted values are : ', predicted)
+            print('Here is the calculated loss', calculated_loss)
+
+        if math.isnan(calculated_loss) or math.isfinite(calculated_loss):
+            print(f'The target values are : ', target)
+            print(f'The predicted values are : ', predicted)
+            # breaks.
+            sys.exit(1)
 
         return calculated_loss
