@@ -50,6 +50,8 @@ class PoseEstimationLoss(nn.Module):
         Returns:
             torch.Tensor: Computed loss.
         """
+        import torch
+
         def compute_angle(joints):
             """
             Compute the angle between consecutive joints.
@@ -59,7 +61,15 @@ class PoseEstimationLoss(nn.Module):
                 torch.Tensor: The angles between consecutive joints.
             """
             vector = joints[:, 1:, :] - joints[:, :-1, :]
+            
+            # Calculate the angles using atan2
             angles = torch.atan2(vector[..., 1], vector[..., 0])
+            
+            # Set angle to 0 where the joints values are the same
+            # to avoid the nan bug.
+            same_joints = (vector == 0).all(dim=-1)
+            angles[same_joints] = 0
+            
             return angles
 
         predicted_angles = compute_angle(predicted)
