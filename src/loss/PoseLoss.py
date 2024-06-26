@@ -6,7 +6,7 @@ import sys
 import math
 
 class PoseEstimationLoss(nn.Module):
-    def __init__(self):
+    def __init__(self, config):
         super().__init__()
         self.config = config
         # self.config = {'use_last_frame_only': True, 'num_frames': 1, 'losses': {'mse': 1.0, 'velocity': 0.0, 'angle': 0.0, 'mpjpe': 0.0}, 'show_predictions': False}
