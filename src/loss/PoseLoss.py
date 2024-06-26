@@ -9,7 +9,6 @@ class PoseEstimationLoss(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        # self.config = {'use_last_frame_only': True, 'num_frames': 1, 'losses': {'mse': 1.0, 'velocity': 0.0, 'angle': 0.0, 'mpjpe': 0.0}, 'show_predictions': False}
         self.mse_loss = nn.MSELoss()
         self.mpjpe = self.loss_mpjpe
         self.velocity_loss = self.velocity_loss_fn
@@ -138,13 +137,17 @@ class PoseEstimationLoss(nn.Module):
 
             print('Here is the calculated loss', calculated_loss)
 
-        if math.isnan(calculated_loss) or math.isfinite(calculated_loss):
+        if math.isnan(calculated_loss) or not math.isfinite(calculated_loss):
             print(f'The target values are : ', target)
             print(f'The predicted values are : ', predicted)
             
             print(f'calculated loss was {calculated_loss}')
+            print("Training was stopped due to infinite or Nan Loss")
             # breaks.
             sys.exit(1)
+
+        if not torch.all((predicted >= -1) & (predicted <= 1)) or not torch.all((target >= -1) & (target <= 1)):
+            print("Error, some of the OUTPUTS or LABELS normalized values are not between -1 and 1")
 
         return calculated_loss
 
