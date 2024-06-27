@@ -12,8 +12,9 @@ class eval_COCOLoader(COCOLoader):
         image_id = self.image_ids[self.new_image_ids[index]]
 
         # then adds lines
-        return image, keypoints, bbox, mask, image_id
-    
+        return image, image_id
+
+
 class eval_COCOVideoLoader(COCO_VideoLoader):
     '''A dataformat class for the evaluation dataset of the COCO dataset
     '''

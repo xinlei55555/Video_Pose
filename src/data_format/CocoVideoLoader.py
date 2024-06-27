@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from einops import rearrange
 
 from data_format.coco_dataset.CocoImageLoader import COCOLoader
+from data_format.eval_Cocoloader import eval_COCOLoader
 from data_format.AffineTransform import preprocess_video_data
 
 class COCOVideoLoader(Dataset):
@@ -18,7 +19,10 @@ class COCOVideoLoader(Dataset):
     A dataset to load the COCO videos as images
     '''
     def __init__(self, config, train_set, real_job):
-        self.image_data = COCOLoader(config, train_set, real_job=real_job)
+        if train_set != 'test':
+            self.image_data = COCOLoader(config, train_set, real_job=real_job)
+        if train_set == 'test':
+            self.image_data = eval_COCOLoader(config, train_set, real_job=real_job)
         self.real_job = real_job
         # reduce the quantity of data
         # if not self.real_job:

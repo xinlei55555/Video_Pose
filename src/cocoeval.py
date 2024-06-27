@@ -4,9 +4,14 @@ Using COCOeval to evaluate the pretrained model with Mamba.
 from xtcocotools.cocoeval import COCOeval
 from xtcocotools.coco import COCO
 
+import torch 
+from einops import rearrange
+
+from data_format.eval_Cocoloader import eval
 
 # first import the dataset from data_format
-from data_format.CocoVideoLoader
+from data_format.eval_Cocoloader import eval_CocoVideoLoader
+
 
 # note: from the val dataset, seems that category_id is always 1
 def tensor_to_coco(tensor, image_ids, category_id=1, score=1.0):
@@ -53,6 +58,7 @@ def testing_loop(model, test_set, dataset_name):
     print('\t Memory before (in MB)', torch.cuda.memory_allocated()/1e6)
     
     outputs_lst = []
+    image_ids = []
     with torch.no_grad():
         # go through each batch
         for i, data in enumerate(test_set):
@@ -60,11 +66,11 @@ def testing_loop(model, test_set, dataset_name):
                 raise NotImplementedError
 
             if dataset_name == 'COCO':
-                inputs = data
+                inputs, image_id = data
+                image_ids.append(image_id)
                 
                 # TODO I am not sure if I need the mask, include after
                 # mask = mask.to(device)
-
             else:
                 raise NotImplementedError
 
@@ -72,8 +78,13 @@ def testing_loop(model, test_set, dataset_name):
 
             outputs_lst.append(outputs)
         
-        return torch.stack(outputs_lst)
+        # stack all the batches into one dataset
+        outputs_lst = torch.stack(outputs_lst)
 
+        # merging all the batches.
+        outputs_lst = rearrange(outputs_lst, 'n b j x -> (n b) j x')
+        
+        return outputs_lst, image_ids
 
 def main(config):
     if config['dataset_name'] != 'COCO':
@@ -81,15 +92,27 @@ def main(config):
         exit()
     
     data_dir = config['data_path']
+    batch_size = config['batch_size']
+    checkpoint_dir = config['checkpoint_directory']
+    checkpoint_name = config['checkpoint_name']
+
+ # configuration
+    pin_memory = True  # if only 1 GPU
+    num_cpu_cores = os.cpu_count()
+    num_workers = config['num_cpus'] * (num_cpu_cores) - 1
+
     # will be using the testing set to compare between the datasets (I used the val for the training)
     annotation_file = os.path.join(data_dir, 'annotations', 'person_keypoints_test2017.json')
 
-    cocoGT = COCO(annotation_file)
+    # cocoGT = COCO(annotation_file)
 
     # then run the entire dataset with the data
     # or, I need to create another data loader, but with the 
     # okay, I will change my dataloadr.
-    input_dataset = 
+    test_set = eval_COCOVideoLoader(config, train_set='test', real_job=True)
+
+    test_loader = DataLoader(test_set, batch_size=batch_size, 
+                            shuffle=False, num_workers=num_worker, pin_memory=pin_memory)
 
     # choosing the right model:
     if config['model_type'] == 'heatmap':
@@ -111,12 +134,12 @@ def main(config):
     model = model.to(device)  # to unique GPU
     print('Model loaded successfully as follows: ', model)
 
-    test_outputs = testing_loop(model, input_dataset, config['dataset_name'])
+    test_outputs, image_ids = testing_loop(model, test_loader, config['dataset_name'])
 
     # now transform the inputs into COCO objects
     # need to denormalize the values, and keep the image ids
 
-    
+    cocoDt = tensor_to_coco(test_outputs, image_ids)
 
 
 
