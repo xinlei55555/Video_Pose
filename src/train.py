@@ -233,8 +233,8 @@ def main(rank, world_size, config, config_file_name):
         test_set = JHMDBLoad(config, train_set=False, real_job=real_job,
                             jump=jump, normalize=(normalize, default))
     if dataset_name == 'COCO':
-        train_set = COCOVideoLoader(config, train_set = True, real_job=real_job)
-        test_set = COCOVideoLoader(config, train_set = False, real_job=real_job)
+        train_set = COCOVideoLoader(config, train_set = 'train', real_job=real_job)
+        test_set = COCOVideoLoader(config, train_set = 'val', real_job=real_job)
 
 
     if torch.cuda.device_count() == 1 or not config['parallelize']:

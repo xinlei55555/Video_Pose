@@ -8,7 +8,7 @@ from xtcocotools.coco import COCO
 # first import the dataset from data_format
 from data_format.CocoVideoLoader
 
-
+# note: from the val dataset, seems that category_id is always 1
 def tensor_to_coco(tensor, image_ids, category_id=1, score=1.0):
     """
     Transform a tensor of shape (B, 17, 2) into a COCO result object.
@@ -44,8 +44,35 @@ def tensor_to_coco(tensor, image_ids, category_id=1, score=1.0):
 def evaluate_coco(gtCOCO, pkCOCO):
     '''Given a ground truth coco object, and a predicted keypoint object, return the mAP'''
     # define a default keypoint object, using the default sigmas, yet no areas
-    gtCOCO = 
     eval_coco = COCOeval(cocoGt=gtCOCO, cocoDt=pkCOCO, sigmas=None, iouType='keypoints', use_area=False)    
+
+def testing_loop(model, test_set, dataset_name):
+    '''Testing loop to run on the whole COCO dataset
+    '''
+    model.eval()
+    print('\t Memory before (in MB)', torch.cuda.memory_allocated()/1e6)
+    
+    outputs_lst = []
+    with torch.no_grad():
+        # go through each batch
+        for i, data in enumerate(test_set):
+            if dataset_name == 'JHMDB':
+                raise NotImplementedError
+
+            if dataset_name == 'COCO':
+                inputs = data
+                
+                # TODO I am not sure if I need the mask, include after
+                # mask = mask.to(device)
+
+            else:
+                raise NotImplementedError
+
+            outputs = model(inputs)
+
+            outputs_lst.append(outputs)
+        
+        return torch.stack(outputs_lst)
 
 
 def main(config):
@@ -62,6 +89,33 @@ def main(config):
     # then run the entire dataset with the data
     # or, I need to create another data loader, but with the 
     # okay, I will change my dataloadr.
+    input_dataset = 
+
+    # choosing the right model:
+    if config['model_type'] == 'heatmap':
+        model = HeatMapVideoMambaPose(config).to(device)
+
+    elif config['model_type'] == 'HMR_decoder':
+        model = HMRVideoMambaPose(config).to(device)
+    
+    elif config['model_type'] == 'MLP_only_decoder':
+        model = MLPVideoMambaPose(config).to(device)
+    
+    elif config['model_type'] == 'HMR_decoder_coco_pretrain':
+        model = HMRVideoMambaPoseCOCO(config).to(rank)
+
+    else:
+        print('Your selected model does not exist! (Yet)')
+        return
+
+    model = model.to(device)  # to unique GPU
+    print('Model loaded successfully as follows: ', model)
+
+    test_outputs = testing_loop(model, input_dataset, config['dataset_name'])
+
+    # now transform the inputs into COCO objects
+    # need to denormalize the values, and keep the image ids
+
     
 
 

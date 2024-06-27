@@ -13,20 +13,23 @@ class COCOLoader(Dataset):
     A dataset loader for COCO dataset.
     '''
 
-    def __init__(self, config, train=False, real_job=False):
+    def __init__(self, config, train='train', real_job=False):
         self.config = config
         self.train = train
         self.transform = get_transforms()
         self.real_job = real_job  # Use get method to handle missing key
 
-        dir_name = 'images/train2017'
+        
+        dir_name = f'images/{self.train}2017'
         if not self.real_job:
             dir_name = 'images/val2017'
-            self.train = False
+            self.train = 'val'
+    
         # Set up paths
         self.data_dir = config['data_path']
-        self.image_dir = os.path.join(self.data_dir, dir_name if self.train else 'images/val2017')
-        self.annotation_file = os.path.join(self.data_dir, 'annotations', 'person_keypoints_train2017.json' if self.train else 'person_keypoints_val2017.json')
+
+        self.image_dir = os.path.join(self.data_dir, dir_name)
+        self.annotation_file = os.path.join(self.data_dir, 'annotations', f'person_keypoints_{self.train}2017.json')
 
         # Initialize COCO API
         self.coco = COCO(self.annotation_file)
@@ -53,7 +56,7 @@ class COCOLoader(Dataset):
             else:
                 self.new_image_ids.append(index)
         
-        print(f"The length of the train: {train} is : {len(self.new_image_ids)} divided by the number of frames")
+        print(f"The length of the: {self.train} dataset is : {len(self.new_image_ids)} divided by the number of frames")
 
     def __len__(self):
         return len(self.new_image_ids)
@@ -114,7 +117,7 @@ if __name__ == '__main__':
     }
 
     # Initialize dataset and dataloader
-    train_dataset = COCOLoader(config, train=False, transform=get_transforms())
+    train_dataset = COCOLoader(config, train='val', transform=get_transforms())
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=2, pin_memory=True)
 
     # Iterate through the data
