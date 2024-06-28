@@ -11,6 +11,23 @@ from data_format.eval_Cocoloader import eval
 
 # first import the dataset from data_format
 from data_format.eval_Cocoloader import eval_CocoVideoLoader
+from data_format.AffineTransform import denormalize_fn
+
+def coco_mask_fn(joints, labels, masks):
+    '''Mask the necessary COCO style joint values'''
+    # Get the shape of the predicted tensor
+    T, J, X = joints.shape
+
+    # Create a boolean mask where mask == 0
+    zero_mask = (visibility != 0)
+
+    # Expand the mask to match the shape of the last dimension
+    zero_mask = zero_mask.unsqueeze(-1).expand(-1, -1, X)
+
+        # Instead of in-place modification, create new tensors with masked values set to 0
+    joints = joints * (zero_mask).float()
+    labels = labels * (zero_mask).float()
+    return joints, labels
 
 
 # note: from the val dataset, seems that category_id is always 1
@@ -50,6 +67,7 @@ def evaluate_coco(gtCOCO, pkCOCO):
     '''Given a ground truth coco object, and a predicted keypoint object, return the mAP'''
     # define a default keypoint object, using the default sigmas, yet no areas
     eval_coco = COCOeval(cocoGt=gtCOCO, cocoDt=pkCOCO, sigmas=None, iouType='keypoints', use_area=False)    
+    # TODO
 
 def testing_loop(model, test_set, dataset_name):
     '''Testing loop to run on the whole COCO dataset
@@ -58,6 +76,8 @@ def testing_loop(model, test_set, dataset_name):
     print('\t Memory before (in MB)', torch.cuda.memory_allocated()/1e6)
     
     outputs_lst = []
+    gt_joints = []
+    masks = []
     image_ids = []
     with torch.no_grad():
         # go through each batch
@@ -66,10 +86,11 @@ def testing_loop(model, test_set, dataset_name):
                 raise NotImplementedError
 
             if dataset_name == 'COCO':
-                inputs, image_id = data
+                inputs, processed_joints, mask, image_id = data
                 image_ids.append(image_id)
                 
-                # TODO I am not sure if I need the mask, include after
+                # TODO 
+                # Okay, I will mask the values rn.
                 # mask = mask.to(device)
             else:
                 raise NotImplementedError
@@ -77,14 +98,22 @@ def testing_loop(model, test_set, dataset_name):
             outputs = model(inputs)
 
             outputs_lst.append(outputs)
+            gt_joints.append(processed_joints)
+            masks.append(mask)
         
         # stack all the batches into one dataset
         outputs_lst = torch.stack(outputs_lst)
+        gt_joints = torch.stack(gt_joints)
+        masks = torch.stack(masks)
 
         # merging all the batches.
         outputs_lst = rearrange(outputs_lst, 'n b j x -> (n b) j x')
+        gt_joints = rearrange(gt_joints, 'n b j x -> (n b) j x')
+        image_ids = rearrange(image_ids, 'n b x -> (n b) x')
+        masks = rearrange(masks, 'n b j x -> (n b) j x')
         
-        return outputs_lst, image_ids
+        
+        return outputs_lst, image_ids, gt_joints, masks
 
 def main(config):
     if config['dataset_name'] != 'COCO':
@@ -134,14 +163,23 @@ def main(config):
     model = model.to(device)  # to unique GPU
     print('Model loaded successfully as follows: ', model)
 
-    test_outputs, image_ids = testing_loop(model, test_loader, config['dataset_name'])
+    test_outputs, image_ids, test_labels, masks = testing_loop(model, test_loader, config['dataset_name'])
 
     # now transform the inputs into COCO objects
     # need to denormalize the values, and keep the image ids
+    tensor_width, tensor_height = config['image_tensor_width'], config['image_tensor_height']
+    test_outputs = denormalize_fn(test_outputs, min_norm=config['min_norm'], h=tensor_height, w=tensor_width)
+    test_labels = denormalize_fn(test_labels, min_norm=config['min_norm'], h=tensor_heigth, w=tensor_width)
+
+    # mask the results that are incorrect
+    test_outputs, test_labels = coco_mask_fn(test_outputs, test_labels, masks)
 
     cocoDt = tensor_to_coco(test_outputs, image_ids)
+    cocoGt = tensor_to_coco(test_labels, image_ids)
 
+    result = evaluate_coco(cocoGt, cocoDt)
 
+    print(result)
 
 if __name__ == '__main__':
     # argparse to get the file path of the config file

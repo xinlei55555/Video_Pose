@@ -12,7 +12,7 @@ class eval_COCOLoader(COCOLoader):
         image_id = self.image_ids[self.new_image_ids[index]]
 
         # then adds lines
-        return image, image_id
+        return image, keypoints, bbox, mask, image_id
 
 
 class eval_COCOVideoLoader(COCO_VideoLoader):
@@ -34,4 +34,4 @@ class eval_COCOVideoLoader(COCO_VideoLoader):
         if self.config['full_debug'] and not torch.all((joint >= -1) & (joint <= 1)):
             print("Error, some of the normalized values are not between -1 and 1")
 
-        return [image, joint, mask, image_id]
+        return image, joint, mask, image_id
