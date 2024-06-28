@@ -67,7 +67,16 @@ def evaluate_coco(gtCOCO, pkCOCO):
     '''Given a ground truth coco object, and a predicted keypoint object, return the mAP'''
     # define a default keypoint object, using the default sigmas, yet no areas
     eval_coco = COCOeval(cocoGt=gtCOCO, cocoDt=pkCOCO, sigmas=None, iouType='keypoints', use_area=False)    
-    # TODO
+      
+    # Run the evaluation
+    eval_coco.evaluate()
+    eval_coco.accumulate()
+    eval_coco.summarize()
+    
+    # Get the mAP for keypoints
+    mAP = eval_coco.stats[0]  # COCOeval.stats[0] is the mAP for keypoints
+    
+    return mAP
 
 def testing_loop(model, test_set, dataset_name):
     '''Testing loop to run on the whole COCO dataset
@@ -89,9 +98,6 @@ def testing_loop(model, test_set, dataset_name):
                 inputs, processed_joints, mask, image_id = data
                 image_ids.append(image_id)
                 
-                # TODO 
-                # Okay, I will mask the values rn.
-                # mask = mask.to(device)
             else:
                 raise NotImplementedError
 
@@ -130,14 +136,7 @@ def main(config):
     num_cpu_cores = os.cpu_count()
     num_workers = config['num_cpus'] * (num_cpu_cores) - 1
 
-    # will be using the testing set to compare between the datasets (I used the val for the training)
-    annotation_file = os.path.join(data_dir, 'annotations', 'person_keypoints_test2017.json')
-
-    # cocoGT = COCO(annotation_file)
-
-    # then run the entire dataset with the data
-    # or, I need to create another data loader, but with the 
-    # okay, I will change my dataloadr.
+    # will be using the testing set to compare between the datasets (I used the val for the training
     test_set = eval_COCOVideoLoader(config, train_set='test', real_job=True)
 
     test_loader = DataLoader(test_set, batch_size=batch_size, 
@@ -179,7 +178,7 @@ def main(config):
 
     result = evaluate_coco(cocoGt, cocoDt)
 
-    print(result)
+    print(f'mAP is {result}')
 
 if __name__ == '__main__':
     # argparse to get the file path of the config file
