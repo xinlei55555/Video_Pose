@@ -255,16 +255,16 @@ def main(rank, world_size, config, config_file_name):
         # Initialize the model
         # choosing the right model:
         if config['model_type'] == 'heatmap':
-            model = HeatMapVideoMambaPose(config).to(device)
+            model = HeatMapVideoMambaPose(config)
 
         elif config['model_type'] == 'HMR_decoder':
-            model = HMRVideoMambaPose(config).to(device)
+            model = HMRVideoMambaPose(config)
         
         elif config['model_type'] == 'MLP_only_decoder':
-            model = MLPVideoMambaPose(config).to(device)
+            model = MLPVideoMambaPose(config)
         
         elif config['model_type'] == 'HMR_decoder_coco_pretrain':
-            model = HMRVideoMambaPoseCOCO(config).to(rank)
+            model = HMRVideoMambaPoseCOCO(config)
 
         else:
             print('Your selected model does not exist! (Yet)')

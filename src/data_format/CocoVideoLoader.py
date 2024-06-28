@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 
 from einops import rearrange
 
-from data_format.coco_dataset.CocoImageLoader import COCOLoader
-from data_format.eval_Cocoloader import eval_COCOLoader
+from data_format.coco_dataset.CocoImageLoader import COCOLoader, eval_COCOLoader
+# from data_format.eval_Cocoloader import eval_COCOLoader
 from data_format.AffineTransform import preprocess_video_data
 
 class COCOVideoLoader(Dataset):

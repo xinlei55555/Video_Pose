@@ -1,21 +1,9 @@
-from data_format.coco_dataset.COCOImageLoader import COCOLoader
+from data_format.coco_dataset.CocoImageLoader import COCOLoader, eval_COCOLoader
 from data_format.CocoVideoLoader import COCOVideoLoader
+from einops import rearrange
 
-class eval_COCOLoader(COCOLoader):
-    '''A dataformat class for the evaluation dataset of the image COCO Loader'''
-    def __getitem__(self, index):
-        # calling the __getitem__ from the parent class
-        # captures the value from the parent class
-        image, keypoints, bbox, mask = super().__getitem__(index)
-
-        # redefining the missing variables.
-        image_id = self.image_ids[self.new_image_ids[index]]
-
-        # then adds lines
-        return image, keypoints, bbox, mask, image_id
-
-
-class eval_COCOVideoLoader(COCO_VideoLoader):
+from data_format.AffineTransform import preprocess_video_data
+class eval_COCOVideoLoader(COCOVideoLoader):
     '''A dataformat class for the evaluation dataset of the COCO dataset
     '''
     def __getitem__(self, index):
