@@ -6,7 +6,7 @@ model_type: 'HMR_decoder_coco_pretrain'
 # full_debug mode will enable a lot of information being printed
 full_debug: False
 show_gradients: False
-show_predictions: False
+show_predictions: True 
 
 # architecture mamba
 embed_channels: 192 # number of channels after the tiny mamba layers.
@@ -40,7 +40,7 @@ activation_fct: 'gelu'
 
 # weight decay and optimizer
 optimizer: 'adamW'
-weight_decay: 0.1 # value fou
+weight_decay: 0.1 # value found from video mamba 
 
 max_grad_norm: 1.0 # use something negative to not have it
 
@@ -49,17 +49,16 @@ epoch_number: 300
 # batch_size: 16
 # batch_size: 8
 batch_size: 16 # just to see how scalable it is
-learning_rate: 0.00005
+learning_rate: 0.0000005
 # learning_rate: 0.00005
 # learning_rate: 0.0005
-
 #scheduler:
-scheduler: False
+scheduler: True
 scheduler_fct: cosine
 # for cosine
 T_0: 10
 T_mult: 2 # doubling the spacing bewteen each reset
-eta_min: 0.0000005 #the minimum learning rate
+eta_min: 0.000000005 #the minimum learning rate
 # for RRLP
 scheduler_factor: 0.1
 start_epoch: 1
@@ -70,7 +69,6 @@ num_cpus: 1
 num_gpus: 1
 parallelize: False
 
-# checkpoints
 # checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/latent_space_regression_with_linear/checkpoint
 checkpoint_directory: checkpoints/HMR_decoder_coco_pretrain
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
@@ -108,7 +106,7 @@ jump: 16 # number of frames to skip between the different datapoints
 joint_number: 17 # COCO has 17 joints.
 
 # if False, uses subset of the data to run
-real_job: False
+real_job: True
 
 # normalization
 normalized: True

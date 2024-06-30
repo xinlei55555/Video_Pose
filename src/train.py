@@ -24,8 +24,8 @@ def load_checkpoint(filepath, model):
     return model
 
 
-def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_set, test_set, device, rank, world_size,
-                  checkpoint_directory, checkpoint_name,  follow_up=(False, 1, None)):
+def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_set, val_set, device, rank, world_size,
+                  checkpoint_directory, checkpoint_name, dataset_name, follow_up=(False, 1, None)):
     # os.chdir(os.path.join(os.getcwd(), checkpoint_directory))
     os.makedirs(os.path.join(checkpoint_directory, checkpoint_name), exist_ok=True)
     best_val_loss = float('inf')
@@ -56,11 +56,17 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
             print('\t Memory before (in MB)', torch.cuda.memory_allocated()/1e6)
             print(
                 f'The number of batches in the train_set is {len(train_set)}')
-            print(f'The number of batches in the test_set is {len(test_set)}')
+            print(f'The number of batches in the val_set is {len(val_set)}')
 
         print('[=============>] train batch for epoch # ', epoch )
         for i, data in enumerate(train_set):
-            train_inputs, train_labels = data
+            if dataset_name == 'JHMDB':
+                train_inputs, train_labels = data
+                mask = None
+
+            if dataset_name == 'COCO':
+                train_inputs, train_labels, mask = data
+                mask = mask.to(device)
 
             # should load individual batches to GPU
             train_inputs, train_labels = train_inputs.to(
@@ -76,7 +82,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
 
             # determine the loss using the loss_fn which is passed into the training loop.
             # Note: Need to pass float! (not double)
-            loss_train = loss_fn(train_outputs.float(), train_labels.float())
+            loss_train = loss_fn(train_outputs.float(), train_labels.float(), mask)
     
             # checking for vanishing gradient.
             if config['show_gradients'] and i == 0:
@@ -112,25 +118,32 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
             torch.cuda.empty_cache()  # Clear cache to save memory
 
         model.eval()  # so that the model does not change the values of the parameters
-        test_loss = 0.0
+        val_loss = 0.0
         with torch.no_grad():  # reduce memory while torch is using evaluation mode
-            print('[======================>] test batch for epoch # ', epoch)
-            for i, data in enumerate(test_set):
-                test_inputs, test_labels = data
-                test_inputs, test_labels = test_inputs.to(
-                    device), test_labels.to(device)
+            print('[======================>] val batch for epoch # ', epoch)
+            for i, data in enumerate(val_set):
+                if dataset_name == 'JHMDB':
+                    val_inputs, val_labels = data
+                    mask = None
+
+                if dataset_name == 'COCO':
+                    val_inputs, val_labels, mask = data
+                    mask = mask.to(device)
+
+                val_inputs, val_labels = val_inputs.to(
+                    device), val_labels.to(device)
 
                 # repeat for the validation
-                test_outputs = model(test_inputs)
+                val_outputs = model(val_inputs)
 
                 # get the loss again for the validation
-                loss_val = loss_fn(test_outputs.float(), test_labels.float())
+                loss_val = loss_fn(val_outputs.float(), val_labels.float(), mask)
 
-                test_loss += loss_val.item()
+                val_loss += loss_val.item()
 
                 if epoch == start_epoch and i == 0:
                     # Prints GPU memory summary
-                    print('\t Memory after test_batch (in MB)',
+                    print('\t Memory after val_batch (in MB)',
                           torch.cuda.memory_allocated()/1e6)
 
                 torch.cuda.empty_cache()  # Clear cache to save memory
@@ -139,27 +152,27 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
         if config['scheduler']:
             print('[==========================>] Registering the learning rate.')
             if config['scheduler_fct'] == 'RRLP':
-                scheduler.step(test_loss)
+                scheduler.step(val_loss)
             if config['scheduler_fct'] == 'cosine':
                 scheduler.step()
 
         # the shown loss should be for individual elements in the batch size
-        show_loss_train, show_loss_test = train_loss / \
-            len(train_set), test_loss / len(test_set)
+        show_loss_train, show_loss_val = train_loss / \
+            len(train_set), val_loss / len(val_set)
 
         if rank == 0:
             print(f'[===================================>] Completed Epoch {epoch}')
             print(f'[************************************************************]')
             print('Information')
             wandb.log({"Pointwise training loss": show_loss_train})
-            wandb.log({"Pointwise testing loss": show_loss_test})
+            wandb.log({"Pointwise validation loss": show_loss_val})
             wandb.log({"Training loss": train_loss})
-            wandb.log({"Testing loss": test_loss})
+            wandb.log({"Validation loss": val_loss})
 
             print(f"Epoch {epoch},\n \t Pointwise Training loss {float(show_loss_train)}, \n"
-                  f" \t Pointwise Validation loss {float(show_loss_test)}")
+                  f" \t Pointwise Validation loss {float(show_loss_val)}")
             print(
-                f"\t Full training loss: {float(train_loss)}, \n \t Full test loss: {float(test_loss)}")
+                f"\t Full training loss: {float(train_loss)}, \n \t Full val loss: {float(val_loss)}")
 
             # if scheduler defined:
             if config['scheduler']:
@@ -167,12 +180,12 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
                 print(f'The current learning rate is: {lr}')
 
             # I use the full loss when comparing, to avoid having too small numbers.
-            if test_loss < best_val_loss or epoch % 50 == 0:
-                if test_loss < best_val_loss:
-                    best_val_loss = test_loss
+            if val_loss < best_val_loss or epoch % 50 == 0:
+                if val_loss < best_val_loss:
+                    best_val_loss = val_loss
                 # save model locally
                 checkpoint_path = os.path.join(
-                    checkpoint_directory, checkpoint_name, f"{config['model_type']}_{checkpoint_name}_{test_loss:.4f}_epoch_{epoch}.pt")
+                    checkpoint_directory, checkpoint_name, f"{config['model_type']}_{checkpoint_name}_{val_loss:.4f}_epoch_{epoch}.pt")
                 torch.save(model.state_dict(), checkpoint_path)
                 print(f'Best model saved at {checkpoint_path}')
                 print("\t Model parameters are of the following size",
@@ -217,11 +230,11 @@ def main(rank, world_size, config, config_file_name):
     if dataset_name == 'JHMDB':
         train_set = JHMDBLoad(config, train_set=True, real_job=real_job,
                             jump=jump, normalize=(normalize, default))
-        test_set = JHMDBLoad(config, train_set=False, real_job=real_job,
+        val_set = JHMDBLoad(config, train_set=False, real_job=real_job,
                             jump=jump, normalize=(normalize, default))
     if dataset_name == 'COCO':
-        train_set = COCOVideoLoader(config, train_set = True, real_job=real_job)
-        test_set = COCOVideoLoader(config, train_set = False, real_job=real_job)
+        train_set = COCOVideoLoader(config, train_set = 'train', real_job=real_job)
+        val_set = COCOVideoLoader(config, train_set = 'val', real_job=real_job)
 
 
     if torch.cuda.device_count() == 1 or not config['parallelize']:
@@ -236,22 +249,22 @@ def main(rank, world_size, config, config_file_name):
         # data loader
         train_loader = DataLoader(train_set, batch_size=batch_size,
                                   shuffle=True, num_workers=num_workers, pin_memory=pin_memory)
-        test_loader = DataLoader(test_set, batch_size=batch_size,
+        val_loader = DataLoader(val_set, batch_size=batch_size,
                                  shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
 
         # Initialize the model
         # choosing the right model:
         if config['model_type'] == 'heatmap':
-            model = HeatMapVideoMambaPose(config).to(device)
+            model = HeatMapVideoMambaPose(config)
 
         elif config['model_type'] == 'HMR_decoder':
-            model = HMRVideoMambaPose(config).to(device)
+            model = HMRVideoMambaPose(config)
         
         elif config['model_type'] == 'MLP_only_decoder':
-            model = MLPVideoMambaPose(config).to(device)
+            model = MLPVideoMambaPose(config)
         
         elif config['model_type'] == 'HMR_decoder_coco_pretrain':
-            model = HMRVideoMambaPoseCOCO(config).to(rank)
+            model = HMRVideoMambaPoseCOCO(config)
 
         else:
             print('Your selected model does not exist! (Yet)')
@@ -279,8 +292,8 @@ def main(rank, world_size, config, config_file_name):
         train_loader = DataLoader(
             train_set, batch_size=batch_size, sampler=train_sampler, shuffle=True, num_workers=num_workers, pin_memory=pin_memory, drop_last=False,)
 
-        # use normal test loader for the test set
-        test_loader = DataLoader(test_set, batch_size=batch_size,
+        # use normal val loader for the val set
+        val_loader = DataLoader(val_set, batch_size=batch_size,
                                  shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
 
         # loading the model
@@ -336,7 +349,7 @@ def main(rank, world_size, config, config_file_name):
     # Training loop
     print(f"The model has started training, with the following characteristics:")
     training_loop(config, num_epochs, optimizer, scheduler, model, loss_fn,
-                    train_loader, test_loader, device, rank, world_size, checkpoint_dir, checkpoint_name, follow_up)
+                    train_loader, val_loader, device, rank, world_size, checkpoint_dir, checkpoint_name, dataset_name, follow_up)
 
 
     if torch.cuda.device_count() > 1 and config['parallelize']:

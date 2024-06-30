@@ -139,6 +139,11 @@ class JHMDBLoad(Dataset):
             print('The shape of the video is', video.shape)
             print(
                 f'index: {index}, video_num: {video_num}, frame_num: {frame_num}, num_of_joints, {joint_for_frame.shape[0]}')
+        
+        # check if all the joint values are between -1 and 1
+        if not torch.all((joint_for_frame >= -1) & (joint_for_frame <= 1)):
+            print("Error, some of the normalized values are not between -1 and 1")
+
         return [video, joint_for_frame]
 
     # this folder is useless
