@@ -86,7 +86,11 @@ def get_data_points(dataset, index):
 
 
 def visualize(joints, frames, file_name, width, height, bboxes=None, use_last_frame_only=False):
-    '''1: neck
+    '''
+    joints: torch.Tensor (N, J, X)
+    frames: torch.Tensor (N, ...unsure)
+    
+    1: neck
     2: belly
     3: face
     4: right shoulder
@@ -105,6 +109,7 @@ def visualize(joints, frames, file_name, width, height, bboxes=None, use_last_fr
     num_frames, num_joints = frames.shape[0], joints.shape[0]
     if num_frames != num_joints:
         print("Error, the number of joints does not equal the number of frames")
+        print(f'num_frames: {num_frames}, num_joints: {num_joints}')
         raise NotImplementedError
     
     else:
@@ -157,6 +162,8 @@ def visualize(joints, frames, file_name, width, height, bboxes=None, use_last_fr
         
         # Draw bounding boxes if provided
         if bboxes is not None:
+            if isinstance(bboxes, torch.Tensor):
+                bboxes = bboxes.tolist()
             bbox = bboxes[frame_idx]
             x_min, y_min, w, h = bbox[0], bbox[1], bbox[2], bbox[3]
             plt.gca().add_patch(plt.Rectangle((x_min, y_min), w, h, fill=False, edgecolor='green', linewidth=2))

@@ -151,7 +151,7 @@ def testing_loop(model, test_set, dataset_name, device):
             masks = torch.cat((masks, mask))
             image_sizes = torch.cat((image_sizes, image_size))
             bboxes = torch.cat((bboxes, bbox))
-            initial_indexes.append(initial_index)
+            initial_indexes.extend(initial_index)
         
         return outputs_lst, image_ids, gt_joints, masks, image_sizes, bboxes, initial_indexes
 
@@ -202,10 +202,11 @@ def main(config):
 
     # denormalize the affine transforms to adjust to the image sizes to the original sizes
     for i in range(test_outputs.shape[0]):
-        _, new_joint = inverse_process_joint_data(bboxes[i][0].cpu().detach().clone().numpy(), test_outputs[i][0].cpu().detach().clone().numpy(), list(image_sizes[i].cpu().detach().clone()), min_norm=config['min_norm'])
+        # _, new_joint = inverse_process_joint_data(bboxes[i][0].cpu().detach().clone().numpy(), test_outputs[i][0].cpu().detach().clone().numpy(), image_sizes[i].cpu().detach().clone().tolist(), min_norm=config['min_norm'])
+        # TODO I'll try with the initial images, unsure
+        _, new_joint = inverse_process_joint_data(bboxes[i][0].cpu().detach().clone().numpy(), test_outputs[i][0].cpu().detach().clone().numpy(), (192, 256), min_norm=config['min_norm'])
         test_outputs[i] = new_joint
 
-    print(test_outputs)
     # mask the results that are incorrect
     test_outputs, test_labels = coco_mask_fn(test_outputs, test_labels, masks)
 
@@ -217,6 +218,14 @@ def main(config):
     result = evaluate_coco(cocoDt, annotations_path)
 
     print(f'mAP is {result}')
+
+    # viualizing on of the answers ig:    
+    print(test_outputs.shape)
+    print(test_set.image_data[initial_indexes[0].item()][0].shape)
+    print(bboxes.shape)
+
+    # added a dimension, because its only 1 frame.
+    visualize_frame(test_outputs[0].unsqueeze(0).cpu(), test_set.image_data[initial_indexes[0].item()][0].unsqueeze(0).cpu(), image_sizes[0][0].item(), image_sizes[0][1].item(), bboxes[0].cpu())
 
 if __name__ == '__main__':
     # argparse to get the file path of the config file
