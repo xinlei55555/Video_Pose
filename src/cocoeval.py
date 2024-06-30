@@ -21,6 +21,11 @@ from models.HMR_decoder.HMRMambaPose import HMRVideoMambaPose
 from models.MLP_only_decoder.MLPMambaPose import MLPVideoMambaPose
 from models.HMR_decoder_coco_pretrain.HMRMambaPose import HMRVideoMambaPoseCOCO
 
+from inference.visualize_coco import visualize, load_model
+
+def visualize_frame(joint, frame, width, height, bbox):
+    visualize(joint, frame, 'coco_pretrain_result', width, height, bbox, False)
+
 def coco_mask_fn(joints, labels, masks):
     '''Mask the necessary COCO style joint values'''
     # Get the shape of the predicted tensor
@@ -79,7 +84,7 @@ def tensor_to_coco(tensor, image_ids, category_id=1, score=1.0):
 def evaluate_coco(dt_annotations, data):
     '''Given a ground truth annotations list and a predicted annotations list, return the mAP'''
     # Create COCO objects
-    coco = data.coco
+    coco = COCO(data)
     
     # coco = COCO()
     # print(dir(coco))
@@ -118,6 +123,7 @@ def testing_loop(model, test_set, dataset_name, device):
     image_ids = []
     image_sizes = torch.tensor([]).to(device)
     bboxes = torch.tensor([]).to(device)
+    initial_indexes = []
     with torch.no_grad():
         # go through each batch
         for i, data in enumerate(test_set):
@@ -125,7 +131,7 @@ def testing_loop(model, test_set, dataset_name, device):
                 raise NotImplementedError
 
             if dataset_name == 'COCO':
-                inputs, processed_joints, mask, image_id, image_size, bbox = data
+                inputs, processed_joints, mask, image_id, image_size, bbox, initial_index = data
                 image_ids.extend(image_id)
                 
             else:
@@ -139,28 +145,34 @@ def testing_loop(model, test_set, dataset_name, device):
 
             outputs = model(inputs)
 
-            # outputs_lst.append(outputs)
-            # gt_joints.append(processed_joints)
-            # masks.append(mask)
-        
             # merging all the batches.
             outputs_lst = torch.cat((outputs_lst, outputs))
             gt_joints = torch.cat((gt_joints, processed_joints))
             masks = torch.cat((masks, mask))
             image_sizes = torch.cat((image_sizes, image_size))
             bboxes = torch.cat((bboxes, bbox))
+            initial_indexes.append(initial_index)
         
-        return outputs_lst, image_ids, gt_joints, masks, image_sizes, bboxes
+        return outputs_lst, image_ids, gt_joints, masks, image_sizes, bboxes, initial_indexes
 
 def main(config):
     if config['dataset_name'] != 'COCO':
         print("Error the dataset selected is not COCO")
         exit()
-    
+
+    # choosing checkpoint 
     data_dir = config['data_path']
     batch_size = config['batch_size']
     checkpoint_dir = config['checkpoint_directory']
     checkpoint_name = config['checkpoint_name']
+    test_checkpoint = None
+    if test_checkpoint is None:
+        lst = sorted(list(os.listdir(os.path.join(config['checkpoint_directory'], config['checkpoint_name']))))
+        test_checkpoint = lst[0]
+    
+    print('Chosen checkpoint is', test_checkpoint)
+    model_path = os.path.join(
+        checkpoint_dir, checkpoint_name, test_checkpoint)
 
     # configuration
     pin_memory = True  # if only 1 GPU
@@ -175,27 +187,12 @@ def main(config):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # choosing the right model:
-    if config['model_type'] == 'heatmap':
-        model = HeatMapVideoMambaPose(config)
-
-    elif config['model_type'] == 'HMR_decoder':
-        model = HMRVideoMambaPose(config)
+    model = load_model(config, filepath=model_path)
     
-    elif config['model_type'] == 'MLP_only_decoder':
-        model = MLPVideoMambaPose(config)
-    
-    elif config['model_type'] == 'HMR_decoder_coco_pretrain':
-        model = HMRVideoMambaPoseCOCO(config)
-
-    else:
-        print('Your selected model does not exist! (Yet)')
-        return
-
     model = model.to(device)  # to unique GPU
     print('Model loaded successfully as follows: ', model)
 
-    test_outputs, image_ids, test_labels, masks, image_sizes, bboxes = testing_loop(model, test_loader, config['dataset_name'], device)
+    test_outputs, image_ids, test_labels, masks, image_sizes, bboxes, initial_indexes = testing_loop(model, test_loader, config['dataset_name'], device)
 
     # now transform the inputs into COCO objects
     # need to denormalize the values, and keep the image ids
@@ -208,6 +205,7 @@ def main(config):
         _, new_joint = inverse_process_joint_data(bboxes[i][0].cpu().detach().clone().numpy(), test_outputs[i][0].cpu().detach().clone().numpy(), list(image_sizes[i].cpu().detach().clone()), min_norm=config['min_norm'])
         test_outputs[i] = new_joint
 
+    print(test_outputs)
     # mask the results that are incorrect
     test_outputs, test_labels = coco_mask_fn(test_outputs, test_labels, masks)
 
@@ -215,8 +213,8 @@ def main(config):
 
     # technically useless
     # cocoGt = tensor_to_coco(test_labels, image_ids)
-
-    result = evaluate_coco(cocoDt, eval_COCOLoader(config, train='test', real_job=True))
+    annotations_path = os.path.join(config['data_path'], 'annotations', f'person_keypoints_val2017.json')
+    result = evaluate_coco(cocoDt, annotations_path)
 
     print(f'mAP is {result}')
 

@@ -15,8 +15,14 @@ import argparse
 from import_config import open_config
 
 from data_format.CocoVideoLoader import COCOVideoLoader
+from data_format.AffineTransform import denormalize_fn, bounding_box, inference_yolo_bounding_box, preprocess_video_data#, inverse_process_joints_data, inverse_process_joint_data, preprocess_video_data
+from models.heatmap.HeatVideoMamba import HeatMapVideoMambaPose
+from models.HMR_decoder.HMRMambaPose import HMRVideoMambaPose
+from models.MLP_only_decoder.MLPMambaPose import MLPVideoMambaPose
+from models.HMR_decoder_coco_pretrain.HMRMambaPose import HMRVideoMambaPoseCOCO
 
-def load_model(config , filepath, parallel=False):
+
+def load_model(config, filepath, parallel=False):
     # Create the model
     # choosing the right model:
     if config['model_type'] == 'heatmap':
@@ -29,10 +35,11 @@ def load_model(config , filepath, parallel=False):
         model = MLPVideoMambaPose(config)
 
     elif config['model_type'] == 'HMR_decoder_coco_pretrain':
-            model = mHMRVideoMambaPoseCOCO(config).to(rank)
+        model = HMRVideoMambaPoseCOCO(config)
 
     else:
         print('Your selected model does not exist! (Yet)')
+        exit()
         return
 
     # load the dictionary from checkpoint, and load the weights into the model.
@@ -257,11 +264,6 @@ def main(config):
 
 
 if __name__ == '__main__':
-    from data_format.AffineTransform import denormalize_fn, bounding_box, inference_yolo_bounding_box, preprocess_video_data#, inverse_process_joints_data, inverse_process_joint_data, preprocess_video_data
-    from models.heatmap.HeatVideoMamba import HeatMapVideoMambaPose
-    from models.HMR_decoder.HMRMambaPose import HMRVideoMambaPose
-    from models.MLP_only_decoder.MLPMambaPose import MLPVideoMambaPose
-
     # argparse to get the file path of the config file
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='heatmap/heatmap_beluga.yaml',
