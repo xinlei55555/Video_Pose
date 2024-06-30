@@ -1,8 +1,8 @@
 '''
 Using COCOeval to evaluate the pretrained model with Mamba.
 '''
-from xtcocotools.cocoeval import COCOeval
-from xtcocotools.coco import COCO
+from pycocotools.cocoeval import COCOeval
+from pycocotools.coco import COCO
 
 import torch 
 from torch.utils.data import Dataset, DataLoader, DistributedSampler
@@ -14,7 +14,7 @@ import os
 from data_format.eval_Cocoloader import eval_COCOVideoLoader
 from data_format.coco_dataset.CocoImageLoader import eval_COCOLoader
 from import_config import open_config
-from data_format.AffineTransform import denormalize_fn
+from data_format.AffineTransform import denormalize_fn, inverse_process_joint_data
 
 from models.heatmap.HeatVideoMamba import HeatMapVideoMambaPose
 from models.HMR_decoder.HMRMambaPose import HMRVideoMambaPose
@@ -76,16 +76,24 @@ def tensor_to_coco(tensor, image_ids, category_id=1, score=1.0):
 
     return results
 
-def evaluate_coco(gt_annotations, dt_annotations, data):
+def evaluate_coco(dt_annotations, data):
     '''Given a ground truth annotations list and a predicted annotations list, return the mAP'''
     # Create COCO objects
     coco = data.coco
+    
+    # coco = COCO()
+    # print(dir(coco))
+    # print(coco)
+    # # exit()
 
-    gt_res = coco.loadRes(gt_annotations) #! TODO Okay, I think the coco Ground truth, I should not reload one, that means I should probably denormalize completely the values I get mbased on image size....
+    # TODO oh wait, loadRes works for annotations for keypoints too ig?
     pk_res = coco.loadRes(dt_annotations)
 
+    # OMG, I would like to adjust my gt annotations though...., because I am not reformmated to the values of the image sizes in the initial image.
+    # gt_res = coco.loadRes(gt_annotations) #! TODO Okay, I think the coco Ground truth, I should not reload one, that means I should probably denormalize completely the values I get mbased on image size....
+
     # define a default keypoint object, using the default sigmas, yet no areas
-    eval_coco = COCOeval(cocoGt=gt_res, cocoDt=pk_res, iouType='keypoints', use_area=False, sigmas=None)
+    eval_coco = COCOeval(cocoGt=coco, cocoDt=pk_res, iouType='keypoints') #, use_area=False, sigmas=None)
 
     
     # Run the evaluation
@@ -108,6 +116,8 @@ def testing_loop(model, test_set, dataset_name, device):
     gt_joints = torch.tensor([]).to(device)
     masks = torch.tensor([]).to(device)
     image_ids = []
+    image_sizes = torch.tensor([]).to(device)
+    bboxes = torch.tensor([]).to(device)
     with torch.no_grad():
         # go through each batch
         for i, data in enumerate(test_set):
@@ -115,7 +125,7 @@ def testing_loop(model, test_set, dataset_name, device):
                 raise NotImplementedError
 
             if dataset_name == 'COCO':
-                inputs, processed_joints, mask, image_id = data
+                inputs, processed_joints, mask, image_id, image_size, bbox = data
                 image_ids.extend(image_id)
                 
             else:
@@ -124,7 +134,9 @@ def testing_loop(model, test_set, dataset_name, device):
             inputs = inputs.to(device)
             processed_joints = processed_joints.to(device)
             mask = mask.to(device)
-            
+            image_size = image_size.to(device)
+            bbox = bbox.to(device)
+
             outputs = model(inputs)
 
             # outputs_lst.append(outputs)
@@ -135,8 +147,10 @@ def testing_loop(model, test_set, dataset_name, device):
             outputs_lst = torch.cat((outputs_lst, outputs))
             gt_joints = torch.cat((gt_joints, processed_joints))
             masks = torch.cat((masks, mask))
+            image_sizes = torch.cat((image_sizes, image_size))
+            bboxes = torch.cat((bboxes, bbox))
         
-        return outputs_lst, image_ids, gt_joints, masks
+        return outputs_lst, image_ids, gt_joints, masks, image_sizes, bboxes
 
 def main(config):
     if config['dataset_name'] != 'COCO':
@@ -148,7 +162,7 @@ def main(config):
     checkpoint_dir = config['checkpoint_directory']
     checkpoint_name = config['checkpoint_name']
 
- # configuration
+    # configuration
     pin_memory = True  # if only 1 GPU
     num_cpu_cores = os.cpu_count()
     num_workers = config['num_cpus'] * (num_cpu_cores) - 1
@@ -181,7 +195,7 @@ def main(config):
     model = model.to(device)  # to unique GPU
     print('Model loaded successfully as follows: ', model)
 
-    test_outputs, image_ids, test_labels, masks = testing_loop(model, test_loader, config['dataset_name'], device)
+    test_outputs, image_ids, test_labels, masks, image_sizes, bboxes = testing_loop(model, test_loader, config['dataset_name'], device)
 
     # now transform the inputs into COCO objects
     # need to denormalize the values, and keep the image ids
@@ -189,13 +203,20 @@ def main(config):
     test_outputs = denormalize_fn(test_outputs, min_norm=config['min_norm'], h=tensor_height, w=tensor_width)
     test_labels = denormalize_fn(test_labels, min_norm=config['min_norm'], h=tensor_height, w=tensor_width)
 
+    # denormalize the affine transforms to adjust to the image sizes to the original sizes
+    for i in range(test_outputs.shape[0]):
+        _, new_joint = inverse_process_joint_data(bboxes[i][0].cpu().detach().clone().numpy(), test_outputs[i][0].cpu().detach().clone().numpy(), list(image_sizes[i].cpu().detach().clone()), min_norm=config['min_norm'])
+        test_outputs[i] = new_joint
+
     # mask the results that are incorrect
     test_outputs, test_labels = coco_mask_fn(test_outputs, test_labels, masks)
 
     cocoDt = tensor_to_coco(test_outputs, image_ids)
-    cocoGt = tensor_to_coco(test_labels, image_ids)
 
-    result = evaluate_coco(cocoGt, cocoDt, eval_COCOLoader(config, train='test', real_job=True))
+    # technically useless
+    # cocoGt = tensor_to_coco(test_labels, image_ids)
+
+    result = evaluate_coco(cocoDt, eval_COCOLoader(config, train='test', real_job=True))
 
     print(f'mAP is {result}')
 

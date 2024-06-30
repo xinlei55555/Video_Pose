@@ -1,6 +1,7 @@
 from data_format.coco_dataset.CocoImageLoader import COCOLoader, eval_COCOLoader
 from data_format.CocoVideoLoader import COCOVideoLoader
 from einops import rearrange
+import torch
 
 from data_format.AffineTransform import preprocess_video_data
 class eval_COCOVideoLoader(COCOVideoLoader):
@@ -8,6 +9,10 @@ class eval_COCOVideoLoader(COCOVideoLoader):
     '''
     def __getitem__(self, index):
         image, joint, bbox, mask, image_id = self.image_data[index]
+
+        # width, height
+        original_size = torch.tensor([image.shape[2], image.shape[1]])  # Assuming the original size is (height, width)
+
         # making them all batch size = 1
         # image = image.unsqueeze(0)
         image = rearrange(image, '(d c) h w -> d h w c', d=1)
@@ -22,4 +27,4 @@ class eval_COCOVideoLoader(COCOVideoLoader):
         if self.config['full_debug'] and not torch.all((joint >= -1) & (joint <= 1)):
             print("Error, some of the normalized values are not between -1 and 1")
 
-        return image, joint, mask, image_id
+        return image, joint, mask, image_id, original_size, bbox
