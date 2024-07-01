@@ -333,7 +333,7 @@ def main(rank, world_size, config, config_file_name):
 
         # learning rate scheduler
         # I will leave the rest of the parameters as the default
-        scheduler = RLR(optimizer=optimizer, factor=config['scheduler_factor']) # half the learning rate each time
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, factor=0.5) # half the learning rate each time
 
         # Training loop
         print(f"The model has started training, with the following characteristics:")
