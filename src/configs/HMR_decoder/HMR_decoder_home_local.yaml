@@ -35,6 +35,7 @@ output_dimensions: 2 # x, y
 dropout: False
 dropout_percent: 0.25 # if dropout is True
 num_hidden_layers: 3 # to replace the deconvolutions and the convolutions.
+activation_fct: 'gelu'
 
 # weight decay and optimizer
 optimizer: 'adamW'
@@ -49,6 +50,12 @@ batch_size: 16 # just to see how scalable it is
 learning_rate: 0.01
 #scheduler:
 scheduler: True
+scheduler_fct: cosine
+# for cosine
+T_0: 10
+T_mult: 2 # doubling the spacing bewteen each reset
+eta_min: 0.0000005 #the minimum learning rate
+# for RRLP
 scheduler_factor: 0.1
 start_epoch: 1
 

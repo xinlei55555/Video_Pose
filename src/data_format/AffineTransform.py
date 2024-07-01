@@ -232,8 +232,8 @@ def inverse_process_joint_data(bbox, joint, output_res, min_norm, frame=False):
     center, scale = box2cs(image_size, bbox)
     rotation = 0
     
-    # denormalize values!
-    joint = denormalize_fn(joint, min_norm, output_res[1], output_res[0])
+    # # denormalize values!
+    # joint = denormalize_fn(joint, min_norm, output_res[1], output_res[0])
 
     # Calculate the correct inverse transformation matrix
     trans = get_warp_matrix(rotation, center * 2.0,
@@ -467,3 +467,4 @@ if __name__ == '__main__':
     plt.tight_layout()
     plt.savefig('inverse_comparison.png')
     plt.close()
+

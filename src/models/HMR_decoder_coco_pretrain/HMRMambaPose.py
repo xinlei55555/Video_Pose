@@ -22,9 +22,9 @@ from timm.models.vision_transformer import _load_weights
 import math
 
 from mamba_ssm.modules.mamba_simple import Mamba
-import models.HMR_decoder.HMRVideoMamba as hvm
-import models.HMR_decoder.HMRJointRegressor as hjr
-import models.HMR_decoder.HMR_decoder as hmrd
+import models.HMR_decoder_coco_pretrain.HMRVideoMamba as hvm
+import models.HMR_decoder_coco_pretrain.HMRJointRegressor as hjr
+import models.HMR_decoder_coco_pretrain.HMR_decoder as hmrd
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
