@@ -10,7 +10,7 @@ show_predictions: False
 
 # architecture mamba
 embed_channels: 192 # number of channels after the tiny mamba layers.
-num_mamba_blocks: 12
+num_mamba_blocks: 16
 
 # losses: {'mse': 0.0, 'velocity': 10.0, 'angle': 1.0, 'mpjpe': 5.0}
 # when pretraining on coco, i won't have all my weird losses lolll
@@ -22,7 +22,7 @@ dim: 1024 # just like HMR2.0 set it to be
 # transformer decoder: # values taken from HMR2.0
 depth: 6
 heads: 8
-mlp_dim: 512 
+mlp_dim: 1024 
 dim_head: 64
 dropout_transformer: 0.0
 emb_dropout: 0.0
@@ -57,7 +57,7 @@ scheduler: True
 scheduler_fct: cosine
 # for cosine
 T_0: 10
-T_mult: 2 # doubling the spacing bewteen each reset
+T_mult: 1 # doubling the spacing bewteen each reset
 eta_min: 0.0000005 #the minimum learning rate
 # for RRLP
 scheduler_factor: 0.1
@@ -75,7 +75,7 @@ checkpoint_directory: checkpoints/HMR_decoder_coco_pretrain
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
 # checkpoint_name: 'new_velocity_10_angle_1_mse_5_train_input_transformer'
 # checkpoint_name: 'testing_false_dataset'
-checkpoint_name: 'masked_gelu_mse_image_video_cosine_anneal_clip-gradient_0.1_weight_decay_0.1_lr_scheduler_12_mamba_5e-5_Coco_pretrain_full_cedars'
+checkpoint_name: '16_mamba_1024_hidden_masked_gelu_mse_image_video_cosine_anneal_clip-gradient_0.1_weight_decay_0.1_lr_scheduler_12_mamba_5e-5_Coco_pretrain_full_cedars'
 
 # Follow up on the training of another previous run?
 follow_up: False
