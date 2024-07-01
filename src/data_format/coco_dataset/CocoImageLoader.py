@@ -48,6 +48,11 @@ class COCOLoader(Dataset):
         self.new_image_ids = []
         # removing all the bboxes that are torch.tensor([0., 0., 0., 0.])
         for index in range(len(self.image_ids)):
+            if not real_job:
+                # I will only work with 2 videos
+                if len(self.new_image_ids) >= 32:
+                    print(f'The image_ids chosen are the {self.new_image_ids}')
+                    break
             image_id = self.image_ids[index]
             image_info = self.coco.loadImgs(image_id)[0]
             annotation_ids = self.coco.getAnnIds(

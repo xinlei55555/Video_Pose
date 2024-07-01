@@ -41,8 +41,6 @@ activation_fct: 'gelu'
 optimizer: 'adamW'
 weight_decay: 0.1 # value found in VideoMamba
 
-max_grad_norm: 1.0 # use something negative to not have it
-
 # training
 epoch_number: 300
 # batch_size: 16
