@@ -23,17 +23,13 @@ from models.HMR_decoder_coco_pretrain.HMRMambaPose import HMRVideoMambaPoseCOCO
 
 from inference.visualize_coco import visualize, load_model
 
-def visualize_frame(joint, frame, width, height, bbox):
-    visualize(joint, frame, 'coco_pretrain_result', width, height, bbox, False)
+def visualize_frame(joint, frame, width, height, bbox, file_name='coco_pretrain_result'):
+    visualize(joint, frame, file_name, width, height, bbox, False)
 
 def coco_mask_fn(joints, labels, masks):
     '''Mask the necessary COCO style joint values'''
     # Get the shape of the predicted tensor
-    B, T, J, X = joints.shape
-
-    joints = rearrange(joints, 'b t j x-> (b t) j x')
-    labels = rearrange(labels, 'b t j x-> (b t) j x')
-    # masks = rearrange(masks, 'b t j x-> (b t) j x')
+    B, J, X = joints.shape
 
     # Create a boolean mask where mask == 0
     zero_mask = (masks != 0)
@@ -80,6 +76,10 @@ def tensor_to_coco(tensor, image_ids, category_id=1, score=1.0):
         results.append(result)
 
     return results
+
+def reflect_keypoints(joints, width, max_val):
+    mid_point = max_val - width // 2
+    
 
 def evaluate_coco(dt_annotations, data):
     '''Given a ground truth annotations list and a predicted annotations list, return the mAP'''
@@ -202,12 +202,16 @@ def main(config):
 
     # denormalize the affine transforms to adjust to the image sizes to the original sizes
     for i in range(test_outputs.shape[0]):
-        # _, new_joint = inverse_process_joint_data(bboxes[i][0].cpu().detach().clone().numpy(), test_outputs[i][0].cpu().detach().clone().numpy(), image_sizes[i].cpu().detach().clone().tolist(), min_norm=config['min_norm'])
-        # TODO I'll try with the initial images, unsure
-        _, new_joint = inverse_process_joint_data(bboxes[i][0].cpu().detach().clone().numpy(), test_outputs[i][0].cpu().detach().clone().numpy(), (192, 256), min_norm=config['min_norm'])
+        _, new_joint = inverse_process_joint_data(bboxes[i][0].cpu().detach().clone().numpy(), test_outputs[i][0].cpu().detach().clone().numpy(), (tensor_width, tensor_height), min_norm=config['min_norm'])
         test_outputs[i] = new_joint
 
+        # I'll try with the initial images, unsure
+        _, new_joint_label = inverse_process_joint_data(bboxes[i][0].cpu().detach().clone().numpy(), test_labels[i][0].cpu().detach().clone().numpy(), (tensor_width, tensor_height), min_norm=config['min_norm'])
+        test_labels[i] = new_joint_label
+
     # mask the results that are incorrect
+    test_outputs = rearrange(test_outputs, 'b t j x-> (b t) j x')
+    test_labels = rearrange(test_labels, 'b t j x-> (b t) j x')
     test_outputs, test_labels = coco_mask_fn(test_outputs, test_labels, masks)
 
     cocoDt = tensor_to_coco(test_outputs, image_ids)
@@ -216,16 +220,19 @@ def main(config):
     # cocoGt = tensor_to_coco(test_labels, image_ids)
     annotations_path = os.path.join(config['data_path'], 'annotations', f'person_keypoints_val2017.json')
     result = evaluate_coco(cocoDt, annotations_path)
-
     print(f'mAP is {result}')
 
-    # viualizing on of the answers ig:    
-    print(test_outputs.shape)
-    print(test_set.image_data[initial_indexes[0].item()][0].shape)
-    print(bboxes.shape)
-
     # added a dimension, because its only 1 frame.
-    visualize_frame(test_outputs[0].unsqueeze(0).cpu(), test_set.image_data[initial_indexes[0].item()][0].unsqueeze(0).cpu(), image_sizes[0][0].item(), image_sizes[0][1].item(), bboxes[0].cpu())
+    image_index = 343
+    visualize_frame(test_outputs[image_index].unsqueeze(0).cpu(), test_set.image_data[initial_indexes[image_index].item()][0].unsqueeze(0).cpu(), image_sizes[image_index][0].item(), image_sizes[image_index][1].item(), bboxes[image_index].cpu())
+    visualize_frame(test_labels[image_index].unsqueeze(0).cpu(), test_set.image_data[initial_indexes[image_index].item()][0].unsqueeze(0).cpu(), image_sizes[image_index][0].item(), image_sizes[image_index][1].item(), bboxes[image_index].cpu(), file_name='ground_truth')
+
+    # just checking for the guitar
+    cocoGt = tensor_to_coco(test_labels, image_ids)
+
+    result = evaluate_coco(cocoGt, annotations_path)
+    print(f'mAP is {result} (Should be 1.00)')
+
 
 if __name__ == '__main__':
     # argparse to get the file path of the config file
