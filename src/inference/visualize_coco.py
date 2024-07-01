@@ -15,8 +15,14 @@ import argparse
 from import_config import open_config
 
 from data_format.CocoVideoLoader import COCOVideoLoader
+from data_format.AffineTransform import denormalize_fn, bounding_box, inference_yolo_bounding_box, preprocess_video_data#, inverse_process_joints_data, inverse_process_joint_data, preprocess_video_data
+from models.heatmap.HeatVideoMamba import HeatMapVideoMambaPose
+from models.HMR_decoder.HMRMambaPose import HMRVideoMambaPose
+from models.MLP_only_decoder.MLPMambaPose import MLPVideoMambaPose
+from models.HMR_decoder_coco_pretrain.HMRMambaPose import HMRVideoMambaPoseCOCO
 
-def load_model(config , filepath, parallel=False):
+
+def load_model(config, filepath, parallel=False):
     # Create the model
     # choosing the right model:
     if config['model_type'] == 'heatmap':
@@ -29,10 +35,11 @@ def load_model(config , filepath, parallel=False):
         model = MLPVideoMambaPose(config)
 
     elif config['model_type'] == 'HMR_decoder_coco_pretrain':
-            model = mHMRVideoMambaPoseCOCO(config).to(rank)
+        model = HMRVideoMambaPoseCOCO(config)
 
     else:
         print('Your selected model does not exist! (Yet)')
+        exit()
         return
 
     # load the dictionary from checkpoint, and load the weights into the model.
@@ -79,7 +86,11 @@ def get_data_points(dataset, index):
 
 
 def visualize(joints, frames, file_name, width, height, bboxes=None, use_last_frame_only=False):
-    '''1: neck
+    '''
+    joints: torch.Tensor (N, J, X)
+    frames: torch.Tensor (N, ...unsure)
+    
+    1: neck
     2: belly
     3: face
     4: right shoulder
@@ -98,6 +109,7 @@ def visualize(joints, frames, file_name, width, height, bboxes=None, use_last_fr
     num_frames, num_joints = frames.shape[0], joints.shape[0]
     if num_frames != num_joints:
         print("Error, the number of joints does not equal the number of frames")
+        print(f'num_frames: {num_frames}, num_joints: {num_joints}')
         raise NotImplementedError
     
     else:
@@ -150,6 +162,8 @@ def visualize(joints, frames, file_name, width, height, bboxes=None, use_last_fr
         
         # Draw bounding boxes if provided
         if bboxes is not None:
+            if isinstance(bboxes, torch.Tensor):
+                bboxes = bboxes.tolist()
             bbox = bboxes[frame_idx]
             x_min, y_min, w, h = bbox[0], bbox[1], bbox[2], bbox[3]
             plt.gca().add_patch(plt.Rectangle((x_min, y_min), w, h, fill=False, edgecolor='green', linewidth=2))
@@ -257,11 +271,6 @@ def main(config):
 
 
 if __name__ == '__main__':
-    from data_format.AffineTransform import denormalize_fn, bounding_box, inference_yolo_bounding_box, preprocess_video_data#, inverse_process_joints_data, inverse_process_joint_data, preprocess_video_data
-    from models.heatmap.HeatVideoMamba import HeatMapVideoMambaPose
-    from models.HMR_decoder.HMRMambaPose import HMRVideoMambaPose
-    from models.MLP_only_decoder.MLPMambaPose import MLPVideoMambaPose
-
     # argparse to get the file path of the config file
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='heatmap/heatmap_beluga.yaml',
