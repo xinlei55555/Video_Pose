@@ -20,4 +20,4 @@ cd /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose
 module restore mamba_modules125
 source mamba_env2/bin/activate
 cd /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/src
-python train.py --config 'HMR_decoder_coco_pretrain/HMR_decoder_cedar.yaml'                   # Command to run your Python script
+python train.py --config 'HMR_decoder_coco_pretrain/HMR_decoder_cedar_new_dim.yaml'                   # Command to run your Python script
