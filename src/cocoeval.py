@@ -8,6 +8,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader, DistributedSampler
 from einops import rearrange
 import argparse
+import sys
 import os
 import numpy as np
 
@@ -116,10 +117,10 @@ def reflect_keypoints(bboxes):
     Returns:
         torch.Tensor: Tensor with the midpoint of each bounding box.
     """
-    mid_points = (bboxes[:, :2] + bboxes[:, 2:]) / 2
+    mid_points = bboxes[:, 0] + bboxes[:, 2] // 2
     return mid_points
 
-def evaluate_coco(dt_annotations, data, sigmas=None, single_input=None):
+def evaluate_coco(dt_annotations, data, sigmas=None, single_input=None, imgIds=None):
     """
     Evaluate the model using COCO evaluation metrics.
     
@@ -128,6 +129,7 @@ def evaluate_coco(dt_annotations, data, sigmas=None, single_input=None):
         data (str): Path to the ground truth annotations file.
         sigmas (np.array, optional): Keypoint sigmas for evaluation.
         single_input (int, optional): Specific image ID to evaluate.
+        imgIds (list[torch.Tensor], optional): list of image ids
     
     Returns:
         float: Mean Average Precision (mAP) for keypoints.
@@ -145,7 +147,15 @@ def evaluate_coco(dt_annotations, data, sigmas=None, single_input=None):
     if single_input is not None:
         eval_coco.params.imgIds = single_input
         print('The image id chosen is: ', single_input)
-    
+
+    if single_input is None and imgIds is not None:
+        print(f'The initial length of imgIds is {len(eval_coco.params.imgIds)} and the new length is {len(imgIds)}')
+        eval_coco.params.imgIds = imgIds
+        print('here are all the coco parameters: ', dir(eval_coco.params))
+
+    # [https://github.com/facebookresearch/maskrcnn-benchmark/issues/524]
+    # eval_coco.params.iouThrs = np.array([0.25, 0.3 , 0.5 , 0.55, 0.6 , 0.65, 0.7 , 0.75, 0.8 , 0.85, 0.9 , 0.95])
+
     # Run the evaluation
     eval_coco.evaluate()
     eval_coco.accumulate()
@@ -229,6 +239,12 @@ def main(config):
         print("Error the dataset selected is not COCO")
         exit()
 
+    # these are the sigmas used by VITPOSE!
+    pose_sigmas=np.array([
+        0.026, 0.025, 0.025, 0.035, 0.035, 0.079, 0.079, 0.072, 0.072, 0.062,
+        0.062, 0.107, 0.107, 0.087, 0.087, 0.089, 0.089
+    ])
+
     # Choosing checkpoint 
     data_dir = config['data_path']
     batch_size = config['batch_size']
@@ -291,7 +307,7 @@ def main(config):
     # technically useless
     # cocoGt = tensor_to_coco(test_labels, image_ids)
     annotations_path = os.path.join(config['data_path'], 'annotations', f'person_keypoints_val2017.json')
-    result = evaluate_coco(cocoDt, annotations_path)
+    result = evaluate_coco(cocoDt, annotations_path, sigmas=pose_sigmas, imgIds=image_ids)#$np.array([1.0 for _ in range(17)]))
     print(f'mAP is {result}')
 
     # added a dimension, because its only 1 frame.
@@ -304,7 +320,9 @@ def main(config):
     cocoDt = tensor_to_coco(test_labels, image_ids, image_sizes.cpu().numpy(), bboxes.cpu().numpy())
 
     print("THis is not supposed to have changed lol", image_ids[image_index].item())
-    result = evaluate_coco(cocoDt, annotations_path)
+
+    # TODO reput the initial sigmas
+    result = evaluate_coco(cocoDt, annotations_path, sigmas=pose_sigmas, imgIds=image_ids)
     print(f'mAP is {result} (Should be 1.00)')
 
     # !TEST now, checking for the initial cocoGt, and seeing how much that has as mAP
@@ -317,7 +335,7 @@ def main(config):
 
     # okay, some othe rbug to investigate... but my image_ids seems to change...
 
-    results = evaluate_coco(cocoDt_2, annotations_path, sigmas=np.array([1.0 for _ in range(17)]), single_input=image_ids[image_index].item())
+    results = evaluate_coco(cocoDt_2, annotations_path, sigmas=pose_sigmas, single_input=image_ids[image_index].item())
     print(f'mAP is {results} (Should be 1.00)')
 
 
