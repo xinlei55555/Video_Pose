@@ -1,14 +1,15 @@
 '''
 Using COCOeval to evaluate the pretrained model with Mamba.
 '''
-from pycocotools.cocoeval import COCOeval
-from pycocotools.coco import COCO
+from xtcocotools.cocoeval import COCOeval
+from xtcocotools.coco import COCO
 
 import torch 
 from torch.utils.data import Dataset, DataLoader, DistributedSampler
 from einops import rearrange
 import argparse
 import os
+import numpy as np
 
 # first import the dataset from data_format
 from data_format.eval_Cocoloader import eval_COCOVideoLoader
@@ -22,6 +23,8 @@ from models.MLP_only_decoder.MLPMambaPose import MLPVideoMambaPose
 from models.HMR_decoder_coco_pretrain.HMRMambaPose import HMRVideoMambaPoseCOCO
 
 from inference.visualize_coco import visualize, load_model
+
+import random
 
 def visualize_frame(joint, frame, width, height, bbox, file_name='coco_pretrain_result'):
     visualize(joint, frame, file_name, width, height, bbox, False)
@@ -71,7 +74,6 @@ def tensor_to_coco(tensor, image_ids, category_id=1, score=1.0):
             "category_id": category_id,
             "keypoints": keypoints_with_visibility,
             "score": score
-            # 'id': i # unsure about this TODO
         }
         results.append(result)
 
@@ -81,25 +83,27 @@ def reflect_keypoints(joints, width, max_val):
     mid_point = max_val - width // 2
     
 
-def evaluate_coco(dt_annotations, data):
+def evaluate_coco(dt_annotations, data, sigmas=None, single_input=None):#, coco):
     '''Given a ground truth annotations list and a predicted annotations list, return the mAP'''
     # Create COCO objects
     coco = COCO(data)
     
-    # coco = COCO()
-    # print(dir(coco))
-    # print(coco)
-    # # exit()
-
-    # TODO oh wait, loadRes works for annotations for keypoints too ig?
+    # load the keypoints
     pk_res = coco.loadRes(dt_annotations)
 
     # OMG, I would like to adjust my gt annotations though...., because I am not reformmated to the values of the image sizes in the initial image.
     # gt_res = coco.loadRes(gt_annotations) #! TODO Okay, I think the coco Ground truth, I should not reload one, that means I should probably denormalize completely the values I get mbased on image size....
 
     # define a default keypoint object, using the default sigmas, yet no areas
-    eval_coco = COCOeval(cocoGt=coco, cocoDt=pk_res, iouType='keypoints') #, use_area=False, sigmas=None)
+    eval_coco = COCOeval(cocoGt=coco, cocoDt=pk_res, iouType='keypoints', use_area=False, sigmas=sigmas)
 
+    # this runs the mAP on a single input
+    if single_input is not None:
+        # copying something from [https://www.kaggle.com/code/yichaohan/how-does-the-coco-eval-work]
+        # imgIds = coco.getImgIds()
+        # exit()
+        eval_coco.params.imgIds = single_input # WAIIT this changed something, okay, so its for each image.... Let me find an image that is perfect, and see what happens
+        print('The image id chosen is: ', single_input)
     
     # Run the evaluation
     eval_coco.evaluate()
@@ -132,6 +136,13 @@ def testing_loop(model, test_set, dataset_name, device):
 
             if dataset_name == 'COCO':
                 inputs, processed_joints, mask, image_id, image_size, bbox, initial_index = data
+                
+                # # this means none of the joints in the image are being used, so mAP would be falsely 0.
+                for m in mask:
+                    if (m == 0).all():
+                        print("WEIRD")
+                        continue
+
                 image_ids.extend(image_id)
                 
             else:
@@ -223,15 +234,30 @@ def main(config):
     print(f'mAP is {result}')
 
     # added a dimension, because its only 1 frame.
-    image_index = 343
+    image_index = 2
+    print("here is the initial index: ", image_ids[image_index].item())
     visualize_frame(test_outputs[image_index].unsqueeze(0).cpu(), test_set.image_data[initial_indexes[image_index].item()][0].unsqueeze(0).cpu(), image_sizes[image_index][0].item(), image_sizes[image_index][1].item(), bboxes[image_index].cpu())
     visualize_frame(test_labels[image_index].unsqueeze(0).cpu(), test_set.image_data[initial_indexes[image_index].item()][0].unsqueeze(0).cpu(), image_sizes[image_index][0].item(), image_sizes[image_index][1].item(), bboxes[image_index].cpu(), file_name='ground_truth')
 
-    # just checking for the guitar
-    cocoGt = tensor_to_coco(test_labels, image_ids)
+    # just checking for the labels after normalization and denormalization process
+    cocoDt = tensor_to_coco(test_labels, image_ids)
 
-    result = evaluate_coco(cocoGt, annotations_path)
+    print("THis is not supposed to have changed lol", image_ids[image_index].item())
+    result = evaluate_coco(cocoDt, annotations_path)
     print(f'mAP is {result} (Should be 1.00)')
+
+    # !TEST now, checking for the initial cocoGt, and seeing how much that has as mAP
+    unprocessed_results = []    
+    for idx in range(len(initial_indexes)):
+        # print(image_index)
+        unprocessed_results.append(test_set.image_data[initial_indexes[idx].item()][1].cpu())
+    unprocessed_results = torch.stack(unprocessed_results)
+    cocoDt_2 = tensor_to_coco(unprocessed_results, image_ids)
+
+    # okay, some othe rbug to investigate... but my image_ids seems to change...
+
+    results = evaluate_coco(cocoDt_2, annotations_path, sigmas=np.array([1.0 for _ in range(17)]), single_input=image_ids[image_index].item())
+    print(f'mAP is {results} (Should be 1.00)')
 
 
 if __name__ == '__main__':

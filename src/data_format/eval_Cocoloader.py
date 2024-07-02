@@ -26,5 +26,13 @@ class eval_COCOVideoLoader(COCOVideoLoader):
         # check if all the joint values are between -1 and 1
         if self.config['full_debug'] and not torch.all((joint >= -1) & (joint <= 1)):
             print("Error, some of the normalized values are not between -1 and 1")
+        
+        #! TODO fix later: quick patching for evaluation
+        # # this means none of the joints in the image are being used, so mAP would be falsely 0.
+        if (mask == 0).all():
+            print("this value does not have any relevant input to be used")
+            # try a random one lol
+            import random
+            return self[random.randint(0, len(self))]
 
         return processed_image, joint, mask, image_id, original_size, bbox, index
