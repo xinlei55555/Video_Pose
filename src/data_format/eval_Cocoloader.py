@@ -30,9 +30,9 @@ class eval_COCOVideoLoader(COCOVideoLoader):
         #! TODO fix later: quick patching for evaluation
         # # this means none of the joints in the image are being used, so mAP would be falsely 0.
         if (mask == 0).all():
-            print("this value does not have any relevant input to be used")
+            print("This value does not have any relevant input to be used")
             # try a random one lol
             import random
-            return self[random.randint(0, len(self))]
+            return self[random.randint(0, len(self) - 1)]
 
         return processed_image, joint, mask, image_id, original_size, bbox, index
