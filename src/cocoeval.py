@@ -132,7 +132,7 @@ def evaluate_coco(dt_annotations, data, stats_name=None, sigmas=None, single_inp
         imgIds (list[torch.Tensor], optional): list of image ids
     
     Returns:
-        torch.Tensor: Average Precision (mAP) for keypoints.
+        list: Average Precision (mAP) for keypoints.
     """
     # Create COCO objects
     coco = COCO(data)
@@ -148,6 +148,8 @@ def evaluate_coco(dt_annotations, data, stats_name=None, sigmas=None, single_inp
         eval_coco.params.imgIds = single_input
         print('The image id chosen is: ', single_input)
 
+        # here are the ground truth values for 
+
     if single_input is None and imgIds is not None:
         print(f'The initial length of imgIds is {len(eval_coco.params.imgIds)} and the new length is {len(imgIds)}')
         eval_coco.params.imgIds = imgIds
@@ -155,7 +157,9 @@ def evaluate_coco(dt_annotations, data, stats_name=None, sigmas=None, single_inp
 
     # [https://github.com/facebookresearch/maskrcnn-benchmark/issues/524]
     # eval_coco.params.iouThrs = np.array([0.25, 0.3 , 0.5 , 0.55, 0.6 , 0.65, 0.7 , 0.75, 0.8 , 0.85, 0.9 , 0.95])
-
+     
+    eval_coco.params.useSegm = None
+    
     # Run the evaluation
     eval_coco.evaluate()
     eval_coco.accumulate()
@@ -163,11 +167,9 @@ def evaluate_coco(dt_annotations, data, stats_name=None, sigmas=None, single_inp
     
     # Get the mAP for keypoints
     average_precisions = eval_coco.stats # COCOeval.stats[0] is the mAP for keypoints
+    # print(average_precisions)
 
-    # I will see that whose are
-    print("Here are the final results of the eval_coco", eval_coco.stats)
-    
-    return torch.tensor(average_precisions)
+    return average_precisions
 
 def calculate_mAP(cocoDt, stats_name, image_ids, annotations_path, pose_sigmas):
     '''
@@ -183,15 +185,38 @@ def calculate_mAP(cocoDt, stats_name, image_ids, annotations_path, pose_sigmas):
     Returns:
         A float representing the mean average precision of the given dataset.
     '''
-    # checking the length of the sigmas
-    if len(sigmas) != len(stats_names):
+    # checking the length of the number of stats_names
+    if 10 != len(stats_name):
         print("The length of the sigmas is not equal to the number of average precisions calculated")
         exit()
 
     results = torch.zeros(len(stats_name))
+    num_elements = torch.zeros(len(stats_name))
+    num_exceptions = 0
     for i in range(len(image_ids)):
-        results = results + evaluate_coco(cocoDt, annotations_path, stats_name=stats_name, sigmas=pose_sigmas, single_input=image_ids[i].item())#$np.array([1.0 for _ in range(17)]))
-    average_precisions = results / len(image_ids)
+        evaluation = evaluate_coco(cocoDt, annotations_path, stats_name=stats_name, sigmas=pose_sigmas, single_input=image_ids[i].item())#$np.array([1.0 for _ in range(17)]))
+        # results = torch.tensor([el if el.item() >= 0. for el in evaluation]) 
+        # for el in range(evaluation.shape[0]):
+        #     if evaluation[el].item() > 0:
+        #         results[el] += evaluation[el].item()
+        #         num_elements[el] += 1
+         # Only consider positive evaluation values
+        if len(evaluation) != 10:
+            print(f"Unexpected evaluation shape: {len(evaluation)}")
+            print(evaluation)
+            print(image_ids[i])
+            num_exceptions += 1
+            print("index num", i)
+            exit()
+        evaluation = torch.tensor(evaluation)
+        positive_mask = evaluation > 0
+        
+        # Accumulate results for positive values
+        results += evaluation * positive_mask
+        num_elements += positive_mask.float()
+    print(f"The number of exceptions was {num_exceptions}")
+
+    average_precisions = results / num_elements
     mean_average_precisions = torch.sum(average_precisions) / (average_precisions.shape[0])
     return mean_average_precisions
 
@@ -332,37 +357,42 @@ def main(config):
 
     # example image index to use in future inference
     image_index = 2
+    # i want the image_id = 468965
+    image_index = image_ids.index(torch.tensor(468965))
     print("here is the initial index: ", image_ids[image_index].item())
 
     cocoDt = tensor_to_coco(test_outputs, image_ids, image_sizes.cpu().numpy(), bboxes.cpu().numpy())
 
     annotations_path = os.path.join(config['data_path'], 'annotations', f'person_keypoints_val2017.json')
     
-    # calculate the summation
-    result = calculate_mAP(cocoDt=cocoDt, stats_name=stats_name, image_ids=image_ids, annotations_path=annotations_path, pose_sigmas=pose_sigmas)
-    print(f'mAP is {result}')
+    # # calculate the summation
+    # result = calculate_mAP(cocoDt=cocoDt, stats_name=stats_name, image_ids=image_ids, annotations_path=annotations_path, pose_sigmas=pose_sigmas)
+    # print(f'mAP is {result}')
 
     # added a dimension, because its only 1 frame.
     visualize_frame(test_outputs[image_index].unsqueeze(0).cpu(), test_set.image_data[initial_indexes[image_index].item()][0].unsqueeze(0).cpu(), image_sizes[image_index][0].item(), image_sizes[image_index][1].item(), bboxes[image_index].unsqueeze(0).cpu())
     visualize_frame(test_labels[image_index].unsqueeze(0).cpu(), test_set.image_data[initial_indexes[image_index].item()][0].unsqueeze(0).cpu(), image_sizes[image_index][0].item(), image_sizes[image_index][1].item(), bboxes[image_index].unsqueeze(0).cpu(), file_name='ground_truth')
 
     # just checking for the labels after normalization and denormalization process
-    cocoGt = tensor_to_coco(test_labels, image_ids, image_sizes.cpu().numpy(), bboxes.cpu().numpy())
+    # cocoGt = tensor_to_coco(test_labels, image_ids, image_sizes.cpu().numpy(), bboxes.cpu().numpy())
 
-    result = calculate_mAP(cocoDt=cocoGt, stats_name=stats_name, image_ids=image_ids, annotations_path=annotations_path, pose_sigmas=pose_sigmas)
-    print(f'mAP is {result} (Should be 1.00)')
+    # result = calculate_mAP(cocoDt=cocoGt, stats_name=stats_name, image_ids=image_ids, annotations_path=annotations_path, pose_sigmas=pose_sigmas)
+    # print(f'mAP is {result} (Should be 1.00)')
 
     # # !TEST now, checking for the initial cocoGt, and seeing how much that has as mAP
-    # unprocessed_results = []    
-    # for idx in range(len(initial_indexes)):
-    #     # print(image_index)
-    #     unprocessed_results.append(test_set.image_data[initial_indexes[idx].item()][1].cpu())
-    # unprocessed_results = torch.stack(unprocessed_results)
-    # cocoDt_2 = tensor_to_coco(unprocessed_results, image_ids, image_sizes.cpu().numpy(), bboxes.cpu().numpy())
+    unprocessed_results = []    
+    for idx in range(len(initial_indexes)):
+        # print(image_index)
+        unprocessed_results.append(test_set.image_data[initial_indexes[idx].item()][1].cpu())
+    unprocessed_results = torch.stack(unprocessed_results)
+    cocoDt_2 = tensor_to_coco(unprocessed_results, image_ids, image_sizes.cpu().numpy(), bboxes.cpu().numpy())
 
     # # okay, some othe rbug to investigate... but my image_ids seems to change...
-    # results = evaluate_coco(cocoDt_2, annotations_path, stats_name=stats_name, sigmas=pose_sigmas, single_input=image_ids[image_index].item())
-    # print(f'mAP is {results} (Should be 1.00)')
+    results = evaluate_coco(cocoDt_2, annotations_path, stats_name=stats_name, sigmas=pose_sigmas, single_input=468965)
+    print(f'mAP is {results} (Should be 1.00)')
+
+    print(masks[image_index], 'is the mask values')
+
 
 
 if __name__ == '__main__':
