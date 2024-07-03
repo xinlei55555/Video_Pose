@@ -88,7 +88,7 @@ def get_data_points(dataset, index):
 def visualize(joints, frames, file_name, width, height, bboxes=None, use_last_frame_only=False):
     '''
     joints: torch.Tensor (N, J, X)
-    frames: torch.Tensor (N, ...unsure)
+    frames: torch.Tensor (N, ...unsure) -> (N, C, H, W)?
     
     1: neck
     2: belly

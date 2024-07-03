@@ -120,13 +120,14 @@ def reflect_keypoints(bboxes):
     mid_points = bboxes[:, 0] + bboxes[:, 2] // 2
     return mid_points
 
-def evaluate_coco(dt_annotations, data, stats_name=None, sigmas=None, single_input=None, imgIds=None):
+def evaluate_coco(dt_annotations, data, coco_data_object=None, stats_name=None, sigmas=None, single_input=None, imgIds=None):
     """
     Evaluate the model using COCO evaluation metrics.
     
     Args:
         dt_annotations (str): Annotation values, as defined in the tensor_to_coco function.
         data (str): Path to the ground truth annotations file.
+        coco_data_object (COCOVideoLoader(torch.utils.data.Dataset)): Dataset object for the coco
         sigmas (np.array, optional): Keypoint sigmas for evaluation.
         single_input (int, optional): Specific image ID to evaluate.
         imgIds (list[torch.Tensor], optional): list of image ids
@@ -135,7 +136,11 @@ def evaluate_coco(dt_annotations, data, stats_name=None, sigmas=None, single_inp
         list: Average Precision (mAP) for keypoints.
     """
     # Create COCO objects
-    coco = COCO(data)
+    if coco_data_object is not None:
+        coco = coco_data_object.image_data.coco
+        # coco.anno_file = data
+    else:
+        coco = COCO(data)
     
     # Load the keypoints
     pk_res = coco.loadRes(dt_annotations)
@@ -149,6 +154,12 @@ def evaluate_coco(dt_annotations, data, stats_name=None, sigmas=None, single_inp
         print('The image id chosen is: ', single_input)
 
         # here are the ground truth values for 
+        image, keypoints, bbox, mask, image_size = coco_data_object.image_data.get_item_with_id(single_input)
+
+        # visualize the actual expected input.
+        print(f"Currently visualizing the annotation file's input value for the given image id: {single_input}")
+        visualize_frame(keypoints.unsqueeze(0), image.unsqueeze(0), image_size[0].item(), image_size[1].item(), bbox.unsqueeze(0))
+ 
 
     if single_input is None and imgIds is not None:
         print(f'The initial length of imgIds is {len(eval_coco.params.imgIds)} and the new length is {len(imgIds)}')
@@ -388,7 +399,7 @@ def main(config):
     cocoDt_2 = tensor_to_coco(unprocessed_results, image_ids, image_sizes.cpu().numpy(), bboxes.cpu().numpy())
 
     # # okay, some othe rbug to investigate... but my image_ids seems to change...
-    results = evaluate_coco(cocoDt_2, annotations_path, stats_name=stats_name, sigmas=pose_sigmas, single_input=468965)
+    results = evaluate_coco(cocoDt_2, annotations_path, coco_data_object=test_set, stats_name=stats_name, sigmas=pose_sigmas, single_input=468965)
     print(f'mAP is {results} (Should be 1.00)')
 
     print(masks[image_index], 'is the mask values')
