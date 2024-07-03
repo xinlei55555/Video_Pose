@@ -120,7 +120,7 @@ def reflect_keypoints(bboxes):
     mid_points = bboxes[:, 0] + bboxes[:, 2] // 2
     return mid_points
 
-def evaluate_coco(dt_annotations, data, sigmas=None, single_input=None, imgIds=None):
+def evaluate_coco(dt_annotations, data, stats_name=None, sigmas=None, single_input=None, imgIds=None):
     """
     Evaluate the model using COCO evaluation metrics.
     
@@ -132,7 +132,7 @@ def evaluate_coco(dt_annotations, data, sigmas=None, single_input=None, imgIds=N
         imgIds (list[torch.Tensor], optional): list of image ids
     
     Returns:
-        float: Mean Average Precision (mAP) for keypoints.
+        torch.Tensor: Average Precision (mAP) for keypoints.
     """
     # Create COCO objects
     coco = COCO(data)
@@ -167,7 +167,33 @@ def evaluate_coco(dt_annotations, data, sigmas=None, single_input=None, imgIds=N
     # I will see that whose are
     print("Here are the final results of the eval_coco", eval_coco.stats)
     
-    return average_precisions
+    return torch.tensor(average_precisions)
+
+def calculate_mAP(cocoDt, stats_name, image_ids, annotations_path, pose_sigmas):
+    '''
+    Calculates the mean Average Precision for the whole dataset
+
+    Args:
+        cocoDt (COCO): A coco object which contains the loaded prediction results
+        stats_name (list): Names of the different metrics that are employed
+        image_ids (list[torch.Tensor]): list of image ids
+        annotations_path: path to the annotation file
+        pose_sigmas (np.array): sigmas for joint value
+
+    Returns:
+        A float representing the mean average precision of the given dataset.
+    '''
+    # checking the length of the sigmas
+    if len(sigmas) != len(stats_names):
+        print("The length of the sigmas is not equal to the number of average precisions calculated")
+        exit()
+
+    results = torch.zeros(len(stats_name))
+    for i in range(len(image_ids)):
+        results = results + evaluate_coco(cocoDt, annotations_path, stats_name=stats_name, sigmas=pose_sigmas, single_input=image_ids[i].item())#$np.array([1.0 for _ in range(17)]))
+    average_precisions = results / len(image_ids)
+    mean_average_precisions = torch.sum(average_precisions) / (average_precisions.shape[0])
+    return mean_average_precisions
 
 def testing_loop(model, test_set, dataset_name, device):
     """
@@ -243,15 +269,16 @@ def main(config):
         exit()
 
     # these are the sigmas used by VITPOSE!
-    pose_sigmas=np.array(config['sigmas'])
-    stats_name = config['stats_name']
-    
+    pose_sigmas = np.array(config['sigmas'])
+    stats_name = list(config['stats_name'])
+
     # Choosing checkpoint 
     data_dir = config['data_path']
     batch_size = config['batch_size']
     checkpoint_dir = config['checkpoint_directory']
     checkpoint_name = config['checkpoint_name']
     test_checkpoint = None
+
     if test_checkpoint is None:
         lst = sorted(list(os.listdir(os.path.join(config['checkpoint_directory'], config['checkpoint_name']))))
         test_checkpoint = lst[0]
@@ -309,10 +336,10 @@ def main(config):
 
     cocoDt = tensor_to_coco(test_outputs, image_ids, image_sizes.cpu().numpy(), bboxes.cpu().numpy())
 
-    # technically useless
-    # cocoGt = tensor_to_coco(test_labels, image_ids)
     annotations_path = os.path.join(config['data_path'], 'annotations', f'person_keypoints_val2017.json')
-    result = evaluate_coco(cocoDt, annotations_path, sigmas=pose_sigmas, imgIds=image_ids, single_input=image_ids[image_index].item())#$np.array([1.0 for _ in range(17)]))
+    
+    # calculate the summation
+    result = calculate_mAP(cocoDt=cocoDt, stats_name=stats_name, image_ids=image_ids, annotations_path=annotations_path, pose_sigmas=pose_sigmas)
     print(f'mAP is {result}')
 
     # added a dimension, because its only 1 frame.
@@ -320,26 +347,22 @@ def main(config):
     visualize_frame(test_labels[image_index].unsqueeze(0).cpu(), test_set.image_data[initial_indexes[image_index].item()][0].unsqueeze(0).cpu(), image_sizes[image_index][0].item(), image_sizes[image_index][1].item(), bboxes[image_index].unsqueeze(0).cpu(), file_name='ground_truth')
 
     # just checking for the labels after normalization and denormalization process
-    cocoDt = tensor_to_coco(test_labels, image_ids, image_sizes.cpu().numpy(), bboxes.cpu().numpy())
+    cocoGt = tensor_to_coco(test_labels, image_ids, image_sizes.cpu().numpy(), bboxes.cpu().numpy())
 
-    print("THis is not supposed to have changed lol", image_ids[image_index].item())
-
-    # TODO reput the initial sigmas
-    result = evaluate_coco(cocoDt, annotations_path, sigmas=pose_sigmas, imgIds=image_ids)
+    result = calculate_mAP(cocoDt=cocoGt, stats_name=stats_name, image_ids=image_ids, annotations_path=annotations_path, pose_sigmas=pose_sigmas)
     print(f'mAP is {result} (Should be 1.00)')
 
-    # !TEST now, checking for the initial cocoGt, and seeing how much that has as mAP
-    unprocessed_results = []    
-    for idx in range(len(initial_indexes)):
-        # print(image_index)
-        unprocessed_results.append(test_set.image_data[initial_indexes[idx].item()][1].cpu())
-    unprocessed_results = torch.stack(unprocessed_results)
-    cocoDt_2 = tensor_to_coco(unprocessed_results, image_ids, image_sizes.cpu().numpy(), bboxes.cpu().numpy())
+    # # !TEST now, checking for the initial cocoGt, and seeing how much that has as mAP
+    # unprocessed_results = []    
+    # for idx in range(len(initial_indexes)):
+    #     # print(image_index)
+    #     unprocessed_results.append(test_set.image_data[initial_indexes[idx].item()][1].cpu())
+    # unprocessed_results = torch.stack(unprocessed_results)
+    # cocoDt_2 = tensor_to_coco(unprocessed_results, image_ids, image_sizes.cpu().numpy(), bboxes.cpu().numpy())
 
-    # okay, some othe rbug to investigate... but my image_ids seems to change...
-
-    results = evaluate_coco(cocoDt_2, annotations_path, sigmas=pose_sigmas, single_input=image_ids[image_index].item())
-    print(f'mAP is {results} (Should be 1.00)')
+    # # okay, some othe rbug to investigate... but my image_ids seems to change...
+    # results = evaluate_coco(cocoDt_2, annotations_path, stats_name=stats_name, sigmas=pose_sigmas, single_input=image_ids[image_index].item())
+    # print(f'mAP is {results} (Should be 1.00)')
 
 
 if __name__ == '__main__':
