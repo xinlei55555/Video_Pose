@@ -33,7 +33,7 @@ joint_regressor: True
   # joint regressor
 hidden_channels: 512
 output_dimensions: 2 # x, y
-dropout: True
+dropout: False
 dropout_percent: 0.25 # if dropout is True
 num_hidden_layers: 3 # to replace the deconvolutions and the convolutions.
 activation_fct: 'gelu'
@@ -87,8 +87,8 @@ previous_checkpoint: ''
 
 # data
 dataset_name: 'COCO'
-data_path: '/home/xinleilin/Projects/Video_Pose/data/COCO-Pose/coco'
-annotations_path: /home/xinleilin/Projects/Video_Pose/data/COCO-Pose/coco/annotations
+data_path: /home/xinlei/Projects/KITE_MambaPose/Video_Pose/data/COCO-Pose/coco
+annotations_path: /home/xinlei/Projects/KITE_MambaPose/Video_Pose/data/COCO-Pose/coco/annotations
 # use avi videos
 use_videos: True
 preprocess_videos: True
@@ -108,7 +108,8 @@ jump: 16 # number of frames to skip between the different datapoints
 joint_number: 17 # COCO has 17 joints.
 
 # if False, uses subset of the data to run
-real_job: True
+real_job: False
+use_val_only: False
 
 # normalization
 normalized: True
