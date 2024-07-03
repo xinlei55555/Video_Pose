@@ -162,9 +162,12 @@ def evaluate_coco(dt_annotations, data, sigmas=None, single_input=None, imgIds=N
     eval_coco.summarize()
     
     # Get the mAP for keypoints
-    mAP = eval_coco.stats[0]  # COCOeval.stats[0] is the mAP for keypoints
+    average_precisions = eval_coco.stats # COCOeval.stats[0] is the mAP for keypoints
+
+    # I will see that whose are
+    print("Here are the final results of the eval_coco", eval_coco.stats)
     
-    return mAP
+    return average_precisions
 
 def testing_loop(model, test_set, dataset_name, device):
     """
@@ -240,11 +243,9 @@ def main(config):
         exit()
 
     # these are the sigmas used by VITPOSE!
-    pose_sigmas=np.array([
-        0.026, 0.025, 0.025, 0.035, 0.035, 0.079, 0.079, 0.072, 0.072, 0.062,
-        0.062, 0.107, 0.107, 0.087, 0.087, 0.089, 0.089
-    ])
-
+    pose_sigmas=np.array(config['sigmas'])
+    stats_name = config['stats_name']
+    
     # Choosing checkpoint 
     data_dir = config['data_path']
     batch_size = config['batch_size']
@@ -302,17 +303,19 @@ def main(config):
     test_labels = rearrange(test_labels, 'b t j x-> (b t) j x')
     test_outputs, test_labels = coco_mask_fn(test_outputs, test_labels, masks)
 
+    # example image index to use in future inference
+    image_index = 2
+    print("here is the initial index: ", image_ids[image_index].item())
+
     cocoDt = tensor_to_coco(test_outputs, image_ids, image_sizes.cpu().numpy(), bboxes.cpu().numpy())
 
     # technically useless
     # cocoGt = tensor_to_coco(test_labels, image_ids)
     annotations_path = os.path.join(config['data_path'], 'annotations', f'person_keypoints_val2017.json')
-    result = evaluate_coco(cocoDt, annotations_path, sigmas=pose_sigmas, imgIds=image_ids)#$np.array([1.0 for _ in range(17)]))
+    result = evaluate_coco(cocoDt, annotations_path, sigmas=pose_sigmas, imgIds=image_ids, single_input=image_ids[image_index].item())#$np.array([1.0 for _ in range(17)]))
     print(f'mAP is {result}')
 
     # added a dimension, because its only 1 frame.
-    image_index = 2
-    print("here is the initial index: ", image_ids[image_index].item())
     visualize_frame(test_outputs[image_index].unsqueeze(0).cpu(), test_set.image_data[initial_indexes[image_index].item()][0].unsqueeze(0).cpu(), image_sizes[image_index][0].item(), image_sizes[image_index][1].item(), bboxes[image_index].unsqueeze(0).cpu())
     visualize_frame(test_labels[image_index].unsqueeze(0).cpu(), test_set.image_data[initial_indexes[image_index].item()][0].unsqueeze(0).cpu(), image_sizes[image_index][0].item(), image_sizes[image_index][1].item(), bboxes[image_index].unsqueeze(0).cpu(), file_name='ground_truth')
 
