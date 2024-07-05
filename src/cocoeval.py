@@ -1,8 +1,8 @@
 '''
 Using COCOeval to evaluate the pretrained model with Mamba.
 '''
-from xtcocotools.cocoeval import COCOeval
-from xtcocotools.coco import COCO
+from pycocotools.cocoeval import COCOeval
+from pycocotools.coco import COCO
 
 import torch 
 from torch.utils.data import Dataset, DataLoader, DistributedSampler
@@ -10,6 +10,7 @@ from einops import rearrange
 import argparse
 import sys
 import os
+import json
 import numpy as np
 
 # first import the dataset from data_format
@@ -68,7 +69,7 @@ def coco_mask_fn(joints, labels, masks):
     return joints, labels
 
 # note: from the val dataset, seems that category_id is always 1
-def tensor_to_coco(tensor, image_ids, image_sizes, bboxes, category_id=1, score=1.0):
+def tensor_to_coco(tensor, image_ids, image_sizes, bboxes, masks, category_id=1, score=1.0):
     """
     Transform a tensor of shape (B, 17, 2) into a COCO result object.
     
@@ -89,9 +90,10 @@ def tensor_to_coco(tensor, image_ids, image_sizes, bboxes, category_id=1, score=
     for i in range(B):
         keypoints = tensor[i].reshape(-1).tolist()
         keypoints_with_visibility = []
+
+        # Not all keypoints are visible!!!
         for j in range(0, len(keypoints), 2):
-            keypoints_with_visibility.extend([keypoints[j], keypoints[j+1], 2])  # Assuming all keypoints are visible
-        
+            keypoints_with_visibility.extend([keypoints[j], keypoints[j+1], masks[i][j//2].item()])
         # Add the scale and center
         center, scale = box2cs(image_sizes[i], bboxes[i])
 
@@ -100,8 +102,10 @@ def tensor_to_coco(tensor, image_ids, image_sizes, bboxes, category_id=1, score=
             "category_id": category_id,
             "keypoints": keypoints_with_visibility,
             "score": score,
-            "center": center.tolist(),
-            "scale": scale.tolist()
+            # "center": center.tolist(),
+            # "scale": scale.tolist(),
+            # "bbox": bboxes[i].tolist(), # the bbox when nothing is declared just becomes the maximum and the minimum in the image
+            # 'bbox': False,
         }
         results.append(result)
 
@@ -137,16 +141,27 @@ def evaluate_coco(dt_annotations, data, coco_data_object=None, stats_name=None, 
     """
     # Create COCO objects
     if coco_data_object is not None:
+        print("using the default coco ground truth values from the image loader")
         coco = coco_data_object.image_data.coco
-        # coco.anno_file = data
     else:
+        print("using custom loaded coco data object results as the ground truth")
         coco = COCO(data)
+
+    # #TODO !!! I think that might be what was missing...
+    # person_ann_ids = coco.getAnnIds(catIds=[1])
+    # person_anns = coco.loadAnns(ids=person_ann_ids)
+    # print(person_anns)
+
+    with open("outputs/results.txt", "w") as f:
+        f.write(json.dumps(dt_annotations))
+    
+    pk_res = coco.loadRes("outputs/results.txt")
     
     # Load the keypoints
-    pk_res = coco.loadRes(dt_annotations)
+    # pk_res = coco.loadRes(dt_annotations)
 
     # Define a default keypoint object, using the default sigmas, yet no areas
-    eval_coco = COCOeval(cocoGt=coco, cocoDt=pk_res, iouType='keypoints', use_area=False, sigmas=sigmas)
+    eval_coco = COCOeval(cocoGt=coco, cocoDt=pk_res, iouType='keypoints')#, use_area=False, sigmas=sigmas)
 
     # This runs the mAP on a single input
     if single_input is not None:
@@ -159,17 +174,23 @@ def evaluate_coco(dt_annotations, data, coco_data_object=None, stats_name=None, 
         # visualize the actual expected input.
         print(f"Currently visualizing the annotation file's input value for the given image id: {single_input}")
         visualize_frame(keypoints.unsqueeze(0), image.unsqueeze(0), image_size[0].item(), image_size[1].item(), bbox.unsqueeze(0))
- 
+
+        print(f'The current ground truth values for the datapoints are keypoints: {keypoints}, bbox: {bbox}, image_size: {image_size}')
 
     if single_input is None and imgIds is not None:
         print(f'The initial length of imgIds is {len(eval_coco.params.imgIds)} and the new length is {len(imgIds)}')
         eval_coco.params.imgIds = imgIds
         print('here are all the coco parameters: ', dir(eval_coco.params))
 
+    # print the results that are going to be used
+    print(pk_res, ' is the result of loading the annotations')
+
     # [https://github.com/facebookresearch/maskrcnn-benchmark/issues/524]
     # eval_coco.params.iouThrs = np.array([0.25, 0.3 , 0.5 , 0.55, 0.6 , 0.65, 0.7 , 0.75, 0.8 , 0.85, 0.9 , 0.95])
      
-    eval_coco.params.useSegm = None
+    # eval_coco.params.useSegm = None # replaced by ioutype
+    # eval_coco.params.useCats = 0
+    
     
     # Run the evaluation
     eval_coco.evaluate()
@@ -208,7 +229,7 @@ def calculate_mAP(cocoDt, stats_name, image_ids, annotations_path, pose_sigmas):
         evaluation = evaluate_coco(cocoDt, annotations_path, stats_name=stats_name, sigmas=pose_sigmas, single_input=image_ids[i].item())#$np.array([1.0 for _ in range(17)]))
         # results = torch.tensor([el if el.item() >= 0. for el in evaluation]) 
         # for el in range(evaluation.shape[0]):
-        #     if evaluation[el].item() > 0:
+        #     if evaluation[el].item() > 0
         #         results[el] += evaluation[el].item()
         #         num_elements[el] += 1
          # Only consider positive evaluation values
@@ -367,12 +388,12 @@ def main(config):
     test_outputs, test_labels = coco_mask_fn(test_outputs, test_labels, masks)
 
     # example image index to use in future inference
-    image_index = 2
+    image_index = 9
     # i want the image_id = 468965
     image_index = image_ids.index(torch.tensor(468965))
     print("here is the initial index: ", image_ids[image_index].item())
 
-    cocoDt = tensor_to_coco(test_outputs, image_ids, image_sizes.cpu().numpy(), bboxes.cpu().numpy())
+    # cocoDt = tensor_to_coco(test_outputs, image_ids, image_sizes.cpu().numpy(), bboxes.cpu().numpy(), masks[image_index].cpu())
 
     annotations_path = os.path.join(config['data_path'], 'annotations', f'person_keypoints_val2017.json')
     
@@ -382,28 +403,34 @@ def main(config):
 
     # added a dimension, because its only 1 frame.
     visualize_frame(test_outputs[image_index].unsqueeze(0).cpu(), test_set.image_data[initial_indexes[image_index].item()][0].unsqueeze(0).cpu(), image_sizes[image_index][0].item(), image_sizes[image_index][1].item(), bboxes[image_index].unsqueeze(0).cpu())
-    visualize_frame(test_labels[image_index].unsqueeze(0).cpu(), test_set.image_data[initial_indexes[image_index].item()][0].unsqueeze(0).cpu(), image_sizes[image_index][0].item(), image_sizes[image_index][1].item(), bboxes[image_index].unsqueeze(0).cpu(), file_name='ground_truth')
 
     # just checking for the labels after normalization and denormalization process
     # cocoGt = tensor_to_coco(test_labels, image_ids, image_sizes.cpu().numpy(), bboxes.cpu().numpy())
 
     # result = calculate_mAP(cocoDt=cocoGt, stats_name=stats_name, image_ids=image_ids, annotations_path=annotations_path, pose_sigmas=pose_sigmas)
     # print(f'mAP is {result} (Should be 1.00)')
+    visualize_frame(test_labels[image_index].unsqueeze(0).cpu(), test_set.image_data[initial_indexes[image_index].item()][0].unsqueeze(0).cpu(), image_sizes[image_index][0].item(), image_sizes[image_index][1].item(), bboxes[image_index].unsqueeze(0).cpu(), file_name='ground_truth')
 
     # # !TEST now, checking for the initial cocoGt, and seeing how much that has as mAP
     unprocessed_results = []    
+    unprocessed_masks = []
     for idx in range(len(initial_indexes)):
-        # print(image_index)
-        unprocessed_results.append(test_set.image_data[initial_indexes[idx].item()][1].cpu())
+        # comes from the output of the imageLoader for COCO
+        data = test_set.image_data[initial_indexes[idx].item()]
+        unprocessed_results.append(data[1].cpu())
+        unprocessed_masks.append(data[3].cpu())
     unprocessed_results = torch.stack(unprocessed_results)
-    cocoDt_2 = tensor_to_coco(unprocessed_results, image_ids, image_sizes.cpu().numpy(), bboxes.cpu().numpy())
+    unprocessed_masks = torch.stack(unprocessed_masks)
+
+
+    cocoDt_2 = tensor_to_coco(unprocessed_results, image_ids, image_sizes.cpu().numpy(), bboxes.cpu().numpy(), unprocessed_masks.cpu().numpy())
 
     # # okay, some othe rbug to investigate... but my image_ids seems to change...
-    results = evaluate_coco(cocoDt_2, annotations_path, coco_data_object=test_set, stats_name=stats_name, sigmas=pose_sigmas, single_input=468965)
+    results = evaluate_coco(cocoDt_2, annotations_path, coco_data_object=test_set, stats_name=stats_name, sigmas=pose_sigmas, single_input=image_ids[image_index].item())
     print(f'mAP is {results} (Should be 1.00)')
 
     print(masks[image_index], 'is the mask values')
-
+    print(cocoDt_2[image_index], 'is the predicted values?')
 
 
 if __name__ == '__main__':

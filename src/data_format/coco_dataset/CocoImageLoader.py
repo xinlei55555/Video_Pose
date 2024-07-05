@@ -5,7 +5,7 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from torchvision.transforms import functional as F
 from PIL import Image
-from xtcocotools.coco import COCO
+from pycocotools.coco import COCO
 import matplotlib.pyplot as plt
 
 

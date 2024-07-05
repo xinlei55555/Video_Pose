@@ -243,8 +243,6 @@ def main(config):
                     else:
                         print('No gradient computed for this parameter')
                         print('---')
-
-     
           
         batch_outputs = inference(model, image.to(device))
         batch_outputs = batch_outputs.to('cpu')
