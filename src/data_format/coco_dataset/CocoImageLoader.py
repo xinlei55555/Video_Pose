@@ -1,3 +1,6 @@
+'''
+Updated dataloader with using the id of the images, instead of the image id
+'''
 import torch
 import os
 import numpy as np
@@ -9,10 +12,20 @@ from pycocotools.coco import COCO
 import matplotlib.pyplot as plt
 
 
-
 class COCOLoader(Dataset):
     '''
     A dataset loader for COCO dataset.
+
+    Attributes:
+        self.config (dict): configuration file
+        self.train (string): type of dataset, train, val or test
+        self.transform (func): given image transformation to apply
+        self.real_job (bool): whether to take a subset of the data
+        self.data_dir (string): data directory
+        self.anno_file (string): full path of the annotation file
+        self.image_dir (string): data of the images)
+        self.coco (COCO): coco API object
+        self.data (list[dict]): contains information on each datapoint
     '''
 
     def __init__(self, config, train='train', real_job=False):
@@ -23,7 +36,7 @@ class COCOLoader(Dataset):
 
         # Set up paths
         self.data_dir = config['data_path']
-        
+
         if train == 'train' or train == 'val':
             dir_name = f'images/{self.train}2017'
             self.anno_file = os.path.join(
@@ -39,80 +52,49 @@ class COCOLoader(Dataset):
             dir_name = 'images/val2017'
             self.train = 'val'
 
-        self.image_dir = os.path.join(self.data_dir, dir_name)     
+        self.image_dir = os.path.join(self.data_dir, dir_name)
 
         # Initialize COCO API
         self.coco = COCO(self.anno_file)
-        self.image_ids = self.coco.getImgIds()
 
-        self.new_image_ids = []
-        # removing all the bboxes that are torch.tensor([0., 0., 0., 0.])
-        for index in range(len(self.image_ids)):
-            if not real_job:
-                # I will only work with 2 videos
-                if len(self.new_image_ids) >= 32:
-                    print(f'The image_ids chosen are the {self.new_image_ids}')
-                    break
-            image_id = self.image_ids[index]
-            image_info = self.coco.loadImgs(image_id)[0]
-            annotation_ids = self.coco.getAnnIds(
-                imgIds=image_info['id'], iscrowd=False)
-            annotations = self.coco.loadAnns(annotation_ids)
+        # default value for pose detection
+        PERSON_CAT_ID = 1
+        person_ann_ids = cocoGt.getAnnIds(catIds=[PERSON_CAT_ID])
+        person_anns = cocoGt.loadAnns(ids=person_ann_ids)
 
-            bbox = np.zeros((4,))  # Bounding box: [x, y, width, height]
-            for annotation in annotations:
-                if 'keypoints' in annotation:
-                    # keypoints = np.array(annotation['keypoints']).reshape((17, 3))
-                    bbox = np.array(annotation['bbox'])  # Extract bounding box
-                    break  # Assume one person per image for simplicity
-
-            # skip when bbox is empty
-            if bbox[0] == bbox[1] == bbox[2] == bbox[3] == 0.:
-                continue
-            else:
-                self.new_image_ids.append(index)
-
+        self.data = []
+        # loop through each person id.
+        for person_ann in person_anns:
+            if person_ann['num_keypoints'] > 0:
+                self.data.append({
+                    "image_id": person_ann['image_id'],
+                    "category_id": PERSON_CAT_ID,
+                    'keypoints': person_ann['keypoints'],
+                    'id': person_ann['id'],
+                    'bbox': person_ann['bbox']
+                })
         print(
-            f"The length of the: {self.train} dataset is : {len(self.new_image_ids)} divided by the number of frames")
+            f"The length of the: {self.train} dataset is : {len(self.data_indexes)} divided by the number of frames")
 
     def __len__(self):
-        return len(self.new_image_ids)
+        return len(self.data)
 
     def __getitem__(self, index):
         # Get actual image ID
-        image_id = self.image_ids[self.new_image_ids[index]]
+        person_id = self.data[index]['id']
+        image_id = self.data[index]['image_id']
 
-        # Load image
+        # Load image, from the given image_id
         image_info = self.coco.loadImgs(image_id)[0]
         image_path = os.path.join(self.image_dir, image_info['file_name'])
         image = Image.open(image_path).convert('RGB')
 
-        # Load keypoints and bounding boxes
-        annotation_ids = self.coco.getAnnIds(
-            imgIds=image_info['id'], iscrowd=False)
-        annotations = self.coco.loadAnns(annotation_ids)
-
-        # Initialize keypoints and bounding box array
-        # COCO keypoints: 17 keypoints with (x, y, v)
-        keypoints = np.zeros((17, 3))
-        bbox = np.zeros((4,))  # Bounding box: [x, y, width, height]
-
-        for annotation in annotations:
-            if 'keypoints' in annotation:
-                keypoints = np.array(annotation['keypoints']).reshape((17, 3))
-                bbox = np.array(annotation['bbox'])  # Extract bounding box
-                break  # Assume one person per image for simplicity
-
-        # # Skip annotations with zero bounding box
-        # while np.array_equal(bbox, np.zeros((4,))):
-        #     index = (index + 1) % len(self.image_ids)
-        #     continue
-
         # Apply transformations to become tensor
         image = self.transform(image)
 
-        keypoints = torch.tensor(keypoints, dtype=torch.float32)
-        bbox = torch.tensor(bbox, dtype=torch.float32)
+        keypoints = torch.tensor(
+            self.data[index]['keypoints'], dtype=torch.float32)
+        bbox = torch.tensor(self.data[index]['bbox'], dtype=torch.float32)
 
         # Since I only want the x, y values, and not the visibility flag
         # Remove the last column and store it in mask
@@ -125,68 +107,29 @@ class COCOLoader(Dataset):
 class eval_COCOLoader(COCOLoader):
     '''A dataformat class for the evaluation dataset of the image COCO Loader'''
 
-    def get_item_with_id(self, image_id):
+    def get_item_with_id(self, id):
         '''
-        Returns the information for the given image_id
+        Returns the information for the given person_id
 
         Args:
-            image_id (int)
+            person_id (int): represents the id of the person in the keypoint values
 
         Returns:
-            image, keypoints, bbox, mask, image_id 
+            image, keypoints, bbox, mask
         '''
-        # Load image
-        image_info = self.coco.loadImgs(image_id)[0]
-        image_path = os.path.join(self.image_dir, image_info['file_name'])
-        image = Image.open(image_path).convert('RGB')
+        # find the proper id in the data file
+        idx = -1
+        for el in range(len(self.data)):
+            if self.data[el]['id'] == person_id:
+                idx = el
+                break
+    
+        # if id was not found.
+        if idx == -1:
+            print("Error, the person id was not found in the dataset")
+            exit()
 
-        # Load keypoints and bounding boxes
-        annotation_ids = self.coco.getAnnIds(
-            imgIds=image_info['id'], iscrowd=False)
-        annotations = self.coco.loadAnns(annotation_ids)
-
-        # Initialize keypoints and bounding box array
-        # COCO keypoints: 17 keypoints with (x, y, v)
-        keypoints = np.zeros((17, 3))
-        bbox = np.zeros((4,))  # Bounding box: [x, y, width, height]
-
-        for annotation in annotations:
-            if 'keypoints' in annotation:
-                keypoints = np.array(annotation['keypoints']).reshape((17, 3))
-                bbox = np.array(annotation['bbox'])  # Extract bounding box
-                break  # Assume one person per image for simplicity
-
-        # # Skip annotations with zero bounding box
-        # while np.array_equal(bbox, np.zeros((4,))):
-        #     index = (index + 1) % len(self.image_ids)
-        #     continue
-
-        # Apply transformations to become tensor
-        image = self.transform(image)
-
-        original_size = torch.tensor([image.shape[2], image.shape[1]])  # Assuming the original size is (height, width)
-
-        keypoints = torch.tensor(keypoints, dtype=torch.float32)
-        bbox = torch.tensor(bbox, dtype=torch.float32)
-
-        # Since I only want the x, y values, and not the visibility flag
-        # Remove the last column and store it in mask
-        mask = keypoints[:, -1]
-        keypoints = keypoints[:, :-1]  # YES YOU WANT THE VISIBILITY TT
-
-        return image, keypoints, bbox, mask, original_size
-
-    def __getitem__(self, index):
-        # calling the __getitem__ from the parent class
-        # captures the value from the parent class
-        image, keypoints, bbox, mask = super().__getitem__(index)
-
-        # redefining the missing variables.
-        image_id = self.image_ids[self.new_image_ids[index]]
-
-        # then adds lines
-        return image, keypoints, bbox, mask, image_id
-
+        return self[el]
 
 def get_transforms():
     # note that there are a lot of imagesssss sizesssss

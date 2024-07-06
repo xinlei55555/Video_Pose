@@ -38,6 +38,9 @@ def main():
     # print(person_anns, 'are the person annotations')
     results = []
 
+    # test
+    all_ids = set()
+
     for person_ann in person_anns:
         if person_ann['num_keypoints'] > 0:
             results.append({
@@ -49,14 +52,18 @@ def main():
                 # 'bbox': person_ann['bbox']
 
             })
+            # just verifying the actual id to see if many values:
+            if person_ann['image_id'] in all_ids:
+                print("duplicate id !!!!!")
+            all_ids.add(person_ann['image_id'])
             # just verifying the values
             if person_ann['image_id'] == 468965:
                 print({
-                "image_id": person_ann['image_id'],
-                "category_id": PERSON_CAT_ID,
-                'keypoints': person_ann['keypoints'],
-                'score': 1.0,
-                'bbox': person_ann['bbox']
+                    "image_id": person_ann['image_id'],
+                    "category_id": PERSON_CAT_ID,
+                    'keypoints': person_ann['keypoints'],
+                    'score': 1.0,
+                    'bbox': person_ann['bbox']
                 })
                 print('here is the full person annotations', person_ann)
 
