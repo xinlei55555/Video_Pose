@@ -59,8 +59,8 @@ class COCOLoader(Dataset):
 
         # default value for pose detection
         PERSON_CAT_ID = 1
-        person_ann_ids = cocoGt.getAnnIds(catIds=[PERSON_CAT_ID])
-        person_anns = cocoGt.loadAnns(ids=person_ann_ids)
+        person_ann_ids = self.coco.getAnnIds(catIds=[PERSON_CAT_ID])
+        person_anns = self.coco.loadAnns(ids=person_ann_ids)
 
         self.data = []
         # loop through each person id.
@@ -74,7 +74,7 @@ class COCOLoader(Dataset):
                     'bbox': person_ann['bbox']
                 })
         print(
-            f"The length of the: {self.train} dataset is : {len(self.data_indexes)} divided by the number of frames")
+            f"The length of the: {self.train} dataset is : {len(self.data)} divided by the number of frames")
 
     def __len__(self):
         return len(self.data)
@@ -92,8 +92,10 @@ class COCOLoader(Dataset):
         # Apply transformations to become tensor
         image = self.transform(image)
 
+        # reshaping the tensor
         keypoints = torch.tensor(
-            self.data[index]['keypoints'], dtype=torch.float32)
+            self.data[index]['keypoints'], dtype=torch.float32).reshape((17, 3))
+
         bbox = torch.tensor(self.data[index]['bbox'], dtype=torch.float32)
 
         # Since I only want the x, y values, and not the visibility flag
@@ -106,8 +108,11 @@ class COCOLoader(Dataset):
 
 class eval_COCOLoader(COCOLoader):
     '''A dataformat class for the evaluation dataset of the image COCO Loader'''
+    def __getitem__(self, index):
+        image, keypoints, bbox, mask = super().__getitem__(index)
+        return image, keypoints, bbox, mask, self.data[index]['image_id'], self.data[index]['id']
 
-    def get_item_with_id(self, id):
+    def get_item_with_id(self, person_id):
         '''
         Returns the information for the given person_id
 
@@ -128,8 +133,7 @@ class eval_COCOLoader(COCOLoader):
         if idx == -1:
             print("Error, the person id was not found in the dataset")
             exit()
-
-        return self[el]
+        return image, keypoints, bbox, mask
 
 def get_transforms():
     # note that there are a lot of imagesssss sizesssss

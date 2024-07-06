@@ -15,7 +15,6 @@ from data_format.coco_dataset.CocoImageLoader import COCOLoader, eval_COCOLoader
 from data_format.AffineTransform import preprocess_video_data
 
 from data_format.coco_dataset.CocoImageLoader import COCOLoader, eval_COCOLoader
-from data_format.CocoVideoLoader import COCOVideoLoader
 from einops import rearrange
 import torch
 
@@ -29,10 +28,7 @@ class COCOVideoLoader(Dataset):
         if train_set == 'test':
             self.image_data = eval_COCOLoader(config, train_set, real_job=real_job)
         self.real_job = real_job
-        # reduce the quantity of data
-        # if not self.real_job:
-            # the first 128 images
-            # self.image_data = self.image_data[:256]
+        
         self.config = config 
         self.frames_num = self.config['num_frames']
         self.tensor_height = self.config['image_tensor_height']
@@ -40,38 +36,15 @@ class COCOVideoLoader(Dataset):
         self.min_norm = self.config['min_norm']
 
     def __len__(self):
-        # if self.real_job:
         return (len(self.image_data)) # nevermind, I make each image a video #// self.frames_num)
         
     def __getitem__(self, index):
-        vid_index = index #* self.frames_num
-
-        # slicing to get the video
-        # video, joints, bboxes = [], [], []
-        # for idx in range(vid_index, vid_index+self.frames_num):
-        #     image, joint, bbox = self.image_data[idx]
-        #     # making them all batch size = 1
-        #     # image = image.unsqueeze(0)
-        #     image = rearrange(image, '(d c) h w -> d h w c', d=1)
-        #     joint = joint.unsqueeze(0)
-        #     bbox = bbox.unsqueeze(0)
-        #     # some of the bbox have width, and height 0!!!! that means there is nothing in it... (so let me just ignore them in COCOImageLoader)
-        #     image, joint = preprocess_video_data(image.numpy(), bbox.numpy(), joint.numpy(), (self.tensor_width, self.tensor_height), self.min_norm)
-        #     video.append(image[0])
-        #     joints.append(joint[0])
-        #     # bboxes.append(bbox[0])
-        # video = torch.stack(video)
-        # joints = torch.stack(joints)
-        # video = rearrange(video, 'd c h w->c d h w')
-
-        #-----------------------------------------
         image, joint, bbox, mask = self.image_data[index]
-        # making them all batch size = 1
-        # image = image.unsqueeze(0)
+        
         image = rearrange(image, '(d c) h w -> d h w c', d=1)
         joint = joint.unsqueeze(0)
         bbox = bbox.unsqueeze(0)
-        #     # some of the bbox have width, and height 0!!!! that means there is nothing in it... (so let me just ignore them in COCOImageLoader)
+
         image, joint = preprocess_video_data(image.numpy(), bbox.numpy(), joint.numpy(), (self.tensor_width, self.tensor_height), self.min_norm)
         # technically, I have depth = 1... do it's like a one frame video.
         image = rearrange(image, 'd c h w -> c d h w')
@@ -89,7 +62,7 @@ class eval_COCOVideoLoader(COCOVideoLoader):
     def __getitem__(self, index):
         initial_image, joint, bbox, mask, image_id, keypoint_id = self.image_data[index]
         image = initial_image.detach().clone() # okay, instead of passing the initial image, i'll pass the index
-        # width, height
+        # width, heightf
         original_size = torch.tensor([image.shape[2], image.shape[1]])  # Assuming the original size is (height, width)
 
         # making them all batch size = 1
@@ -97,7 +70,7 @@ class eval_COCOVideoLoader(COCOVideoLoader):
         image = rearrange(image, '(d c) h w -> d h w c', d=1)
         joint = joint.unsqueeze(0)
         bbox = bbox.unsqueeze(0)
-        #     # some of the bbox have width, and height 0!!!! that means there is nothing in it... (so let me just ignore them in COCOImageLoader)
+        # some of the bbox have width, and height 0!!!! that means there is nothing in it... (so let me just ignore them in COCOImageLoader)
         processed_image, joint = preprocess_video_data(image.numpy(), bbox.numpy(), joint.numpy(), (self.tensor_width, self.tensor_height), self.min_norm)
         # technically, I have depth = 1... do it's like a one frame video.
         processed_image = rearrange(processed_image, 'd c h w -> c d h w')
@@ -107,6 +80,6 @@ class eval_COCOVideoLoader(COCOVideoLoader):
             print("Error, some of the normalized values are not between -1 and 1")
         
         return processed_image, joint, mask, image_id, original_size, bbox, index, keypoint_id
-        
+
 if __name__ == '__main__':
     main(config)
