@@ -14,6 +14,11 @@ from data_format.coco_dataset.CocoImageLoader import COCOLoader, eval_COCOLoader
 # from data_format.eval_Cocoloader import eval_COCOLoader
 from data_format.AffineTransform import preprocess_video_data
 
+from data_format.coco_dataset.CocoImageLoader import COCOLoader, eval_COCOLoader
+from data_format.CocoVideoLoader import COCOVideoLoader
+from einops import rearrange
+import torch
+
 class COCOVideoLoader(Dataset):
     '''
     A dataset to load the COCO videos as images
@@ -78,5 +83,30 @@ class COCOVideoLoader(Dataset):
         return [image, joint, mask]
         
 
+class eval_COCOVideoLoader(COCOVideoLoader):
+    '''A dataformat class for the evaluation dataset of the COCO dataset
+    '''
+    def __getitem__(self, index):
+        initial_image, joint, bbox, mask, image_id, keypoint_id = self.image_data[index]
+        image = initial_image.detach().clone() # okay, instead of passing the initial image, i'll pass the index
+        # width, height
+        original_size = torch.tensor([image.shape[2], image.shape[1]])  # Assuming the original size is (height, width)
+
+        # making them all batch size = 1
+        # image = image.unsqueeze(0)
+        image = rearrange(image, '(d c) h w -> d h w c', d=1)
+        joint = joint.unsqueeze(0)
+        bbox = bbox.unsqueeze(0)
+        #     # some of the bbox have width, and height 0!!!! that means there is nothing in it... (so let me just ignore them in COCOImageLoader)
+        processed_image, joint = preprocess_video_data(image.numpy(), bbox.numpy(), joint.numpy(), (self.tensor_width, self.tensor_height), self.min_norm)
+        # technically, I have depth = 1... do it's like a one frame video.
+        processed_image = rearrange(processed_image, 'd c h w -> c d h w')
+
+        # check if all the joint values are between -1 and 1
+        if self.config['full_debug'] and not torch.all((joint >= -1) & (joint <= 1)):
+            print("Error, some of the normalized values are not between -1 and 1")
+        
+        return processed_image, joint, mask, image_id, original_size, bbox, index, keypoint_id
+        
 if __name__ == '__main__':
     main(config)

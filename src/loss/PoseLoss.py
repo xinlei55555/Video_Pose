@@ -156,7 +156,7 @@ class PoseEstimationLoss(nn.Module):
             # breaks.
             sys.exit(1)
 
-        if not torch.all((predicted >= -1) & (predicted <= 1)) or not torch.all((target >= -1) & (target <= 1)):
+        if self.config['full_debug'] and (not torch.all((predicted >= -1) & (predicted <= 1)) or not torch.all((target >= -1) & (target <= 1))):
             print("Error, some of the OUTPUTS or LABELS normalized values are not between -1 and 1")
 
         return calculated_loss
