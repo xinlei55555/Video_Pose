@@ -79,7 +79,7 @@ class eval_COCOVideoLoader(COCOVideoLoader):
         if self.config['full_debug'] and not torch.all((joint >= -1) & (joint <= 1)):
             print("Error, some of the normalized values are not between -1 and 1")
         
-        return processed_image, joint, mask, image_id, original_size, bbox, index
+        return processed_image, joint, mask, image_id, original_size, bbox, index, keypoint_id
 
 if __name__ == '__main__':
     main(config)
