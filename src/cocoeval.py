@@ -14,7 +14,7 @@ import json
 import numpy as np
 
 # first import the dataset from data_format
-from data_format.eval_Cocoloader import eval_COCOVideoLoader
+from data_format.Cocoloader import eval_COCOVideoLoader
 from data_format.coco_dataset.CocoImageLoader import eval_COCOLoader
 from import_config import open_config
 from data_format.AffineTransform import denormalize_fn, inverse_process_joint_data
