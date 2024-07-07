@@ -32,7 +32,7 @@ import random
 def visualize_frame(joint, frame, width, height, bbox, file_name='coco_pretrain_result'):
     """
     Visualize a single frame with joint annotations.
-    
+
     Args:
         joint (torch.Tensor): Tensor containing joint coordinates.
         frame (torch.Tensor): Tensor containing frame data.
@@ -42,7 +42,6 @@ def visualize_frame(joint, frame, width, height, bbox, file_name='coco_pretrain_
         file_name (str): The name of the file to save the visualization.
     """
     visualize(joint, frame, file_name, width, height, bbox, False)
-
 
 
 def coco_mask_fn(joints, labels, masks):
@@ -137,9 +136,6 @@ def evaluate_coco(dt_annotations, data, stats_name=None, sigmas=None, single_inp
     # Create COCO objects
     cocoGt = COCO(data)
 
-    person_ann_ids = cocoGt.getAnnIds(catIds=[category_id])
-    person_anns = cocoGt.loadAnns(ids=person_ann_ids)
-
     with open("outputs/results.txt", "w") as f:
         f.write(json.dumps(dt_annotations))
 
@@ -155,7 +151,8 @@ def evaluate_coco(dt_annotations, data, stats_name=None, sigmas=None, single_inp
         print('The image id chosen is: ', single_input)
 
         # here are the ground truth values for
-        image, keypoints, bbox, mask = coco_data_object.image_data.get_item_with_id(single_input)
+        image, keypoints, bbox, mask = coco_data_object.image_data.get_item_with_id(
+            single_input)
 
         print('This is me debugging to check for the image shape ', image.shape)
         # Assuming the original size is (b, height, width)
@@ -250,10 +247,11 @@ def testing_loop(model, test_set, dataset_name, device):
 
         return outputs_lst, image_ids, gt_joints, masks, image_sizes, bboxes, initial_indexes, keypoint_ids
 
+
 def main(config):
     """
     Main function to run the evaluation process.
-    
+
     Args:
         config (dict): Configuration dictionary.
     """
@@ -265,7 +263,7 @@ def main(config):
     pose_sigmas = np.array(config['sigmas'])
     stats_name = list(config['stats_name'])
 
-    # Choosing checkpoint 
+    # Choosing checkpoint
     data_dir = config['data_path']
     batch_size = config['batch_size']
     checkpoint_dir = config['checkpoint_directory']
@@ -273,9 +271,10 @@ def main(config):
     test_checkpoint = None
 
     if test_checkpoint is None:
-        lst = sorted(list(os.listdir(os.path.join(config['checkpoint_directory'], config['checkpoint_name']))))
+        lst = sorted(list(os.listdir(os.path.join(
+            config['checkpoint_directory'], config['checkpoint_name']))))
         test_checkpoint = lst[0]
-    
+
     print('Chosen checkpoint is', test_checkpoint)
     model_path = os.path.join(
         checkpoint_dir, checkpoint_name, test_checkpoint)
@@ -288,17 +287,18 @@ def main(config):
     # will be using the testing set to compare between the datasets (I used the val for the training
     test_set = eval_COCOVideoLoader(config, train_set='test', real_job=True)
 
-    test_loader = DataLoader(test_set, batch_size=batch_size, 
-                            shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
+    test_loader = DataLoader(test_set, batch_size=batch_size,
+                             shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model = load_model(config, filepath=model_path)
-    
+
     model = model.to(device)  # to unique GPU
     print('Model loaded successfully as follows: ', model)
 
-    test_outputs, image_ids, test_labels, masks, image_sizes, bboxes, initial_indexes, keypoint_ids = testing_loop(model, test_loader, config['dataset_name'], device)
+    test_outputs, image_ids, test_labels, masks, image_sizes, bboxes, initial_indexes, keypoint_ids = testing_loop(
+        model, test_loader, config['dataset_name'], device)
 
     # rearrange bboxes to be (B, 4)
     bboxes = rearrange(bboxes, 'b t x -> (b t) x')
@@ -306,16 +306,20 @@ def main(config):
     # now transform the inputs into COCO objects
     # need to denormalize the values, and keep the image ids
     tensor_width, tensor_height = config['image_tensor_width'], config['image_tensor_height']
-    test_outputs = denormalize_fn(test_outputs, min_norm=config['min_norm'], h=tensor_height, w=tensor_width)
-    test_labels = denormalize_fn(test_labels, min_norm=config['min_norm'], h=tensor_height, w=tensor_width)
+    test_outputs = denormalize_fn(
+        test_outputs, min_norm=config['min_norm'], h=tensor_height, w=tensor_width)
+    test_labels = denormalize_fn(
+        test_labels, min_norm=config['min_norm'], h=tensor_height, w=tensor_width)
 
     # denormalize the affine transforms to adjust to the image sizes to the original sizes
     for i in range(test_outputs.shape[0]):
-        _, new_joint = inverse_process_joint_data(bboxes[i].cpu().detach().clone().numpy(), test_outputs[i][0].cpu().detach().clone().numpy(), (tensor_width, tensor_height), min_norm=config['min_norm'])
+        _, new_joint = inverse_process_joint_data(bboxes[i].cpu().detach().clone().numpy(), test_outputs[i][0].cpu(
+        ).detach().clone().numpy(), (tensor_width, tensor_height), min_norm=config['min_norm'])
         test_outputs[i] = new_joint
 
         # I'll try with the initial images, unsure
-        _, new_joint_label = inverse_process_joint_data(bboxes[i].cpu().detach().clone().numpy(), test_labels[i][0].cpu().detach().clone().numpy(), (tensor_width, tensor_height), min_norm=config['min_norm'])
+        _, new_joint_label = inverse_process_joint_data(bboxes[i].cpu().detach().clone().numpy(
+        ), test_labels[i][0].cpu().detach().clone().numpy(), (tensor_width, tensor_height), min_norm=config['min_norm'])
         test_labels[i] = new_joint_label
 
     # mask the results that are incorrect
@@ -324,22 +328,30 @@ def main(config):
     test_outputs, test_labels = coco_mask_fn(test_outputs, test_labels, masks)
 
     # evaluation of predicted keypoints
-    annotations_path = os.path.join(config['data_path'], 'annotations', f'person_keypoints_val2017.json')
+    annotations_path = os.path.join(
+        config['data_path'], 'annotations', f'person_keypoints_val2017.json')
 
-    cocoDt = tensor_to_coco(test_outputs, image_ids, image_sizes.cpu().numpy(), bboxes.cpu().numpy(), masks.cpu(), keypoint_ids)
-    result = evaluate_coco(dt_annotations=cocoDt, data=annotations_path, stats_name=stats_name, sigmas=pose_sigmas)
+    cocoDt = tensor_to_coco(test_outputs, image_ids, image_sizes.cpu(
+    ).numpy(), bboxes.cpu().numpy(), masks.cpu(), keypoint_ids)
+    result = evaluate_coco(dt_annotations=cocoDt, data=annotations_path,
+                           stats_name=stats_name, sigmas=pose_sigmas)
     print(f'mAP is {result}')
 
     # just for testing purposes, evaluation of the ground truth values
-    cocoGt = tensor_to_coco(test_labels, image_ids, image_sizes.cpu().numpy(), bboxes.cpu().numpy(), masks.cpu(), keypoint_ids)
-    result = evaluate_coco(dt_annotations=cocoGt, data=annotations_path, stats_name=stats_name, sigmas=pose_sigmas)
+    cocoGt = tensor_to_coco(test_labels, image_ids, image_sizes.cpu(
+    ).numpy(), bboxes.cpu().numpy(), masks.cpu(), keypoint_ids)
+    result = evaluate_coco(dt_annotations=cocoGt, data=annotations_path,
+                           stats_name=stats_name, sigmas=pose_sigmas)
     print(f'mAP is {result} (Should be 1.00)')
 
     # visualize ground truth and predicted
     # added a dimension, because its only 1 frame.
     image_index = 0
-    visualize_frame(test_outputs[image_index].unsqueeze(0).cpu(), test_set.image_data[initial_indexes[image_index].item()][0].unsqueeze(0).cpu(), image_sizes[image_index][0].item(), image_sizes[image_index][1].item(), bboxes[image_index].unsqueeze(0).cpu())
-    visualize_frame(test_labels[image_index].unsqueeze(0).cpu(), test_set.image_data[initial_indexes[image_index].item()][0].unsqueeze(0).cpu(), image_sizes[image_index][0].item(), image_sizes[image_index][1].item(), bboxes[image_index].unsqueeze(0).cpu(), file_name='ground_truth')
+    visualize_frame(test_outputs[image_index].unsqueeze(0).cpu(), test_set.image_data[initial_indexes[image_index].item()][0].unsqueeze(
+        0).cpu(), image_sizes[image_index][0].item(), image_sizes[image_index][1].item(), bboxes[image_index].unsqueeze(0).cpu())
+    visualize_frame(test_labels[image_index].unsqueeze(0).cpu(), test_set.image_data[initial_indexes[image_index].item()][0].unsqueeze(0).cpu(
+    ), image_sizes[image_index][0].item(), image_sizes[image_index][1].item(), bboxes[image_index].unsqueeze(0).cpu(), file_name='ground_truth')
+
 
 if __name__ == '__main__':
     # argparse to get the file path of the config file
