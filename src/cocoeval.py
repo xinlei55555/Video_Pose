@@ -1,8 +1,9 @@
 '''
 Using COCOeval to evaluate the pretrained model with Mamba.
 '''
-from pycocotools.cocoeval import COCOeval
-from pycocotools.coco import COCO
+# using xtcocotools instead of pycocotools, to be able to have personalized sigmas.
+from xtcocotools.cocoeval import COCOeval
+from xtcocotools.coco import COCO
 
 import torch
 from torch.utils.data import Dataset, DataLoader, DistributedSampler
@@ -131,8 +132,6 @@ def evaluate_coco(dt_annotations, data, stats_name=None, sigmas=None, single_inp
     Returns:
         list: Average Precision (mAP) for keypoints.
     """
-    if sigmas is not None:
-        print("Sigmas has not yet been implemented")
     # Create COCO objects
     cocoGt = COCO(data)
 
@@ -143,7 +142,7 @@ def evaluate_coco(dt_annotations, data, stats_name=None, sigmas=None, single_inp
     pk_res = cocoGt.loadRes("outputs/results.txt")
 
     # Define a default keypoint object, using the default sigmas, yet no areas
-    eval_coco = COCOeval(cocoGt=cocoGt, cocoDt=pk_res, iouType='keypoints')
+    eval_coco = COCOeval(cocoGt=cocoGt, cocoDt=pk_res, iouType='keypoints', sigmas=sigmas, use_area=False)
 
     # This runs the mAP on a single input, with the id of the person.
     if single_input is not None:
