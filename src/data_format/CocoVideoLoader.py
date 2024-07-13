@@ -49,7 +49,7 @@ class COCOVideoLoader(Dataset):
 
         # perform image data augmentation on train_set, before nromalizing the joint values.
         if self.train_set:    
-            image, joint = data_augment(config['data_augmentation'], image, joint, bbox, (self.tensor_width, self.tensor_height))
+            image, joint = data_augment(config['data_augmentation'], image, joint, bbox, (self.tensor_width, self.tensor_height), config['flip_types'])
 
         # normalize the values
         joint = normalize_fn(joint, self.min_norm, self.tensor_height, self.tensor_width)

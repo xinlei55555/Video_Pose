@@ -15,7 +15,11 @@ num_mamba_blocks: 16
 # losses: {'mse': 0.0, 'velocity': 10.0, 'angle': 1.0, 'mpjpe': 5.0}
 # when pretraining on coco, i won't have all my weird losses lolll
 losses: {'mse': 1.0, 'velocity': 0.0, 'angle': 0.0, 'mpjpe': 0.0}
-data_augmentation: {'flip': [0.5, ['horizontal']], 'rotation', [0.0, 0.0], 'shifting', 0.0}
+
+# data augmentation
+data_augmentation: {'flip': 0.5, 'rotation': 0.0, 'shifting': 0.0}
+flip_types: ['horizontal']
+
 use_last_frame_only: False
 # unsure own values for the transformer decoder
 dim: 1024 # just like HMR2.0 set it to be

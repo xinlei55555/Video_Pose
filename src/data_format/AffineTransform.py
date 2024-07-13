@@ -115,7 +115,7 @@ def data_augment(aug_dct, input_video, input_keypoints, input_bbox, input_res, c
     13,  # Left Knee ↔ Right Knee
     16,  # Right Ankle ↔ Left Ankle
     15  # Left Ankle ↔ Right Ankle
-]):
+], flip_types=None):
     '''
     Randomly perform a set of augmentation to the datapoint using mmpose framework
     Augmentations performed will include mirroring, rotation and maybe shifting / resizing? (although since I have the ground truth bboxes, i don't know how useful that will be)
@@ -130,8 +130,9 @@ def data_augment(aug_dct, input_video, input_keypoints, input_bbox, input_res, c
     '''
     # https://mmpose.readthedocs.io/en/dev-1.x/advanced_guides/customize_transforms.html
     # randomly flip the data horizontally
-    if aug_dct['flip'][0] > 0.0:
-        flip_transform = RandomFlip(prob=aug_dct['flip'][0], direction=aug_dct['flip'][1])
+    if aug_dct['flip'] > 0.0:
+        flip_transform = RandomFlip(
+            prob=aug_dct['flip'], direction=flip_types)
         # rearranging the image to (F, H, W, C), and transforming to numpy
         input_video = rearrange(input_video, 'f c h w -> f h w c').numpy()
         output_results = []
@@ -153,7 +154,7 @@ def data_augment(aug_dct, input_video, input_keypoints, input_bbox, input_res, c
 
         # then rotation
         # https://github.com/ViTAE-Transformer/ViTPose/blob/main/mmpose/datasets/pipelines/top_down_transform.py#L147
-        
+
         # reshape the output
     video = rearrange(video, 'f h w c -> f c h w')
     return video, keypoints
