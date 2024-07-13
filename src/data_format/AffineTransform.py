@@ -92,8 +92,21 @@ def warp_affine_joints(joints, mat):
         np.concatenate((joints, joints[:, 0:1] * 0 + 1), axis=1),
         mat.T).reshape(shape)
 
+def data_augment(input_video, input_keypoints, input_bbox, input_res):
+        '''
+        Randomly perform a set of augmentation to the datapoint using mmpose framework
+        Augmentations performed will include mirroring, rotation and maybe shifting / resizing? (although since I have the ground truth bboxes, i don't know how useful that will be)
+        second step will be to perform the quantization.
 
-def preprocess_video_data(frames, bboxes, joints, out_res, min_norm):
+        Args:
+            Not sure:
+        
+        Returns:
+            No sure:
+        '''
+        pass
+
+def preprocess_video_data(frames, bboxes, joints, out_res):
     """
     Preprocesses the video data.
 
@@ -135,8 +148,8 @@ def preprocess_video_data(frames, bboxes, joints, out_res, min_norm):
     new_frames = torch.stack(new_frames)
     new_joints = torch.stack(new_joints)
 
-    # normalize the joints with custom normalization
-    new_joints = normalize_fn(new_joints, min_norm, out_res[1], out_res[0])
+    # # normalize the joints with custom normalization
+    # new_joints = normalize_fn(new_joints, min_norm, out_res[1], out_res[0])
 
     return new_frames, new_joints
 
@@ -392,7 +405,10 @@ if __name__ == '__main__':
     # joints = np.array([[[0, 0]] * 15] * num_frames )
     # # Preprocess the video
     preprocessed_frames, preprocessed_joints = preprocess_video_data(
-        frames, bboxes, joints, out_res, -1)
+        frames, bboxes, joints, out_res)
+
+    joint = normalize_fn(joint, -1, out_res[1], out_res[0])
+
 
     # after_frames, after_jionts = inverse_process_video_data(preprocessed_frames[0], bboxes[0], preprocessed_joints[0], out_res)
 

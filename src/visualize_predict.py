@@ -365,7 +365,9 @@ def main(config):
                 # preprocess the videos
                 input_video = rearrange(input_video, 'd c h w -> d h w c')          
                 print(input_video.shape, 'is the shape of the input video')
-                input_video, ground_truth_joints = preprocess_video_data(input_video.detach().clone().numpy(), bboxes_indexed.detach().clone().numpy(), ground_truth_joints.detach().clone().numpy(), (tensor_width, tensor_height), config['min_norm'])
+                input_video, ground_truth_joints = preprocess_video_data(input_video.detach().clone().numpy(), bboxes_indexed.detach().clone().numpy(), ground_truth_joints.detach().clone().numpy(), (tensor_width, tensor_height))
+                ground_truth_joints = normalize_fn(ground_truth_joints, config['min_norm'], tensor_height, tensor_width)
+
 
                 # rearrange to channel first                
                 input_video = rearrange(input_video, 'd c h w-> c d h w')

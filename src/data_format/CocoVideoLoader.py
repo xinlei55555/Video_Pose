@@ -12,7 +12,7 @@ from einops import rearrange
 
 from data_format.coco_dataset.CocoImageLoader import COCOLoader, eval_COCOLoader
 # from data_format.eval_Cocoloader import eval_COCOLoader
-from data_format.AffineTransform import preprocess_video_data
+from data_format.AffineTransform import preprocess_video_data, data_augment, normalize_fn
 
 from data_format.coco_dataset.CocoImageLoader import COCOLoader, eval_COCOLoader
 from einops import rearrange
@@ -45,7 +45,15 @@ class COCOVideoLoader(Dataset):
         joint = joint.unsqueeze(0)
         bbox = bbox.unsqueeze(0)
 
-        image, joint = preprocess_video_data(image.numpy(), bbox.numpy(), joint.numpy(), (self.tensor_width, self.tensor_height), self.min_norm)
+        image, joint = preprocess_video_data(image.numpy(), bbox.numpy(), joint.numpy(), (self.tensor_width, self.tensor_height))
+
+        # perform image data augmentation on train_set, before nromalizing the joint values.
+        if self.train_set:    
+            image, joint = data_augment(image, joint, bbox, (self.tensor_width, self.tensor_height))
+
+        # normalize the values
+        joint = normalize_fn(joint, self.min_norm, self.tensor_height, self.tensor_width)
+
         # technically, I have depth = 1... do it's like a one frame video.
         image = rearrange(image, 'd c h w -> c d h w')
 
@@ -70,9 +78,15 @@ class eval_COCOVideoLoader(COCOVideoLoader):
         image = rearrange(image, '(d c) h w -> d h w c', d=1)
         joint = joint.unsqueeze(0)
         bbox = bbox.unsqueeze(0)
-        # some of the bbox have width, and height 0!!!! that means there is nothing in it... (so let me just ignore them in COCOImageLoader)
-        processed_image, joint = preprocess_video_data(image.numpy(), bbox.numpy(), joint.numpy(), (self.tensor_width, self.tensor_height), self.min_norm)
-        # technically, I have depth = 1... do it's like a one frame video.
+
+        processed_image, joint = preprocess_video_data(image.numpy(), bbox.numpy(), joint.numpy(), (self.tensor_width, self.tensor_height))
+
+        # perform image data augmentation, before nromalizing the joint values.
+        # image, joint = data_augment(image, joint, bbox, (self.tensor_width, self.tensor_height))
+
+        # normalize the values
+        joint = normalize_fn(joint, self.min_norm, self.tensor_height, self.tensor_width)
+
         processed_image = rearrange(processed_image, 'd c h w -> c d h w')
 
         # check if all the joint values are between -1 and 1

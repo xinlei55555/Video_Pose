@@ -74,8 +74,13 @@ class JHMDBLoad(Dataset):
                 video = video.numpy()
                 joints = joints.numpy()
                 bboxes = bounding_box(joints).numpy()
+
+                # process the video data
                 video, joints = preprocess_video_data(frames=video, bboxes=bboxes, joints=joints, out_res=(
-                    self.tensor_width, self.tensor_height), min_norm=self.min_norm)
+                    self.tensor_width, self.tensor_height))
+                
+                # normalize the joints
+                joint = normalize_fn(joint, self.min_norm, self.tensor_height, self.tensor_width)
 
                 self.frames_with_joints[i] = (video, joints)
 
