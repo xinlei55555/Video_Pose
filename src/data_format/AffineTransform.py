@@ -150,17 +150,14 @@ def data_augment(aug_dct, input_video, input_keypoints, input_bbox, input_res, c
         # takes in a batch of keypoints.
         output_dct = flip_transform.transform(input_dct)
         video = torch.from_numpy(output_dct['img'])
-        keypoints = torch.from_numpy(output_dct['keypoints'])
+        keypoints = torch.from_numpy(output_dct['keypoints'])    
 
-        # then rotation
-        # https://github.com/ViTAE-Transformer/ViTPose/blob/main/mmpose/datasets/pipelines/top_down_transform.py#L147
-
-        # reshape the output
+    # reshape the output
     video = rearrange(video, 'f h w c -> f c h w')
     return video, keypoints
 
 
-def preprocess_video_data(frames, bboxes, joints, out_res):
+def preprocess_video_data(frames, bboxes, joints, out_res, rotation=0):
     """
     Preprocesses the video data.
 
@@ -177,7 +174,6 @@ def preprocess_video_data(frames, bboxes, joints, out_res):
     new_frames, new_joints = [], []
     for i in range(num_frames):
         center, scale = box2cs(image_size, bboxes[i])
-        rotation = 0
         trans = get_warp_matrix(rotation, center * 2.0,
                                 image_size - 1.0, scale * 200.0)
 

@@ -45,7 +45,12 @@ class COCOVideoLoader(Dataset):
         joint = joint.unsqueeze(0)
         bbox = bbox.unsqueeze(0)
 
-        image, joint = preprocess_video_data(image.numpy(), bbox.numpy(), joint.numpy(), (self.tensor_width, self.tensor_height))
+        # apply rotation data augmentation if needed:
+        # https://github.com/ViTAE-Transformer/ViTPose/blob/main/mmpose/datasets/pipelines/top_down_transform.py#L147
+        rotation = 0
+        if config['data_augmentation']['rotation'] > 0:
+            rotation = config['rotation_val']
+        image, joint = preprocess_video_data(image.numpy(), bbox.numpy(), joint.numpy(), (self.tensor_width, self.tensor_height), rotation)
 
         # perform image data augmentation on train_set, before nromalizing the joint values.
         if self.train_set:    
