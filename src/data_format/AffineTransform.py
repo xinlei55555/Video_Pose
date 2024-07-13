@@ -6,6 +6,9 @@ import math
 import torch
 from einops import rearrange
 
+# data augmentation:
+from mmpose.datasets.transforms import LoadImage, RandomFlip
+import mmcv
 
 def get_warp_matrix(theta, size_input, size_dst, size_target):
     """Calculate the transformation matrix under the constraint of unbiased.
@@ -99,12 +102,31 @@ def data_augment(input_video, input_keypoints, input_bbox, input_res):
         second step will be to perform the quantization.
 
         Args:
-            Not sure:
-        
-        Returns:
-            No sure:
+            input_video (torch.Tensor): (F, C, H, W)
+            input_keypoints(torch.Tensor): (F, J, 2)
+            input_bbox (torch.Tensor): 1-d with x, y, w, h
+            input_res(tuple[int, int]): (width, height)
         '''
-        pass
+        # start with flipping:
+        # https://mmpose.readthedocs.io/en/dev-1.x/advanced_guides/customize_transforms.html
+        flip_transform = RandomFlip(prob=[0.5], direction=['horizontal']) # randomly flip the data horizontally
+        for index in range(input_video.shape[0]):
+            input_dct = {
+                'img': input_video[index],
+                'img_shape': input_res, # TODO Recheck assume (w, h)
+                 flip_indices
+            -   input_size (optional)
+            - bbox (optional)
+            - bbox_center (optional)
+            - keypoints (optional)
+            - keypoints_visible (optional)
+            - img_mask (optional)
+            }
+            output_dct = flip_transform.transform(input_dct)
+        # then rotation
+        # https://github.com/ViTAE-Transformer/ViTPose/blob/main/mmpose/datasets/pipelines/top_down_transform.py#L147
+
+        return video        
 
 def preprocess_video_data(frames, bboxes, joints, out_res):
     """
