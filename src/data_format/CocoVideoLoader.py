@@ -50,13 +50,13 @@ class COCOVideoLoader(Dataset):
         # apply rotation data augmentation if needed:
         # https://github.com/ViTAE-Transformer/ViTPose/blob/main/mmpose/datasets/pipelines/top_down_transform.py#L147
         rotation = 0
-        if self.train_set and config['data_augmentation']['rotation'] > 0 and random.uniform(0, 1) > config['data_augmentation']['rotation']:
-            rotation = config['rotation_val']
+        if self.train_set and self.config['data_augmentation']['rotation'] > 0 and random.uniform(0, 1) > self.config['data_augmentation']['rotation']:
+            rotation = self.config['rotation_val']
         image, joint = preprocess_video_data(image.numpy(), bbox.numpy(), joint.numpy(), (self.tensor_width, self.tensor_height), rotation)
 
         # perform image data augmentation on train_set, before nromalizing the joint values.
         if self.train_set:    
-            image, joint = data_augment(config['data_augmentation'], image, joint, bbox, (self.tensor_width, self.tensor_height), config['flip_types'])
+            image, joint = data_augment(self.config['data_augmentation'], image, joint, bbox, (self.tensor_width, self.tensor_height), self.config['flip_types'])
 
         # normalize the values
         joint = normalize_fn(joint, self.min_norm, self.tensor_height, self.tensor_width)
