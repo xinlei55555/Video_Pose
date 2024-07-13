@@ -17,9 +17,10 @@ num_mamba_blocks: 16
 losses: {'mse': 1.0, 'velocity': 0.0, 'angle': 0.0, 'mpjpe': 0.0}
 
 # data augmentation
-data_augmentation: {'flip': 0.5, 'rotation': 0.6, 'quantization': 0.0}
+data_augmentation: {'flip': 0.5, 'rotation': 0.6, 'quantization': 0.5}
 flip_types: ['horizontal']
 rotation_val: 40
+quantization_bins: [2, 10] # range of bins for the random quantization.
 
 use_last_frame_only: False
 # unsure own values for the transformer decoder
