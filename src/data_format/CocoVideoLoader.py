@@ -18,6 +18,8 @@ from data_format.coco_dataset.CocoImageLoader import COCOLoader, eval_COCOLoader
 from einops import rearrange
 import torch
 
+import random
+
 class COCOVideoLoader(Dataset):
     '''
     A dataset to load the COCO videos as images
@@ -48,7 +50,7 @@ class COCOVideoLoader(Dataset):
         # apply rotation data augmentation if needed:
         # https://github.com/ViTAE-Transformer/ViTPose/blob/main/mmpose/datasets/pipelines/top_down_transform.py#L147
         rotation = 0
-        if config['data_augmentation']['rotation'] > 0:
+        if self.train_set and config['data_augmentation']['rotation'] > 0 and random.uniform(0, 1) > config['data_augmentation']['rotation']:
             rotation = config['rotation_val']
         image, joint = preprocess_video_data(image.numpy(), bbox.numpy(), joint.numpy(), (self.tensor_width, self.tensor_height), rotation)
 
