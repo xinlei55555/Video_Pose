@@ -6,7 +6,7 @@ model_type: 'HMR_decoder_coco_pretrain'
 # full_debug mode will enable a lot of information being printed
 full_debug: False
 show_gradients: False
-show_predictions: True 
+show_predictions: False 
 
 # architecture mamba
 embed_channels: 192 # number of channels after the tiny mamba layers.
@@ -53,7 +53,7 @@ epoch_number: 300
 # batch_size: 16
 # batch_size: 8
 batch_size: 16 # just to see how scalable it is
-learning_rate: 0.0000005
+learning_rate: 0.00005
 # learning_rate: 0.00005
 # learning_rate: 0.0005
 #scheduler:
@@ -62,7 +62,7 @@ scheduler_fct: cosine
 # for cosine
 T_0: 10
 T_mult: 2 # doubling the spacing bewteen each reset
-eta_min: 0.000000005 #the minimum learning rate
+eta_min: 0.0000005 #the minimum learning rate
 # for RRLP
 scheduler_factor: 0.1
 start_epoch: 1
