@@ -12,23 +12,25 @@ from einops import rearrange
 
 from data_format.coco_dataset.CocoImageLoader import COCOLoader, eval_COCOLoader
 # from data_format.eval_Cocoloader import eval_COCOLoader
-from data_format.AffineTransform import preprocess_video_data
+from data_format.AffineTransform import preprocess_video_data, data_augment, normalize_fn
 
 from data_format.coco_dataset.CocoImageLoader import COCOLoader, eval_COCOLoader
 from einops import rearrange
 import torch
+
+import random
 
 class COCOVideoLoader(Dataset):
     '''
     A dataset to load the COCO videos as images
     '''
     def __init__(self, config, train_set, real_job):
-        if train_set != 'test':
+        self.train_set = train_set
+        if self.train_set != 'test':
             self.image_data = COCOLoader(config, train_set, real_job=real_job)
-        if train_set == 'test':
+        if self.train_set == 'test':
             self.image_data = eval_COCOLoader(config, train_set, real_job=real_job)
         self.real_job = real_job
-        
         self.config = config 
         self.frames_num = self.config['num_frames']
         self.tensor_height = self.config['image_tensor_height']
@@ -45,7 +47,20 @@ class COCOVideoLoader(Dataset):
         joint = joint.unsqueeze(0)
         bbox = bbox.unsqueeze(0)
 
-        image, joint = preprocess_video_data(image.numpy(), bbox.numpy(), joint.numpy(), (self.tensor_width, self.tensor_height), self.min_norm)
+        # apply rotation data augmentation if needed:
+        # https://github.com/ViTAE-Transformer/ViTPose/blob/main/mmpose/datasets/pipelines/top_down_transform.py#L147
+        rotation = 0
+        if self.train_set=='train' and self.config['data_augmentation']['rotation'] > 0 and random.uniform(0, 1) > self.config['data_augmentation']['rotation']:
+            rotation = self.config['rotation_val']
+        image, joint = preprocess_video_data(image.numpy(), bbox.numpy(), joint.numpy(), (self.tensor_width, self.tensor_height), rotation)
+
+        # perform image data augmentation on train_set, before nromalizing the joint values.
+        if self.train_set=='train':    
+            image, joint = data_augment(self.config['data_augmentation'], image, joint, bbox, (self.tensor_width, self.tensor_height), flip_types=self.config['flip_types'], quant_bins=self.config['quantization_bins'])
+
+        # normalize the values
+        joint = normalize_fn(joint, self.min_norm, self.tensor_height, self.tensor_width)
+
         # technically, I have depth = 1... do it's like a one frame video.
         image = rearrange(image, 'd c h w -> c d h w')
 
@@ -70,9 +85,15 @@ class eval_COCOVideoLoader(COCOVideoLoader):
         image = rearrange(image, '(d c) h w -> d h w c', d=1)
         joint = joint.unsqueeze(0)
         bbox = bbox.unsqueeze(0)
-        # some of the bbox have width, and height 0!!!! that means there is nothing in it... (so let me just ignore them in COCOImageLoader)
-        processed_image, joint = preprocess_video_data(image.numpy(), bbox.numpy(), joint.numpy(), (self.tensor_width, self.tensor_height), self.min_norm)
-        # technically, I have depth = 1... do it's like a one frame video.
+
+        processed_image, joint = preprocess_video_data(image.numpy(), bbox.numpy(), joint.numpy(), (self.tensor_width, self.tensor_height))
+
+        # perform image data augmentation, before nromalizing the joint values.
+        # image, joint = data_augment(image, joint, bbox, (self.tensor_width, self.tensor_height))
+
+        # normalize the values
+        joint = normalize_fn(joint, self.min_norm, self.tensor_height, self.tensor_width)
+
         processed_image = rearrange(processed_image, 'd c h w -> c d h w')
 
         # check if all the joint values are between -1 and 1

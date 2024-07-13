@@ -6,20 +6,21 @@ model_type: 'HMR_decoder_coco_pretrain'
 # full_debug mode will enable a lot of information being printed
 full_debug: False
 show_gradients: False
-show_predictions: True 
+show_predictions: False 
 
 # architecture mamba
 embed_channels: 192 # number of channels after the tiny mamba layers.
-num_mamba_blocks: 12
+num_mamba_blocks: 16
 
 # losses: {'mse': 0.0, 'velocity': 10.0, 'angle': 1.0, 'mpjpe': 5.0}
 # when pretraining on coco, i won't have all my weird losses lolll
 losses: {'mse': 1.0, 'velocity': 0.0, 'angle': 0.0, 'mpjpe': 0.0}
 
 # data augmentation
-data_augmentation: {'flip': 0.5, 'rotation': 0.6, 'shifting': 0.0}
+data_augmentation: {'flip': 0.5, 'rotation': 0.0, 'quantization': 0.0}
 flip_types: ['horizontal']
 rotation_val: 40
+quantization_bins: [2, 10] # range of bins for the random quantization.
 
 use_last_frame_only: False
 # unsure own values for the transformer decoder
@@ -54,7 +55,7 @@ epoch_number: 300
 # batch_size: 16
 # batch_size: 8
 batch_size: 16 # just to see how scalable it is
-learning_rate: 0.0000005
+learning_rate: 0.00005
 # learning_rate: 0.00005
 # learning_rate: 0.0005
 #scheduler:
@@ -63,7 +64,7 @@ scheduler_fct: cosine
 # for cosine
 T_0: 10
 T_mult: 2 # doubling the spacing bewteen each reset
-eta_min: 0.000000005 #the minimum learning rate
+eta_min: 0.0000005 #the minimum learning rate
 # for RRLP
 scheduler_factor: 0.1
 start_epoch: 1
@@ -76,11 +77,12 @@ parallelize: False
 
 # checkpoint_directory: /home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/3_VideoMambaPose/src/models/experiments/latent_space_regression_with_linear/checkpoint
 # checkpoint_directory: checkpoints/HMR_decoder_coco_pretrain
-checkpoint_directory: '/home/xinleilin/Projects/Video_Pose/src/checkpoints/HMR_decoder_coco_pretrain'
+# checkpoint_directory: '/home/xinleilin/Projects/Video_Pose/src/checkpoints/HMR_decoder_coco_pretrain'
+checkpoint_directory: '/home/linxin67/projects/def-btaati/linxin67/Projects/MambaPose/Video_Pose/src/checkpoints/HMR_decoder_coco_pretrain'
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
 # checkpoint_name: 'new_velocity_10_angle_1_mse_5_train_input_transformer'
 # checkpoint_name: 'testing_false_dataset'
-checkpoint_name: 'final_cedar_model'
+checkpoint_name: 'flipping_data_loader_fixed_16_mamba_1024_hidden_masked_gelu_mse_image_video_cosine_anneal_clip-gradient_0.1_weight_decay_0.1_lr_scheduler_12_mamba_5e-5_Coco_pretrain_full_cedars'
 
 # Follow up on the training of another previous run?
 follow_up: False
@@ -91,8 +93,8 @@ previous_checkpoint: ''
 
 # data
 dataset_name: 'COCO'
-data_path: '/home/xinleilin/Projects/Video_Pose/data/COCO-Pose/coco'
-annotations_path: /home/xinleilin/Projects/Video_Pose/data/COCO-Pose/coco/annotations
+data_path: '/home/linxin67/scratch/COCO-Pose/coco'
+annotations_path: /home/linxin67/scratch/COCO-Pose/coco/annotations
 # use avi videos
 use_videos: True
 preprocess_videos: True

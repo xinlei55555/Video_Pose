@@ -6,6 +6,13 @@ import math
 import torch
 from einops import rearrange
 
+# data augmentation:
+from mmpose.datasets.transforms import LoadImage, RandomFlip
+import mmcv
+
+from data_format.RandomQuantization import RandomizedQuantizationAugModule
+
+import random
 
 def get_warp_matrix(theta, size_input, size_dst, size_target):
     """Calculate the transformation matrix under the constraint of unbiased.
@@ -93,7 +100,76 @@ def warp_affine_joints(joints, mat):
         mat.T).reshape(shape)
 
 
-def preprocess_video_data(frames, bboxes, joints, out_res, min_norm):
+def data_augment(aug_dct, video, keypoints, input_bbox, input_res, coco_flip_indices=[
+    0,  # Nose
+    2,  # Right Eye ↔ Left Eye
+    1,  # Left Eye ↔ Right Eye
+    4,  # Right Ear ↔ Left Ear
+    3,  # Left Ear ↔ Right Ear
+    6,  # Right Shoulder ↔ Left Shoulder
+    5,  # Left Shoulder ↔ Right Shoulder
+    8,  # Right Elbow ↔ Left Elbow
+    7,  # Left Elbow ↔ Right Elbow
+    10,  # Right Wrist ↔ Left Wrist
+    9,  # Left Wrist ↔ Right Wrist
+    12,  # Right Hip ↔ Left Hip
+    11,  # Left Hip ↔ Right Hip
+    14,  # Right Knee ↔ Left Knee
+    13,  # Left Knee ↔ Right Knee
+    16,  # Right Ankle ↔ Left Ankle
+    15  # Left Ankle ↔ Right Ankle
+], flip_types=[], quant_bins=[2, 10]):
+    '''
+    Randomly perform a set of augmentation to the datapoint using mmpose framework
+    Augmentations performed will include mirroring, rotation and maybe shifting / resizing? (although since I have the ground truth bboxes, i don't know how useful that will be)
+    second step will be to perform the quantization.
+
+    Args:
+        aug_dct (dict[string, float]): dictionary of all augmentations {name: probability}, and for rotation, also include the angle.
+        input_video (torch.Tensor): (F, C, H, W)
+        input_keypoints(torch.Tensor): (F, J, 2)
+        input_bbox (torch.Tensor): 1-d with x, y, w, h
+        input_res(tuple[int, int]): (width, height)
+    '''
+    # https://mmpose.readthedocs.io/en/dev-1.x/advanced_guides/customize_transforms.html
+    # randomly flip the data horizontally
+    if aug_dct['flip'] > 0.0:
+        flip_transform = RandomFlip(
+            prob=aug_dct['flip'], direction=flip_types)
+        # rearranging the image to (F, H, W, C), and transforming to numpy
+        video = rearrange(video, 'f c h w -> f h w c').numpy()
+        output_results = []
+        input_dct = {
+            'img': video[index],  # can take a list of images.
+            'img_shape': (input_res[1], input_res[0]),  # (h, w)
+            #! NOTE: I won't need to flip the bbox, since we are only shifting the image AFTER the AffineTransform.
+            # - bbox (optional)
+            # - bbox_center (optional)
+            # ! NOTE: Need to flip the keypoints. Notice also that left becomes right in the keypoints.
+            'flip_indices': coco_flip_indices,
+            'keypoints': keypoints.numpy(),
+            # 'keypoints_visible': keypoint_mask # will not pass, since values are 0.. would just swap.
+        }
+        # takes in a batch of keypoints.
+        output_dct = flip_transform.transform(input_dct)
+        video = torch.from_numpy(output_dct['img'])
+        keypoints = torch.from_numpy(output_dct['keypoints'])
+    
+        # reshape the output
+        video = rearrange(video, 'f h w c -> f c h w')
+
+    # random quantization
+    # https://github.com/microsoft/random_quantize/blob/main/randomized_quantization.py
+    if aug_dct['quantization'] > 0:
+        # pick random quantization bin in the range
+        bins = random.randint(quant_bins[0], quant_bins[1])
+        quantization_obj = RandomizedQuantizationAugModule(region_num=bins)
+        video = quantization_obj(video)
+
+    return video, keypoints
+
+
+def preprocess_video_data(frames, bboxes, joints, out_res, rotation=0):
     """
     Preprocesses the video data.
 
@@ -110,7 +186,6 @@ def preprocess_video_data(frames, bboxes, joints, out_res, min_norm):
     new_frames, new_joints = [], []
     for i in range(num_frames):
         center, scale = box2cs(image_size, bboxes[i])
-        rotation = 0
         trans = get_warp_matrix(rotation, center * 2.0,
                                 image_size - 1.0, scale * 200.0)
 
@@ -120,7 +195,7 @@ def preprocess_video_data(frames, bboxes, joints, out_res, min_norm):
             trans, (int(image_size[0]), int(image_size[1])),
             flags=cv2.INTER_LINEAR)
         frames_cropped = F.to_tensor(frames_cropped)
-        
+
         # normalize the RGB data
         frames_cropped = F.normalize(frames_cropped, mean=[0.485, 0.456, 0.406], std=[
             0.229, 0.224, 0.225])
@@ -135,12 +210,14 @@ def preprocess_video_data(frames, bboxes, joints, out_res, min_norm):
     new_frames = torch.stack(new_frames)
     new_joints = torch.stack(new_joints)
 
-    # normalize the joints with custom normalization
-    new_joints = normalize_fn(new_joints, min_norm, out_res[1], out_res[0])
+    # # normalize the joints with custom normalization
+    # new_joints = normalize_fn(new_joints, min_norm, out_res[1], out_res[0])
 
     return new_frames, new_joints
 
 # I am unsure if the correct translation is applied to the values in the new frames. (same for the )
+
+
 def inverse_process_joints_data(bboxes, joints, output_res, min_norm, frames=False):
     '''
     This applies the inverse functions of the preprocess_video_data outputs of a given frame
@@ -150,7 +227,7 @@ def inverse_process_joints_data(bboxes, joints, output_res, min_norm, frames=Fal
         joint is a numpy array containing the joints for the given frame
         input_res is a tuple containing the final resolution
     '''
-    
+
     # note: output_res must be the same as out_res in preprocess_video_data
     image_size = np.array(output_res)
 
@@ -175,12 +252,13 @@ def inverse_process_joints_data(bboxes, joints, output_res, min_norm, frames=Fal
         inv_trans = cv2.invertAffineTransform(trans)
 
         # inverse warping for the joints
-        new_joints.append(torch.from_numpy(warp_affine_joints(joints[idx][:, 0:2].copy(), inv_trans)))
-        
+        new_joints.append(torch.from_numpy(
+            warp_affine_joints(joints[idx][:, 0:2].copy(), inv_trans)))
+
         if frames is not False:
             # frames = torch.from_numpy(frames[idx])
             frame = frames[idx]
-           
+
             frame = rearrange(frame, 'h w c -> c w h')
 
             frame = torch.from_numpy(frame)
@@ -191,9 +269,9 @@ def inverse_process_joints_data(bboxes, joints, output_res, min_norm, frames=Fal
                     1/0.229, 1/0.224, 1/0.225]),
                 transforms.Normalize(
                     mean=[-0.485, -0.456, -0.406], std=[1., 1., 1.]),
-            ]) 
+            ])
             frame = invTrans(frame)
-            
+
             frame = rearrange(frame, 'c w h-> h w c')
 
             frame = frame.numpy()
@@ -206,17 +284,18 @@ def inverse_process_joints_data(bboxes, joints, output_res, min_norm, frames=Fal
             frame = F.to_tensor(frame_cropped)
 
             # frame = rearrange(frame, 'h w c-> c h w') # to remove
-            
+
             new_frames.append(frame)
-    
+
     if frames is not False:
         new_frames = torch.stack(new_frames)
 
     new_joints = torch.stack(new_joints)
 
     # although usually, I would not be denormalizing the frames.
-    
+
     return new_frames, new_joints
+
 
 def inverse_process_joint_data(bbox, joint, output_res, min_norm, frame=False):
     '''
@@ -231,7 +310,7 @@ def inverse_process_joint_data(bbox, joint, output_res, min_norm, frame=False):
     image_size = np.array(output_res)
     center, scale = box2cs(image_size, bbox)
     rotation = 0
-    
+
     # # denormalize values!
     # joint = denormalize_fn(joint, min_norm, output_res[1], output_res[0])
 
@@ -243,7 +322,8 @@ def inverse_process_joint_data(bbox, joint, output_res, min_norm, frame=False):
     inv_trans = cv2.invertAffineTransform(trans)
 
     # inverse warping for the joints
-    joint = torch.from_numpy(warp_affine_joints(joint[:, 0:2].copy(), inv_trans))
+    joint = torch.from_numpy(warp_affine_joints(
+        joint[:, 0:2].copy(), inv_trans))
 
     # although usually, I would not be denormalizing the frames.
     if frame is not False:
@@ -266,7 +346,6 @@ def inverse_process_joint_data(bbox, joint, output_res, min_norm, frame=False):
             inv_trans, (int(image_size[0]), int(image_size[1])),
             flags=cv2.INTER_LINEAR)
         frame = F.to_tensor(frame_cropped)
-
 
     return frame, joint
 
@@ -392,7 +471,9 @@ if __name__ == '__main__':
     # joints = np.array([[[0, 0]] * 15] * num_frames )
     # # Preprocess the video
     preprocessed_frames, preprocessed_joints = preprocess_video_data(
-        frames, bboxes, joints, out_res, -1)
+        frames, bboxes, joints, out_res)
+
+    joint = normalize_fn(joint, -1, out_res[1], out_res[0])
 
     # after_frames, after_jionts = inverse_process_video_data(preprocessed_frames[0], bboxes[0], preprocessed_joints[0], out_res)
 
@@ -467,4 +548,3 @@ if __name__ == '__main__':
     plt.tight_layout()
     plt.savefig('inverse_comparison.png')
     plt.close()
-

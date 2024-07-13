@@ -31,3 +31,4 @@ outputs/
 *.mat
 .AppleDouble/
 old_results/
+mmpose/
