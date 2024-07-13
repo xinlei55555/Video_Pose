@@ -104,6 +104,18 @@ class COCOLoader(Dataset):
         keypoints = keypoints[:, :-1]  # YES YOU WANT THE VISIBILITY TT
 
         return image, keypoints, bbox, mask
+    
+    def data_augment(input_image, input_keypoints, input_bbox):
+        '''
+        Randomly perform a set of augmentation to the datapoint using mmpose framework
+        
+        Args:
+            Not sure:
+        
+        Returns:
+            No sure:
+        '''
+        pass
 
 
 class eval_COCOLoader(COCOLoader):
