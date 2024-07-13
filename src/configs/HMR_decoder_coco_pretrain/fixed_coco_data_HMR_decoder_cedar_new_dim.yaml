@@ -17,7 +17,7 @@ num_mamba_blocks: 16
 losses: {'mse': 1.0, 'velocity': 0.0, 'angle': 0.0, 'mpjpe': 0.0}
 
 # data augmentation
-data_augmentation: {'flip': 0.5, 'rotation': 0.0, 'shifting': 0.0}
+data_augmentation: {'flip': 0.5, 'rotation': 0.0, 'quantization': 0.0}
 flip_types: ['horizontal']
 rotation_val: 40
 
