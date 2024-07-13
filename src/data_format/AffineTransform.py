@@ -115,7 +115,7 @@ def data_augment(aug_dct, input_video, input_keypoints, input_bbox, input_res, c
     13,  # Left Knee ↔ Right Knee
     16,  # Right Ankle ↔ Left Ankle
     15  # Left Ankle ↔ Right Ankle
-], flip_types=None):
+], flip_types=[]):
     '''
     Randomly perform a set of augmentation to the datapoint using mmpose framework
     Augmentations performed will include mirroring, rotation and maybe shifting / resizing? (although since I have the ground truth bboxes, i don't know how useful that will be)
