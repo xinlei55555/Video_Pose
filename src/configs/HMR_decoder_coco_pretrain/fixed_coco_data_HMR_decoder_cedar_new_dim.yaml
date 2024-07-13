@@ -15,7 +15,7 @@ num_mamba_blocks: 16
 # losses: {'mse': 0.0, 'velocity': 10.0, 'angle': 1.0, 'mpjpe': 5.0}
 # when pretraining on coco, i won't have all my weird losses lolll
 losses: {'mse': 1.0, 'velocity': 0.0, 'angle': 0.0, 'mpjpe': 0.0}
-
+data_augmentation: {'flip': [0.5, ['horizontal']], 'rotation', [0.0, 0.0], 'shifting', 0.0}
 use_last_frame_only: False
 # unsure own values for the transformer decoder
 dim: 1024 # just like HMR2.0 set it to be
@@ -75,7 +75,7 @@ checkpoint_directory: '/home/xinleilin/Projects/Video_Pose/src/checkpoints/HMR_d
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
 # checkpoint_name: 'new_velocity_10_angle_1_mse_5_train_input_transformer'
 # checkpoint_name: 'testing_false_dataset'
-checkpoint_name: 'fixed_data_final_cedar_model'
+checkpoint_name: 'flipping_fixed_data_final_cedar_model'
 
 # Follow up on the training of another previous run?
 follow_up: False

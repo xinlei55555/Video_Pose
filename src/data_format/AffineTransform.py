@@ -97,7 +97,7 @@ def warp_affine_joints(joints, mat):
         mat.T).reshape(shape)
 
 
-def data_augment(input_video, input_keypoints, input_bbox, input_res, coco_flip_indices=[
+def data_augment(aug_dct, input_video, input_keypoints, input_bbox, input_res, coco_flip_indices=[
     0,  # Nose
     2,  # Right Eye ↔ Left Eye
     1,  # Left Eye ↔ Right Eye
@@ -122,38 +122,39 @@ def data_augment(input_video, input_keypoints, input_bbox, input_res, coco_flip_
     second step will be to perform the quantization.
 
     Args:
+        aug_dct (dict[string, float]): dictionary of all augmentations {name: probability}, and for rotation, also include the angle.
         input_video (torch.Tensor): (F, C, H, W)
         input_keypoints(torch.Tensor): (F, J, 2)
         input_bbox (torch.Tensor): 1-d with x, y, w, h
         input_res(tuple[int, int]): (width, height)
     '''
-    # start with flipping:
     # https://mmpose.readthedocs.io/en/dev-1.x/advanced_guides/customize_transforms.html
     # randomly flip the data horizontally
-    flip_transform = RandomFlip(prob=[0.5], direction=['horizontal'])
-    # rearranging the image to (F, H, W, C), and transforming to numpy
-    input_video = rearrange(input_video, 'f c h w -> f h w c').numpy()
-    output_results = []
-    input_dct = {
-        'img': input_video[index],  # can take a list of images.
-        'img_shape': (input_res[1], input_res[0]),  # (h, w)
-        #! NOTE: I won't need to flip the bbox, since we are only shifting the image AFTER the AffineTransform.
-        # - bbox (optional)
-        # - bbox_center (optional)
-        # ! NOTE: Need to flip the keypoints. Notice also that left becomes right in the keypoints.
-        'flip_indices': coco_flip_indices,
-        'keypoints': input_keypoints.numpy(),
-        # 'keypoints_visible': keypoint_mask # will not pass, since values are 0.. would just swap.
-    }
-    # takes in a batch of keypoints.
-    output_dct = flip_transform.transform(input_dct)
-    video = torch.from_numpy(output_dct['img'])
-    keypoints = torch.from_numpy(output_dct['keypoints'])
+    if aug_dct['flip'][0] > 0.0:
+        flip_transform = RandomFlip(prob=aug_dct['flip'][0], direction=aug_dct['flip'][1])
+        # rearranging the image to (F, H, W, C), and transforming to numpy
+        input_video = rearrange(input_video, 'f c h w -> f h w c').numpy()
+        output_results = []
+        input_dct = {
+            'img': input_video[index],  # can take a list of images.
+            'img_shape': (input_res[1], input_res[0]),  # (h, w)
+            #! NOTE: I won't need to flip the bbox, since we are only shifting the image AFTER the AffineTransform.
+            # - bbox (optional)
+            # - bbox_center (optional)
+            # ! NOTE: Need to flip the keypoints. Notice also that left becomes right in the keypoints.
+            'flip_indices': coco_flip_indices,
+            'keypoints': input_keypoints.numpy(),
+            # 'keypoints_visible': keypoint_mask # will not pass, since values are 0.. would just swap.
+        }
+        # takes in a batch of keypoints.
+        output_dct = flip_transform.transform(input_dct)
+        video = torch.from_numpy(output_dct['img'])
+        keypoints = torch.from_numpy(output_dct['keypoints'])
 
-    # then rotation
-    # https://github.com/ViTAE-Transformer/ViTPose/blob/main/mmpose/datasets/pipelines/top_down_transform.py#L147
-    
-    # reshape the output
+        # then rotation
+        # https://github.com/ViTAE-Transformer/ViTPose/blob/main/mmpose/datasets/pipelines/top_down_transform.py#L147
+        
+        # reshape the output
     video = rearrange(video, 'f h w c -> f c h w')
     return video, keypoints
 
