@@ -10,6 +10,9 @@ from einops import rearrange
 from mmpose.datasets.transforms import LoadImage, RandomFlip
 import mmcv
 
+from data_format.RandomQuantization import RandomizedQuantizationAugModule
+
+import random
 
 def get_warp_matrix(theta, size_input, size_dst, size_target):
     """Calculate the transformation matrix under the constraint of unbiased.
@@ -97,7 +100,7 @@ def warp_affine_joints(joints, mat):
         mat.T).reshape(shape)
 
 
-def data_augment(aug_dct, input_video, input_keypoints, input_bbox, input_res, coco_flip_indices=[
+def data_augment(aug_dct, video, keypoints, input_bbox, input_res, coco_flip_indices=[
     0,  # Nose
     2,  # Right Eye ↔ Left Eye
     1,  # Left Eye ↔ Right Eye
@@ -115,7 +118,7 @@ def data_augment(aug_dct, input_video, input_keypoints, input_bbox, input_res, c
     13,  # Left Knee ↔ Right Knee
     16,  # Right Ankle ↔ Left Ankle
     15  # Left Ankle ↔ Right Ankle
-], flip_types=[]):
+], flip_types=[], quant_bins=[2, 10]):
     '''
     Randomly perform a set of augmentation to the datapoint using mmpose framework
     Augmentations performed will include mirroring, rotation and maybe shifting / resizing? (although since I have the ground truth bboxes, i don't know how useful that will be)
@@ -134,26 +137,35 @@ def data_augment(aug_dct, input_video, input_keypoints, input_bbox, input_res, c
         flip_transform = RandomFlip(
             prob=aug_dct['flip'], direction=flip_types)
         # rearranging the image to (F, H, W, C), and transforming to numpy
-        input_video = rearrange(input_video, 'f c h w -> f h w c').numpy()
+        video = rearrange(video, 'f c h w -> f h w c').numpy()
         output_results = []
         input_dct = {
-            'img': input_video[index],  # can take a list of images.
+            'img': video[index],  # can take a list of images.
             'img_shape': (input_res[1], input_res[0]),  # (h, w)
             #! NOTE: I won't need to flip the bbox, since we are only shifting the image AFTER the AffineTransform.
             # - bbox (optional)
             # - bbox_center (optional)
             # ! NOTE: Need to flip the keypoints. Notice also that left becomes right in the keypoints.
             'flip_indices': coco_flip_indices,
-            'keypoints': input_keypoints.numpy(),
+            'keypoints': keypoints.numpy(),
             # 'keypoints_visible': keypoint_mask # will not pass, since values are 0.. would just swap.
         }
         # takes in a batch of keypoints.
         output_dct = flip_transform.transform(input_dct)
         video = torch.from_numpy(output_dct['img'])
-        keypoints = torch.from_numpy(output_dct['keypoints'])    
+        keypoints = torch.from_numpy(output_dct['keypoints'])
+    
+        # reshape the output
+        video = rearrange(video, 'f h w c -> f c h w')
 
-    # reshape the output
-    video = rearrange(video, 'f h w c -> f c h w')
+    # random quantization
+    # https://github.com/microsoft/random_quantize/blob/main/randomized_quantization.py
+    if aug_dct['quantization'] > 0:
+        # pick random quantization bin in the range
+        bins = random.randint(quant_bins[0], quant_bins[1])
+        quantization_obj = RandomizedQuantizationAugModule(region_num=bins)
+        video = quantization_obj(video)
+
     return video, keypoints
 
 
