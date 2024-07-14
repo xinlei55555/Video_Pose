@@ -148,13 +148,13 @@ def data_augment(aug_dct, video, keypoints, mask, input_bbox, input_res, coco_fl
             # ! NOTE: Need to flip the keypoints. Notice also that left becomes right in the keypoints.
             'flip_indices': coco_flip_indices,
             'keypoints': keypoints.numpy(),
-            'keypoints_visible': mask.numpy() # also need to shift the keypoint's visibility mask
+            'keypoints_visible': mask.unsqueeze(0).numpy() # also need to shift the keypoint's visibility mask
         }
         # takes in a batch of keypoints.
         output_dct = flip_transform.transform(input_dct)
-        video = torch.from_numpy(output_dct['img'])
-        keypoints = torch.from_numpy(output_dct['keypoints'])
-        mask = torch.from_numpy(output_dct['keypoints_visible'])
+        video = torch.from_numpy(output_dct['img'].copy()) # reversed stride cannot be handled by pytorch.
+        keypoints = torch.from_numpy(output_dct['keypoints'].copy())
+        mask = torch.from_numpy(output_dct['keypoints_visible'].copy()).squeeze(0) # remove the first dimension that was added
     
         # reshape the output
         video = rearrange(video, 'f h w c -> f c h w')
