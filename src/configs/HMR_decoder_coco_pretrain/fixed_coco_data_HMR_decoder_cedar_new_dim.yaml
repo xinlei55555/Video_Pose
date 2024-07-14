@@ -17,7 +17,7 @@ num_mamba_blocks: 16
 losses: {'mse': 1.0, 'velocity': 0.0, 'angle': 0.0, 'mpjpe': 0.0}
 
 # data augmentation
-data_augmentation: {'flip': 0.5, 'rotation': 0.0, 'quantization': 0.0}
+data_augmentation: {'flip': 0.5, 'rotation': 0.6, 'quantization': 0.0}
 flip_types: ['horizontal']
 rotation_val: 40
 quantization_bins: [2, 10] # range of bins for the random quantization.
@@ -82,7 +82,7 @@ checkpoint_directory: '/home/linxin67/projects/def-btaati/linxin67/Projects/Mamb
 # checkpoint_name: 'Custom_Tanh_normalized_checkpoints'
 # checkpoint_name: 'new_velocity_10_angle_1_mse_5_train_input_transformer'
 # checkpoint_name: 'testing_false_dataset'
-checkpoint_name: 'flipping_data_loader_fixed_16_mamba_1024_hidden_masked_gelu_mse_image_video_cosine_anneal_clip-gradient_0.1_weight_decay_0.1_lr_scheduler_12_mamba_5e-5_Coco_pretrain_full_cedars'
+checkpoint_name: 'rotation_flipping_data_loader_fixed_16_mamba_1024_hidden_masked_gelu_mse_image_video_cosine_anneal_clip-gradient_0.1_weight_decay_0.1_lr_scheduler_12_mamba_5e-5_Coco_pretrain_full_cedars'
 
 # Follow up on the training of another previous run?
 follow_up: False

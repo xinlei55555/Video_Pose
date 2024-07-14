@@ -51,7 +51,7 @@ class COCOVideoLoader(Dataset):
         # https://github.com/ViTAE-Transformer/ViTPose/blob/main/mmpose/datasets/pipelines/top_down_transform.py#L147
         rotation = 0
         if self.train_set=='train' and self.config['data_augmentation']['rotation'] > 0 and random.uniform(0, 1) > self.config['data_augmentation']['rotation']:
-            rotation = self.config['rotation_val']
+            rotation = random.randint(0, self.config['rotation_val']) # random rotation
         image, joint = preprocess_video_data(image.numpy(), bbox.numpy(), joint.numpy(), (self.tensor_width, self.tensor_height), rotation)
 
         # perform image data augmentation on train_set, before nromalizing the joint values.
