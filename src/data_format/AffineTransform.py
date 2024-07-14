@@ -140,7 +140,7 @@ def data_augment(aug_dct, video, keypoints, input_bbox, input_res, coco_flip_ind
         video = rearrange(video, 'f c h w -> f h w c').numpy()
         output_results = []
         input_dct = {
-            'img': video[index],  # can take a list of images.
+            'img': video,  # can take a list of images.
             'img_shape': (input_res[1], input_res[0]),  # (h, w)
             #! NOTE: I won't need to flip the bbox, since we are only shifting the image AFTER the AffineTransform.
             # - bbox (optional)
