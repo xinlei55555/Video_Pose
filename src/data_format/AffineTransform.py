@@ -100,7 +100,7 @@ def warp_affine_joints(joints, mat):
         mat.T).reshape(shape)
 
 
-def data_augment(aug_dct, video, keypoints, input_bbox, input_res, coco_flip_indices=[
+def data_augment(aug_dct, video, keypoints, mask, input_bbox, input_res, coco_flip_indices=[
     0,  # Nose
     2,  # Right Eye ↔ Left Eye
     1,  # Left Eye ↔ Right Eye
@@ -148,12 +148,13 @@ def data_augment(aug_dct, video, keypoints, input_bbox, input_res, coco_flip_ind
             # ! NOTE: Need to flip the keypoints. Notice also that left becomes right in the keypoints.
             'flip_indices': coco_flip_indices,
             'keypoints': keypoints.numpy(),
-            # 'keypoints_visible': keypoint_mask # will not pass, since values are 0.. would just swap.
+            'keypoints_visible': mask.unsqueeze(0).numpy() # also need to shift the keypoint's visibility mask
         }
         # takes in a batch of keypoints.
         output_dct = flip_transform.transform(input_dct)
-        video = torch.from_numpy(output_dct['img'])
-        keypoints = torch.from_numpy(output_dct['keypoints'])
+        video = torch.from_numpy(output_dct['img'].copy()) # reversed stride cannot be handled by pytorch.
+        keypoints = torch.from_numpy(output_dct['keypoints'].copy())
+        mask = torch.from_numpy(output_dct['keypoints_visible'].copy()).squeeze(0) # remove the first dimension that was added
     
         # reshape the output
         video = rearrange(video, 'f h w c -> f c h w')
@@ -166,7 +167,7 @@ def data_augment(aug_dct, video, keypoints, input_bbox, input_res, coco_flip_ind
         quantization_obj = RandomizedQuantizationAugModule(region_num=bins)
         video = quantization_obj(video)
 
-    return video, keypoints
+    return video, keypoints, mask
 
 
 def preprocess_video_data(frames, bboxes, joints, out_res, rotation=0):

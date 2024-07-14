@@ -52,7 +52,7 @@ def coco_mask_fn(joints, labels, masks):
     Args:
         joints (torch.Tensor): Predicted joint values of shape (B, J, 2).
         labels (torch.Tensor): Ground truth joint values of shape (B, J, 2).
-        masks (torch.Tensor): Mask tensor of shape (B, J, 1).
+        masks (torch.Tensor): Mask tensor of shape (B, J).
 
     Returns:
         torch.Tensor, torch.Tensor: Masked joints and labels.
