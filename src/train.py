@@ -53,7 +53,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
 
         if epoch == start_epoch:
             # Prints GPU memory summary
-            print('\t Memory before (in MB)', torch.cuda.memory_allocated()/1e6)
+            print('\t Memory before (in MB)', torch.cuda.memory_reserved()/1e6)
             print(
                 f'The number of batches in the train_set is {len(train_set)}')
             print(f'The number of batches in the val_set is {len(val_set)}')
@@ -113,7 +113,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
             if epoch == start_epoch and i == 0:
                 # Prints GPU memory summary
                 print('\t Memory after train_batch (in MB)',
-                      torch.cuda.memory_allocated()/1e6)
+                      torch.cuda.memory_reserved()/1e6)
 
             torch.cuda.empty_cache()  # Clear cache to save memory
 
@@ -144,7 +144,7 @@ def training_loop(config, n_epochs, optimizer, scheduler, model, loss_fn, train_
                 if epoch == start_epoch and i == 0:
                     # Prints GPU memory summary
                     print('\t Memory after val_batch (in MB)',
-                          torch.cuda.memory_allocated()/1e6)
+                          torch.cuda.memory_reserved()/1e6)
 
                 torch.cuda.empty_cache()  # Clear cache to save memory
 

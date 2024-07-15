@@ -6,7 +6,7 @@ model_type: 'HMR_decoder_coco_pretrain'
 # full_debug mode will enable a lot of information being printed
 full_debug: False
 show_gradients: False
-show_predictions: True 
+show_predictions: False 
 
 # architecture mamba
 embed_channels: 192 # number of channels after the tiny mamba layers.
@@ -17,9 +17,10 @@ num_mamba_blocks: 16
 losses: {'mse': 1.0, 'velocity': 0.0, 'angle': 0.0, 'mpjpe': 0.0}
 
 # data augmentation
-data_augmentation: {'flip': 0.5, 'rotation': 0.6, 'shifting': 0.0}
+data_augmentation: {'flip': 0.5, 'rotation': 0.6, 'quantization': 0.5}
 flip_types: ['horizontal']
 rotation_val: 40
+quantization_bins: [2, 10] # range of bins for the random quantization.
 
 use_last_frame_only: False
 # unsure own values for the transformer decoder
@@ -111,7 +112,7 @@ jump: 16 # number of frames to skip between the different datapoints
 joint_number: 17 # COCO has 17 joints.
 
 # if False, uses subset of the data to run
-real_job: False
+real_job: True
 
 # normalization
 normalized: True
